@@ -21,18 +21,24 @@ Updated: 2026-06-11
 | `flask-yes-harness` | No-op | Complex harness-effect validation | 4 | 0 | 0% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Complex harness-effect A/B (3×) | 12 | 10 | 83.3% | 2 | 0 | 0 |
 | `flask-yes-harness` | Codex CLI | Complex harness-effect A/B (3×) | 12 | 11 | 91.7% | 0 | 0 | 1 |
+| `flask-no-harness` | No-op | Hidden-oracle validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | No-op | Hidden-oracle validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Hidden-oracle A/B (3×) | 12 | 0 | 0% | 11 | 0 | 3 |
+| `flask-yes-harness` | Codex CLI | Hidden-oracle A/B (3×) | 12 | 11 | 91.7% | 0 | 0 | 0 |
 
 Latest run:
-[`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md) —
-Codex CLI A/B on four more complex Flask harness-effect tasks. The harnessed
-target reached 11/12 successes with 0 wrong-file edits, while the bare target
-reached 10/12 with 2 wrong-file edits. The latest broader repeated snapshot
-remains
+[`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md) —
+Codex CLI A/B on four hidden-oracle Flask harness-effect tasks. The harnessed
+target reached 11/12 successes with 0 wrong-file edits and 0 timeouts, while
+the bare target reached 0/12 with 11 wrong-file edits and 3 timeouts. Codex was
+run with `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
+The latest broader repeated snapshot remains
 [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
 Detailed reports:
 
-- [`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md) ← latest
+- [`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md) ← latest
+- [`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md)
 - [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md)
 - [`2026-06-11-flask-yes-harness-codex-pilot.md`](2026-06-11-flask-yes-harness-codex-pilot.md)
 - [`2026-06-11-flask-yes-harness-noop-baseline.md`](2026-06-11-flask-yes-harness-noop-baseline.md)
@@ -82,8 +88,14 @@ The complex harness-effect follow-up expanded the A/B to four harder tasks and
 `flask-no-harness` passed all deterministic verification commands. The likely
 reason is methodology leakage: the target-local oracle code is visible in both
 clones, so a capable agent can read the exact expected contract even without
-harness conventions. The next stronger experiment should keep the deterministic
-oracle outside the agent-visible target clone.
+harness conventions. That motivated the hidden-oracle follow-up below.
+
+The hidden-oracle follow-up removes that leakage by keeping task specs and the
+deterministic oracle in this runner repository. Under the same four-task shape
+and 3x repetition, `flask-no-harness` fell to 0/12 while `flask-yes-harness`
+reached 11/12. This is the clearest current evidence that the harness is
+meaningful for convention-dependent work: it improved contract discovery,
+boundary discipline, and timeout behavior.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

@@ -8,24 +8,26 @@ usage details live in code, task specs, and benchmark reports.
 
 ## Latest Performance
 
-The latest Flask harness-effect A/B run uses more complex tasks where the prompt
-names a repository-specific API but does not restate the full response contract
-or companion-document requirements. The harnessed repository contains that
-guidance in its local agent instructions and conventions.
+The latest Flask harness-effect A/B run uses hidden-oracle tasks where the
+prompt names a repository-specific API but does not restate the full response
+contract. The deterministic oracle lives in this runner, outside the
+agent-visible target clone. Codex was run with medium reasoning and priority
+service tier:
+`CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
 | Target | Harness | Agent | Runs | Successes | Success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` | No | Codex CLI | 12 | 10 | 83.3% | 12 | 2 | 0 | 0 |
-| `flask-yes-harness` | Yes | Codex CLI | 12 | 11 | 91.7% | 11 | 0 | 0 | 1 |
+| `flask-no-harness` | No | Codex CLI | 12 | 0 | 0% | 0 | 11 | 0 | 3 |
+| `flask-yes-harness` | Yes | Codex CLI | 12 | 11 | 91.7% | 11 | 0 | 0 | 0 |
 
-Interpretation: in this scoped test, the harness still improved scored success
-and file-boundary discipline, but the functional lift was weaker than the first
-harness-effect run. The likely reason is oracle leakage: the deterministic
-oracle files live inside both target repositories, so Codex can read the exact
-contract even in the no-harness clone.
+Interpretation: when the exact scoring contract is hidden from the target
+repository, the harness produces a large lift in both functional success and
+file-boundary discipline. The bare target repeatedly guessed route names and
+response shapes, while the harnessed target discovered the repository-local
+contracts from its agent instructions and conventions.
 
 Detailed report:
-[`docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md).
+[`docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md).
 
 ## What Yes-Harness Improved
 
@@ -34,22 +36,23 @@ repository's expectations easier for the agent to discover and follow.
 
 | Dimension | `flask-no-harness` | `flask-yes-harness` | Observed effect |
 | --- | --- | --- | --- |
-| Scored success | 10/12 | 11/12 | Harnessed tasks completed slightly more reliably. |
-| Verification | 12/12 | 11/12 | Functional verification was not the main separator in the complex run. |
-| File boundaries | 2 wrong-file edits | 0 wrong-file edits | Harness guidance kept edits inside expected paths. |
-| Timeouts | 0 timeouts | 1 timeout | The harnessed target still had one long-tail Codex timeout. |
-| Companion docs | Two runs also touched `README.md` | No wrong-file edits | Harness guidance better constrained durable-knowledge placement. |
+| Scored success | 0/12 | 11/12 | Harnessed tasks completed the hidden contracts reliably. |
+| Verification | 0/12 | 11/12 | Functional correctness became the main separator once the oracle was hidden. |
+| File boundaries | 11 wrong-file edits | 0 wrong-file edits | Harness guidance kept edits inside expected paths. |
+| Timeouts | 3 timeouts | 0 timeouts | Harness guidance reduced long-running failed exploration. |
+| Contract discovery | Guessed routes and response shapes | Used documented conventions | Repository-local knowledge translated into concrete API behavior. |
 
-The most important difference is not raw Flask coding ability. Both targets are
-solvable. The benefit appears most clearly in repository-local discipline:
-documentation placement and allowed edit boundaries. The next stronger
-experiment should keep deterministic oracles outside the agent-visible target
-clone so the no-harness agent cannot recover the full contract from oracle code.
+The most important difference is not raw Flask coding ability. The hidden run
+shows the harness is useful when success depends on repository-local knowledge:
+route names, response shapes, thresholds, companion-document placement, and
+allowed edit boundaries.
 
 ## Benchmark Evidence
 
 | Scope | Agent | Mode | Runs | Successes | Success rate | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `flask-yes-harness` hidden-oracle A/B | Codex CLI | Live adapter (3x) | 12 | 11 | 91.7% | 0 | 0 | 0 |
+| `flask-no-harness` hidden-oracle A/B | Codex CLI | Live adapter (3x) | 12 | 0 | 0% | 11 | 0 | 3 |
 | `flask-yes-harness` complex harness-effect A/B | Codex CLI | Live adapter (3x) | 12 | 11 | 91.7% | 0 | 0 | 1 |
 | `flask-no-harness` complex harness-effect A/B | Codex CLI | Live adapter (3x) | 12 | 10 | 83.3% | 2 | 0 | 0 |
 | `flask-yes-harness` harness-effect A/B | Codex CLI | Live adapter (3x) | 6 | 6 | 100% | 0 | 0 | 0 |
@@ -68,9 +71,9 @@ benchmark reports.
 ```mermaid
 xychart-beta
     title "Selected Success Rates"
-    x-axis ["Complex no harness", "Complex yes harness", "Codex 5x", "Claude Code 5x"]
+    x-axis ["Hidden no harness", "Hidden yes harness", "Complex no harness", "Complex yes harness"]
     y-axis "Success %" 0 --> 100
-    bar [83.3, 91.7, 85, 92.5]
+    bar [0, 91.7, 83.3, 91.7]
 ```
 
 ## What The Metrics Mean
@@ -88,13 +91,11 @@ are violated.
 
 ## Current Findings
 
-- Harness-effect Flask A/B remains harness-positive, but the larger complex
-  run narrows the claim: `flask-yes-harness` reached 11/12 while
-  `flask-no-harness` reached 10/12, with the clearer improvement in wrong-file
-  edits (0 vs 2).
-- Target-local oracle visibility is now the main methodology risk. The next A/B
-  should use external hidden oracles so the no-harness agent cannot read the
-  exact expected contract from `benchmarks/oracles/`.
+- Hidden-oracle Flask A/B is the strongest harness-positive evidence so far:
+  `flask-yes-harness` reached 11/12 while `flask-no-harness` reached 0/12.
+- The earlier complex run remains useful as a methodology lesson: when oracle
+  code is visible in both target clones, a capable no-harness agent can recover
+  much of the expected contract.
 - The first plain Flask pilot was too easy to show harness lift: both bare and
   harnessed targets produced 4/4 verification passes and 3/4 scored successes.
 - The larger `harness-starter-kit` repeated runs show strong boundary
@@ -106,6 +107,7 @@ are violated.
 ## Detailed Reports
 
 - [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
+- [`docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md)
 - [`docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md)
 - [`docs/benchmarks/2026-06-11-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-harness-effect-ab-3x.md)
 - [`docs/benchmarks/2026-06-11-flask-yes-harness-codex-pilot.md`](docs/benchmarks/2026-06-11-flask-yes-harness-codex-pilot.md)
