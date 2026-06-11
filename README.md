@@ -26,10 +26,11 @@ Current infrastructure status:
 | `harness-starter-kit` dry run | Codex CLI | 3 | 2 | 0 | 0 | 0 |
 
 ```mermaid
-pie showData
-    title Latest Codex dry run outcomes
-    "Success" : 2
-    "Verification failure" : 1
+xychart-beta
+    title "Success Rate by Scope"
+    x-axis ["starter-kit dry run"]
+    y-axis "Success %" 0 --> 100
+    bar [67]
 ```
 
 Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
