@@ -72,6 +72,8 @@ standard library only.
   },
   "prompt": "Do the task the agent should attempt.",
   "timeout_seconds": 900,
+  "max_attempts": 1,
+  "max_cost_usd": 2.5,
   "expected_files": ["docs/**", "scripts/**"],
   "forbidden_files": [".env", "**/.env", "node_modules/**"],
   "verification": {
@@ -89,6 +91,14 @@ standard library only.
 `repo.source` can be a local path or a Git URL. Relative local paths are resolved
 from the current working directory first, then from the task file directory.
 
+`timeout_seconds` limits the agent command. `max_attempts` controls how many
+fresh isolated attempts the CLI may run before returning failure. Keep
+`max_attempts` at `1` when measuring strict first-pass performance.
+
+`max_cost_usd` is recorded and passed to agent adapters as a budget hint. The
+runner cannot enforce provider spend directly; adapters and provider-side
+budget controls must honor it.
+
 ## Agent Adapter Contract
 
 The runner executes `--agent-command` inside the isolated clone. It sets these
@@ -99,6 +109,10 @@ environment variables:
 - `BENCHMARK_PROMPT`: prompt text
 - `BENCHMARK_TASK_ID`: task id
 - `BENCHMARK_RUN_ID`: unique run id
+- `BENCHMARK_ATTEMPT_NUMBER`: 1-based attempt number
+- `BENCHMARK_ATTEMPT_LIMIT`: configured attempt limit
+- `BENCHMARK_TIMEOUT_SECONDS`: effective agent timeout for this attempt
+- `BENCHMARK_MAX_COST_USD`: optional budget hint, when configured
 
 Any agent command that can read those values and edit the isolated clone can be
 used. For example, a wrapper script can call Codex CLI, Claude Code, Aider, or a
@@ -108,6 +122,25 @@ Because the command runs from the isolated target repository clone, reference
 local adapter scripts with an absolute path such as
 `python3 $PWD/examples/agents/noop_agent.py` when invoking the runner from this
 repository root.
+
+The Codex CLI example adapter is:
+
+```bash
+python3 -m harness_agent_benchmark_runner run \
+  --task benchmarks/tasks/harness-starter-kit-smoke.json \
+  --agent-command "python3 $PWD/examples/agents/codex_exec_agent.py" \
+  --max-agent-timeout 900 \
+  --max-cost-usd 2.5
+```
+
+The adapter reads these optional environment variables:
+
+- `CODEX_BIN`: Codex binary, default `codex`
+- `CODEX_MODEL`: model argument passed as `--model`
+- `CODEX_PROFILE`: Codex profile passed as `--profile`
+- `CODEX_APPROVAL_POLICY`: default `never`
+- `CODEX_SANDBOX`: default `workspace-write`
+- `CODEX_EXEC_ARGS`: extra shell-parsed arguments appended to `codex exec`
 
 ## Scoring
 
@@ -122,6 +155,9 @@ A run is marked successful only when:
 The raw result is always preserved under `runs/<run-id>/result.json` and appended
 to `results/YYYY-MM-DD.jsonl`.
 
+When retries are enabled, each attempt gets a fresh isolated clone and writes its
+own result record. The CLI exits successfully if any configured attempt succeeds.
+
 ## 24-Hour Operation
 
 The intended production setup is a self-hosted runner, launchd job, systemd
@@ -130,7 +166,9 @@ timer, or small scheduler that repeatedly calls:
 ```bash
 python3 -m harness_agent_benchmark_runner run \
   --task <task-spec> \
-  --agent-command <agent-wrapper>
+  --agent-command <agent-wrapper> \
+  --max-agent-timeout <seconds> \
+  --max-cost-usd <budget>
 ```
 
 Use an external scheduler for now. Keeping scheduling outside the runner makes

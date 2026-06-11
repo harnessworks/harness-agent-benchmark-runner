@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -24,29 +25,33 @@ def run_process(
     if env:
         merged_env.update(env)
 
+    stdout = ""
+    stderr = ""
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             command,
             cwd=str(cwd),
             env=merged_env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=timeout_seconds,
             shell=isinstance(command, str),
-            check=False,
+            start_new_session=True,
         )
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
         duration = time.monotonic() - started
         timed_out = False
-        exit_code = completed.returncode
-        stdout = completed.stdout or ""
-        stderr = completed.stderr or ""
+        exit_code = process.returncode
     except subprocess.TimeoutExpired as exc:
         duration = time.monotonic() - started
         timed_out = True
         exit_code = 124
         stdout = decode_output(exc.stdout)
         stderr = decode_output(exc.stderr)
+        terminate_process_group(process)
+        final_stdout, final_stderr = process.communicate()
+        stdout = final_stdout or stdout
+        stderr = final_stderr or stderr
         stderr += f"\nTimed out after {timeout_seconds} seconds.\n"
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +71,31 @@ def run_process(
         stdout_tail=stdout[-tail_chars:],
         stderr_tail=stderr[-tail_chars:],
     )
+
+
+def terminate_process_group(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGTERM)
+        else:
+            process.terminate()
+        process.wait(timeout=5)
+    except ProcessLookupError:
+        return
+    except subprocess.TimeoutExpired:
+        if process.poll() is not None:
+            return
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+        except ProcessLookupError:
+            return
+        process.wait()
 
 
 def decode_output(value: bytes | str | None) -> str:

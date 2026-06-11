@@ -51,6 +51,8 @@ def new_counter() -> dict[str, int]:
         "runs": 0,
         "successes": 0,
         "verification_passed": 0,
+        "first_pass_verification": 0,
+        "agent_timeouts": 0,
         "wrong_file_edits": 0,
         "forbidden_file_edits": 0,
         "runner_errors": 0,
@@ -63,6 +65,10 @@ def update_counter(counter: dict[str, int], scoring: dict[str, Any]) -> None:
         counter["successes"] += 1
     if scoring.get("verification_passed") is True:
         counter["verification_passed"] += 1
+    if scoring.get("first_pass_verification") is True:
+        counter["first_pass_verification"] += 1
+    if scoring.get("agent_timed_out") is True:
+        counter["agent_timeouts"] += 1
     counter["wrong_file_edits"] += int(scoring.get("wrong_file_edits") or 0)
     counter["forbidden_file_edits"] += int(scoring.get("forbidden_file_edits") or 0)
     if scoring.get("runner_error"):
@@ -77,6 +83,8 @@ def format_summary(summary: dict[str, Any]) -> str:
             f"Runs: {total['runs']}",
             f"Successes: {total['successes']}",
             f"Verification passed: {total['verification_passed']}",
+            f"First-pass verification: {total['first_pass_verification']}",
+            f"Agent timeouts: {total['agent_timeouts']}",
             f"Wrong-file edits: {total['wrong_file_edits']}",
             f"Forbidden-file edits: {total['forbidden_file_edits']}",
             f"Runner errors: {total['runner_errors']}",
@@ -90,6 +98,8 @@ def format_summary(summary: dict[str, Any]) -> str:
             "- "
             f"{task_id}: runs={values['runs']}, successes={values['successes']}, "
             f"verification_passed={values['verification_passed']}, "
+            f"first_pass_verification={values['first_pass_verification']}, "
+            f"agent_timeouts={values['agent_timeouts']}, "
             f"wrong_file_edits={values['wrong_file_edits']}, "
             f"forbidden_file_edits={values['forbidden_file_edits']}, "
             f"runner_errors={values['runner_errors']}"

@@ -35,6 +35,8 @@ class TaskSpec:
     prompt: str
     prompt_ref: str | None = None
     timeout_seconds: int = 900
+    max_attempts: int = 1
+    max_cost_usd: float | None = None
     expected_files: tuple[str, ...] = ()
     forbidden_files: tuple[str, ...] = ()
     verification_commands: tuple[CommandSpec, ...] = ()
@@ -73,7 +75,9 @@ class TaskSpec:
             repo=RepoSpec(source=repo_data["source"], ref=repo_ref),
             prompt=data["prompt"],
             prompt_ref=optional_string(data, "prompt_ref"),
-            timeout_seconds=optional_int(data, "timeout_seconds", default=900),
+            timeout_seconds=positive_int(data, "timeout_seconds", default=900),
+            max_attempts=positive_int(data, "max_attempts", default=1),
+            max_cost_usd=optional_non_negative_float(data, "max_cost_usd"),
             expected_files=tuple(string_list(data, "expected_files")),
             forbidden_files=tuple(string_list(data, "forbidden_files")),
             verification_commands=commands,
@@ -96,8 +100,10 @@ def parse_command_spec(value: Any) -> CommandSpec:
         if name is not None and not isinstance(name, str):
             raise ValueError("verification command name must be a string")
         timeout = value.get("timeout_seconds")
-        if timeout is not None and not isinstance(timeout, int):
-            raise ValueError("verification command timeout_seconds must be an integer")
+        if timeout is not None and (
+            isinstance(timeout, bool) or not isinstance(timeout, int) or timeout <= 0
+        ):
+            raise ValueError("verification command timeout_seconds must be a positive integer")
         return CommandSpec(command=command, name=name, timeout_seconds=timeout)
     raise ValueError("verification command entries must be strings, lists, or objects")
 
@@ -118,11 +124,20 @@ def optional_string(data: dict[str, Any], key: str) -> str | None:
     return value
 
 
-def optional_int(data: dict[str, Any], key: str, default: int) -> int:
+def positive_int(data: dict[str, Any], key: str, default: int) -> int:
     value = data.get(key, default)
-    if not isinstance(value, int):
-        raise ValueError(f"{key} must be an integer when provided")
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{key} must be a positive integer when provided")
     return value
+
+
+def optional_non_negative_float(data: dict[str, Any], key: str) -> float | None:
+    value = data.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+        raise ValueError(f"{key} must be a non-negative number when provided")
+    return float(value)
 
 
 def string_list(data: dict[str, Any], key: str) -> list[str]:
@@ -167,6 +182,9 @@ class RunnerConfig:
     results_dir: Path = Path("results")
     keep_runs: bool = True
     default_command_timeout_seconds: int = 300
+    max_attempts_override: int | None = None
+    max_agent_timeout_seconds: int | None = None
+    max_cost_usd_override: float | None = None
     output_tail_chars: int = 4000
     repo_source_override: str | None = None
     repo_ref_override: str | None = None

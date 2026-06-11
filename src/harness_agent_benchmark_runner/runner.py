@@ -13,13 +13,23 @@ from .models import ProcessResult, RunnerConfig, TaskSpec
 from .processes import run_process
 
 
-def run_task(task: TaskSpec, config: RunnerConfig) -> dict[str, Any]:
+def run_task(
+    task: TaskSpec,
+    config: RunnerConfig,
+    *,
+    attempt_number: int = 1,
+    attempt_limit: int | None = None,
+    raise_on_runner_error: bool = True,
+) -> dict[str, Any]:
+    attempt_limit = attempt_limit or resolve_attempt_limit(task, config)
     run_id = make_run_id(task.task_id)
     started_at = now_iso()
     run_dir = config.workspace_root.expanduser().resolve() / run_id
     repo_dir = run_dir / "repo"
     logs_dir = run_dir / "logs"
     prompt_path = run_dir / "prompt.txt"
+    agent_timeout_seconds = effective_agent_timeout_seconds(task, config)
+    max_cost_usd = effective_max_cost_usd(task, config)
 
     run_dir.mkdir(parents=True, exist_ok=False)
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -39,14 +49,19 @@ def run_task(task: TaskSpec, config: RunnerConfig) -> dict[str, Any]:
             "BENCHMARK_PROMPT_FILE": str(prompt_path),
             "BENCHMARK_TASK_ID": task.task_id,
             "BENCHMARK_RUN_ID": run_id,
+            "BENCHMARK_ATTEMPT_NUMBER": str(attempt_number),
+            "BENCHMARK_ATTEMPT_LIMIT": str(attempt_limit),
+            "BENCHMARK_TIMEOUT_SECONDS": str(agent_timeout_seconds),
             **config.extra_env,
         }
+        if max_cost_usd is not None:
+            agent_env["BENCHMARK_MAX_COST_USD"] = str(max_cost_usd)
 
         agent_result = run_process(
             config.agent_command,
             cwd=repo_dir,
             label="agent",
-            timeout_seconds=task.timeout_seconds,
+            timeout_seconds=agent_timeout_seconds,
             env=agent_env,
             log_path=logs_dir / "agent.log",
             tail_chars=config.output_tail_chars,
@@ -80,10 +95,22 @@ def run_task(task: TaskSpec, config: RunnerConfig) -> dict[str, Any]:
             "run_id": run_id,
             "started_at": started_at,
             "finished_at": finished_at,
+            "attempt": {
+                "number": attempt_number,
+                "limit": attempt_limit,
+            },
+            "limits": {
+                "agent_timeout_seconds": agent_timeout_seconds,
+                "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
+                "max_cost_usd": max_cost_usd,
+            },
             "task": {
                 "id": task.task_id,
                 "description": task.description,
                 "prompt_ref": task.prompt_ref,
+                "timeout_seconds": task.timeout_seconds,
+                "max_attempts": task.max_attempts,
+                "max_cost_usd": task.max_cost_usd,
                 "expected_files": list(task.expected_files),
                 "forbidden_files": list(task.forbidden_files),
             },
@@ -105,8 +132,9 @@ def run_task(task: TaskSpec, config: RunnerConfig) -> dict[str, Any]:
             "scoring": {
                 "success": success,
                 "agent_exit_code": agent_result.exit_code,
+                "agent_timed_out": agent_result.timed_out,
                 "verification_passed": verification_passed,
-                "first_pass_verification": verification_passed,
+                "first_pass_verification": attempt_number == 1 and verification_passed,
                 "wrong_file_edits": len(wrong_files),
                 "wrong_files": wrong_files,
                 "forbidden_file_edits": len(forbidden_files),
@@ -122,16 +150,46 @@ def run_task(task: TaskSpec, config: RunnerConfig) -> dict[str, Any]:
             "run_id": run_id,
             "started_at": started_at,
             "finished_at": now_iso(),
+            "attempt": {
+                "number": attempt_number,
+                "limit": attempt_limit,
+            },
+            "limits": {
+                "agent_timeout_seconds": agent_timeout_seconds,
+                "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
+                "max_cost_usd": max_cost_usd,
+            },
             "task": {"id": task.task_id, "description": task.description},
             "repo": {"source": config.repo_source_override or task.repo.source},
             "scoring": {"success": False, "runner_error": type(exc).__name__},
             "error": str(exc),
         }
         write_result(result, config.results_dir.expanduser().resolve(), run_dir)
-        raise
+        if raise_on_runner_error:
+            raise
+        return result
     finally:
         if not config.keep_runs:
             shutil.rmtree(run_dir, ignore_errors=True)
+
+
+def run_task_with_retries(task: TaskSpec, config: RunnerConfig) -> list[dict[str, Any]]:
+    attempt_limit = resolve_attempt_limit(task, config)
+    if attempt_limit <= 0:
+        raise ValueError("attempt limit must be greater than 0")
+    results: list[dict[str, Any]] = []
+    for attempt_number in range(1, attempt_limit + 1):
+        result = run_task(
+            task,
+            config,
+            attempt_number=attempt_number,
+            attempt_limit=attempt_limit,
+            raise_on_runner_error=False,
+        )
+        results.append(result)
+        if result.get("scoring", {}).get("success") is True:
+            break
+    return results
 
 
 def run_verification_commands(
@@ -154,6 +212,24 @@ def run_verification_commands(
             )
         )
     return results
+
+
+def resolve_attempt_limit(task: TaskSpec, config: RunnerConfig) -> int:
+    if config.max_attempts_override is not None:
+        return config.max_attempts_override
+    return task.max_attempts
+
+
+def effective_agent_timeout_seconds(task: TaskSpec, config: RunnerConfig) -> int:
+    if config.max_agent_timeout_seconds is None:
+        return task.timeout_seconds
+    return min(task.timeout_seconds, config.max_agent_timeout_seconds)
+
+
+def effective_max_cost_usd(task: TaskSpec, config: RunnerConfig) -> float | None:
+    if config.max_cost_usd_override is not None:
+        return config.max_cost_usd_override
+    return task.max_cost_usd
 
 
 def resolve_repo_source(source: str, task_path: Path | None) -> str:
