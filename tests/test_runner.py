@@ -10,7 +10,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from harness_agent_benchmark_runner.models import RunnerConfig
-from harness_agent_benchmark_runner.runner import run_task, run_task_with_retries
+from harness_agent_benchmark_runner.runner import (
+    materialize_verification_command,
+    run_task,
+    run_task_with_retries,
+)
 from harness_agent_benchmark_runner.summary import summarize_results
 from harness_agent_benchmark_runner.tasks import load_task
 
@@ -239,6 +243,25 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(summary["total"]["first_pass_verification"], 1)
         self.assertEqual(summary["total"]["agent_timeouts"], 1)
         self.assertEqual(summary["by_task"]["task-a"]["runs"], 2)
+
+    def test_materialize_verification_command_replaces_task_placeholders(self) -> None:
+        task_path = Path("/tmp/benchmarks/tasks/fixture.json")
+
+        self.assertEqual(
+            materialize_verification_command(
+                ["bash", "{task_dir}/../oracles/check.sh", "{task_file}"],
+                task_path,
+            ),
+            [
+                "bash",
+                "/tmp/benchmarks/tasks/../oracles/check.sh",
+                "/tmp/benchmarks/tasks/fixture.json",
+            ],
+        )
+        self.assertEqual(
+            materialize_verification_command("python {task_dir}/check.py", task_path),
+            "python /tmp/benchmarks/tasks/check.py",
+        )
 
 
 def create_git_repo(path: Path) -> Path:

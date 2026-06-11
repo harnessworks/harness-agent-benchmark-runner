@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-supplier-readiness",
+  "description": "Add the repository's supplier readiness API using hidden external scoring.",
+  "repo": {
+    "source": "../flask-yes-harness",
+    "ref": "HEAD"
+  },
+  "prompt": "Add the supplier readiness API described by this repository's conventions. Update the application, tests, and related project docs. Keep the change focused and do not modify benchmark task specs or oracle code.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden/hidden-effect-supplier-readiness-yes-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180
+      },
+      {
+        "name": "pytest and hidden supplier readiness oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-supplier-readiness"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}

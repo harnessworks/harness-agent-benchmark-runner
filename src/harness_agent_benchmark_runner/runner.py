@@ -203,7 +203,7 @@ def run_verification_commands(
         timeout = command.timeout_seconds or config.default_command_timeout_seconds
         results.append(
             run_process(
-                command.command,
+                materialize_verification_command(command.command, task.source_path),
                 cwd=repo_dir,
                 label=command.label,
                 timeout_seconds=timeout,
@@ -212,6 +212,25 @@ def run_verification_commands(
             )
         )
     return results
+
+
+def materialize_verification_command(command: str | list[str], task_path: Path | None) -> str | list[str]:
+    if task_path is None:
+        return command
+
+    replacements = {
+        "{task_dir}": str(task_path.parent),
+        "{task_file}": str(task_path),
+    }
+
+    def replace(value: str) -> str:
+        for placeholder, replacement in replacements.items():
+            value = value.replace(placeholder, replacement)
+        return value
+
+    if isinstance(command, str):
+        return replace(command)
+    return [replace(part) for part in command]
 
 
 def resolve_attempt_limit(task: TaskSpec, config: RunnerConfig) -> int:
