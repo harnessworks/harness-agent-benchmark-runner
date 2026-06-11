@@ -1,3 +1,6 @@
+<img width="2172" height="724" alt="harness_runner" src="https://github.com/user-attachments/assets/edf405d3-33fc-483b-a5c1-1730f430812f" />
+
+
 # Harness Agent Benchmark Runner
 
 Continuous benchmark runner for measuring coding-agent performance against
