@@ -16,24 +16,26 @@ Current infrastructure status:
 - Runner: operational for isolated clone execution, deterministic verification,
   file-boundary scoring, and JSONL result collection.
 - First target: `harnessworks/harness-starter-kit`.
-- Latest comparable snapshot: 2026-06-11, same 8 deterministic tasks, 0
-  wrong-file edits, 0 forbidden-file edits, and 0 timeouts for both measured
-  agent outputs.
-- Current note: Codex was measured through a live CLI adapter. Claude was
-  measured through replayed Claude-produced patches, so it is a deterministic
-  solution-quality check, not a live latency or cost measurement.
+- Latest comparable snapshot: 2026-06-11, same 8 deterministic tasks. Codex CLI
+  live adapter was measured for 5 repetitions per task: 34/40 successes, 0
+  wrong-file edits, 0 forbidden-file edits, and 4 timeouts.
+- Current note: repeated live measurements now exist for Codex CLI and Claude
+  Code CLI. Claude Opus patch replay remains a deterministic solution-quality
+  check, not a live latency or cost measurement.
 
 | Scope | Agent | Mode | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter | 8 | 8 | 0 | 0 | 0 |
+| `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter (5×) | 40 | 34 | 0 | 0 | 4 |
+| `harness-starter-kit` 8-task dry run | Claude Code CLI | Live adapter (5×) | 40 | 37 | 0 | 0 | 0 |
+| `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter (1×) | 8 | 8 | 0 | 0 | 0 |
 | `harness-starter-kit` 8-task dry run | Claude Opus | Patch replay | 8 | 8 | 0 | 0 | 0 |
 
 ```mermaid
 xychart-beta
-    title "8-Task Success Rate by Run"
-    x-axis ["No-op baseline", "Codex live", "Claude replay"]
+    title "Harness Starter Kit Success Rate by Run"
+    x-axis ["No-op", "Codex 1x", "Claude replay", "Claude Code 5x", "Codex 5x"]
     y-axis "Success %" 0 --> 100
-    bar [0, 100, 100]
+    bar [0, 100, 100, 92.5, 85]
 ```
 
 The no-op baseline is a harness validation run, not an agent score.
