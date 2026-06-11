@@ -41,6 +41,8 @@ xychart-beta
 The no-op baseline is a harness validation run, not an agent score.
 
 Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
+Full records analysis:
+[`docs/benchmarks/2026-06-11-benchmark-records-analysis.md`](docs/benchmarks/2026-06-11-benchmark-records-analysis.md).
 
 ## Goal
 

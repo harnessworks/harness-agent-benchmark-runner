@@ -19,6 +19,7 @@ wrong-file edits and 0 forbidden-file edits.
 Detailed reports:
 
 - [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md) ← latest
+- [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md)
 - [`2026-06-11-claude-code-5runs.md`](2026-06-11-claude-code-5runs.md)
 - [`2026-06-11-claude-as-agent-8.md`](2026-06-11-claude-as-agent-8.md)
 - [`2026-06-11-codex-dry-run-8-oracle-fix.md`](2026-06-11-codex-dry-run-8-oracle-fix.md)
@@ -35,6 +36,9 @@ The Claude Code multi-repetition run remains useful comparison evidence: 37/40
 successes, 0 timeouts, and 0 file-boundary violations. Next milestone: separate
 agent quality failures from timeout/concurrency pressure by re-running Codex
 with lower parallelism or higher task timeouts.
+
+Full records analysis:
+[`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
 
 ## Raw Artifacts
 
