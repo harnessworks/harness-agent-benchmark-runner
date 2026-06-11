@@ -17,17 +17,23 @@ Updated: 2026-06-11
 | `flask-yes-harness` | Codex CLI | Live adapter pilot (1×) | 4 | 3 | 75% | 0 | 0 | 1 |
 | `flask-no-harness` | Codex CLI | Harness-effect A/B (3×) | 6 | 4 | 66.7% | 1 | 0 | 1 |
 | `flask-yes-harness` | Codex CLI | Harness-effect A/B (3×) | 6 | 6 | 100% | 0 | 0 | 0 |
+| `flask-no-harness` | No-op | Complex harness-effect validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | No-op | Complex harness-effect validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Complex harness-effect A/B (3×) | 12 | 10 | 83.3% | 2 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Complex harness-effect A/B (3×) | 12 | 11 | 91.7% | 0 | 0 | 1 |
 
-Latest run: [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md) —
-Codex CLI A/B on two harness-effect Flask tasks. The harnessed target reached
-6/6 successes with 0 boundary violations, while the bare target reached 4/6
-with 1 wrong-file edit and 1 timeout. The latest broader repeated snapshot
+Latest run:
+[`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md) —
+Codex CLI A/B on four more complex Flask harness-effect tasks. The harnessed
+target reached 11/12 successes with 0 wrong-file edits, while the bare target
+reached 10/12 with 2 wrong-file edits. The latest broader repeated snapshot
 remains
 [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
 Detailed reports:
 
-- [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md) ← latest
+- [`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md) ← latest
+- [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md)
 - [`2026-06-11-flask-yes-harness-codex-pilot.md`](2026-06-11-flask-yes-harness-codex-pilot.md)
 - [`2026-06-11-flask-yes-harness-noop-baseline.md`](2026-06-11-flask-yes-harness-noop-baseline.md)
 - [`2026-06-11-flask-no-harness-codex-pilot.md`](2026-06-11-flask-no-harness-codex-pilot.md)
@@ -69,6 +75,15 @@ The later harness-effect A/B suite changes the benchmark shape: detailed API
 contracts and companion-document rules live in the harnessed repository rather
 than the prompt. Under sequential 3x Codex runs, `flask-yes-harness` scored 6/6
 while `flask-no-harness` scored 4/6.
+
+The complex harness-effect follow-up expanded the A/B to four harder tasks and
+24 live Codex records. It still showed better boundary discipline for
+`flask-yes-harness` (0 wrong-file edits vs 2), but not a large functional lift:
+`flask-no-harness` passed all deterministic verification commands. The likely
+reason is methodology leakage: the target-local oracle code is visible in both
+clones, so a capable agent can read the exact expected contract even without
+harness conventions. The next stronger experiment should keep the deterministic
+oracle outside the agent-visible target clone.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
