@@ -25,6 +25,10 @@ Current infrastructure status:
 - New target: local `flask-no-harness` validates a plain Flask app without
   harness-specific files. No-op is 0/4 with clean boundaries; the first Codex
   live pilot is 3/4 with 4/4 verification passes and one timeout.
+- Paired target: local `flask-yes-harness` adds project-specific harness
+  guidance and a normal harness gate. First Codex pilot is also 3/4 with 4/4
+  verification passes and one timeout, so the current A/B signal is timeout
+  variance rather than a clear harness success-rate lift.
 
 | Scope | Agent | Mode | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -34,6 +38,8 @@ Current infrastructure status:
 | `harness-starter-kit` 8-task dry run | Claude Opus | Patch replay | 8 | 8 | 0 | 0 | 0 |
 | `flask-no-harness` 4-task baseline | No-op | Target validation | 4 | 0 | 0 | 0 | 0 |
 | `flask-no-harness` 4-task pilot | Codex CLI | Live adapter (1×) | 4 | 3 | 0 | 0 | 1 |
+| `flask-yes-harness` 4-task baseline | No-op | Target validation | 4 | 0 | 0 | 0 | 0 |
+| `flask-yes-harness` 4-task pilot | Codex CLI | Live adapter (1×) | 4 | 3 | 0 | 0 | 1 |
 
 ```mermaid
 xychart-beta
