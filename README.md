@@ -26,10 +26,25 @@ The runner should not decide product quality by itself. It records deterministic
 signals first, then leaves judgment-heavy fields to a reviewer or a separate
 read-only evaluation agent.
 
+## Benchmark Status
+
+Current infrastructure status:
+
+- Runner: operational for isolated clone execution, deterministic verification,
+  file-boundary scoring, and JSONL result collection.
+- First target: `harnessworks/harness-starter-kit`.
+- Latest Codex dry run: 2026-06-11, 3 runs, 2 successes, 0 wrong-file edits,
+  0 forbidden-file edits, 0 timeouts.
+- Current note: one docs-only task failed because its oracle required brittle
+  exact substrings even though Codex changed only the expected file.
+
+Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
+
 ## Repository Layout
 
 ```text
 benchmarks/tasks/      Example task specs.
+docs/benchmarks/       Public benchmark summaries and methodology notes.
 examples/agents/       Tiny local agent adapters for smoke tests.
 src/                   Runner package.
 tests/                 Unit tests for task loading, scoring, and summaries.

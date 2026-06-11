@@ -26,6 +26,27 @@ summary logic here.
 - When changing scoring semantics, update README task spec docs and tests in
   the same change.
 
+## Benchmark Reporting
+
+After any real agent dry run, pilot, or evidence run that should be visible to
+future maintainers:
+
+- Do not commit raw `runs/`, `results/`, local logs, cloned repositories, or
+  credentials.
+- Summarize public-safe results in `docs/benchmarks/`.
+- Keep `docs/benchmarks/latest.md` pointed at the most recent representative
+  report.
+- Keep README's `Benchmark Status` section short: current infrastructure state,
+  latest run headline, and a link to the detailed report.
+- Include enough detail for reproducibility: target repository, target ref,
+  agent adapter, run count, success count, wrong-file edits, forbidden-file
+  edits, timeouts, and notable failure causes.
+- Treat benchmark results as evidence only for the measured scope. A
+  target-repository dry run proves runner/task/adapter behavior for that target;
+  it does not prove cross-repository harness effectiveness.
+- When a task fails because an oracle is brittle rather than because the agent
+  violated task intent or file boundaries, record that distinction.
+
 ## Validation
 
 Run:
