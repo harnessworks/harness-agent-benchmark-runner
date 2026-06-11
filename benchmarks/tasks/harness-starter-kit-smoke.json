@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "harness-starter-kit-smoke",
+  "description": "No-op smoke run against a sibling harness-starter-kit checkout.",
+  "repo": {
+    "source": "../harness-starter-kit",
+    "ref": "HEAD"
+  },
+  "prompt": "Inspect the repository and make no changes. This smoke task verifies runner isolation and validation command execution.",
+  "prompt_ref": "benchmarks/tasks/harness-starter-kit-smoke.json",
+  "timeout_seconds": 120,
+  "expected_files": [],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "node_modules/**",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "structure drift check",
+        "command": ["python3", "scripts/check_structure.py"],
+        "timeout_seconds": 120
+      }
+    ]
+  }
+}

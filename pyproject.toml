@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harness-agent-benchmark-runner"
+version = "0.1.0"
+description = "Continuous benchmark runner for coding-agent harness tasks"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Harness Works" }]
+dependencies = []
+
+[project.scripts]
+harness-agent-benchmark = "harness_agent_benchmark_runner.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
