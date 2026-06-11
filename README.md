@@ -16,22 +16,27 @@ Current infrastructure status:
 - Runner: operational for isolated clone execution, deterministic verification,
   file-boundary scoring, and JSONL result collection.
 - First target: `harnessworks/harness-starter-kit`.
-- Latest Codex dry run: 2026-06-11, 8 runs, 8 successes, 0 wrong-file edits,
-  0 forbidden-file edits, 0 timeouts.
-- Current note: the first expanded 8-task dry run is green after the target
-  repository fixed a brittle command-workflow oracle.
+- Latest comparable snapshot: 2026-06-11, same 8 deterministic tasks, 0
+  wrong-file edits, 0 forbidden-file edits, and 0 timeouts for both measured
+  agent outputs.
+- Current note: Codex was measured through a live CLI adapter. Claude was
+  measured through replayed Claude-produced patches, so it is a deterministic
+  solution-quality check, not a live latency or cost measurement.
 
-| Scope | Agent | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `harness-starter-kit` dry run | Codex CLI | 8 | 8 | 0 | 0 | 0 |
+| Scope | Agent | Mode | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter | 8 | 8 | 0 | 0 | 0 |
+| `harness-starter-kit` 8-task dry run | Claude Opus | Patch replay | 8 | 8 | 0 | 0 | 0 |
 
 ```mermaid
 xychart-beta
-    title "Success Rate by Scope"
-    x-axis ["starter-kit 8-task dry run"]
+    title "8-Task Success Rate by Run"
+    x-axis ["No-op baseline", "Codex live", "Claude replay"]
     y-axis "Success %" 0 --> 100
-    bar [100]
+    bar [0, 100, 100]
 ```
+
+The no-op baseline is a harness validation run, not an agent score.
 
 Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
 
@@ -171,6 +176,34 @@ The adapter reads these optional environment variables:
 - `CODEX_APPROVAL_POLICY`: default `never`
 - `CODEX_SANDBOX`: default `workspace-write`
 - `CODEX_EXEC_ARGS`: extra shell-parsed arguments appended to `codex exec`
+
+The Claude Code example adapter is:
+
+```bash
+python3 -m harness_agent_benchmark_runner run \
+  --task benchmarks/tasks/harness-starter-kit-smoke.json \
+  --agent-command "python3 $PWD/examples/agents/claude_code_agent.py" \
+  --max-agent-timeout 900 \
+  --max-cost-usd 2.5
+```
+
+It requires an authenticated Claude Code CLI on the host. The adapter uses
+Claude Code print mode and passes the benchmark prompt on stdin with a short
+query argument. Its default permission mode is `bypassPermissions`, so run it
+only through the runner's isolated clone/workspace path.
+
+The adapter reads these optional environment variables:
+
+- `CLAUDE_BIN`: Claude Code binary, default `claude`
+- `CLAUDE_MODEL`: model argument passed as `--model`
+- `CLAUDE_PERMISSION_MODE`: default `bypassPermissions`
+- `CLAUDE_MAX_TURNS`: optional `--max-turns` value
+- `CLAUDE_NO_SESSION_PERSISTENCE`: default `1`
+- `CLAUDE_PROMPT_ARG`: short print-mode query used with the stdin prompt
+- `CLAUDE_EXTRA_ARGS`: extra shell-parsed arguments appended to `claude -p`
+
+When `BENCHMARK_MAX_COST_USD` is set, the adapter forwards it to Claude Code as
+`--max-budget-usd`.
 
 ## Scoring
 

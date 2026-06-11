@@ -4,23 +4,34 @@ Updated: 2026-06-11
 
 ## Current Summary
 
-The runner has completed an end-to-end Codex adapter dry run against the first
-eight deterministic benchmark tasks in the first target repository,
-`harnessworks/harness-starter-kit`.
+The latest public snapshot covers three compatible 8-task runs against the
+first target repository, `harnessworks/harness-starter-kit`:
 
-| Target | Agent | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `harness-starter-kit` | Codex CLI | 8 | 8 | 0 | 0 | 0 |
+- a no-op baseline that should fail every task,
+- a live Codex CLI dry run,
+- and a Claude Opus solution-quality run replayed through the runner.
 
-Latest detailed report:
-[`2026-06-11-codex-dry-run-8-oracle-fix.md`](2026-06-11-codex-dry-run-8-oracle-fix.md).
+| Target | Agent | Mode | Runs | Successes | First-pass verify | Wrong-file edits | Forbidden-file edits | Timeouts |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `harness-starter-kit` | No-op | Harness validation | 8 | 0 | 0 | 0 | 0 | 0 |
+| `harness-starter-kit` | Codex CLI | Live adapter | 8 | 8 | 8 | 0 | 0 | 0 |
+| `harness-starter-kit` | Claude Opus | Patch replay | 8 | 8 | 8 | 0 | 0 | 0 |
+
+Detailed reports:
+
+- [`2026-06-11-noop-8-harness-validation.md`](2026-06-11-noop-8-harness-validation.md)
+- [`2026-06-11-codex-dry-run-8-oracle-fix.md`](2026-06-11-codex-dry-run-8-oracle-fix.md)
+- [`2026-06-11-claude-as-agent-8.md`](2026-06-11-claude-as-agent-8.md)
 
 ## Interpretation
 
 This is a benchmark infrastructure dry run, not yet a product-effectiveness
-claim. It proves that the runner can execute real Codex tasks in isolated
+claim. The no-op baseline proves the task oracles do not pass empty work. The
+Codex run proves the runner can execute a live agent subprocess in isolated
 clones, collect deterministic evidence, and separate verification failures from
-file-boundary violations.
+file-boundary violations. The Claude replay proves another agent's produced
+solutions can be scored against the same task specs, but it does not measure
+Claude latency or cost because the solve phase happened before replay.
 
 The next evidence milestone is to run the expanded task set repeatedly, then
 compare baseline versus harnessed target repositories.
