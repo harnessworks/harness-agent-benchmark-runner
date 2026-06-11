@@ -11,14 +11,19 @@ Updated: 2026-06-11
 | `harness-starter-kit` | Codex CLI | Live adapter (5×) | 40 | 34 | 85% | 0 | 0 | 4 |
 | `harness-starter-kit` | Claude Opus | Patch replay (1×) | 8 | 8 | 100% | 0 | 0 | 0 |
 | `harness-starter-kit` | Claude Code CLI | Live adapter (5×) | 40 | 37 | 92.5% | 0 | 0 | 0 |
+| `flask-no-harness` | No-op | Target validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Live adapter pilot (1×) | 4 | 3 | 75% | 0 | 0 | 1 |
 
-Latest run: [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md) —
-Codex CLI live adapter, 34/40 successes across 8 tasks × 5 runs, with 0
-wrong-file edits and 0 forbidden-file edits.
+Latest run: [`2026-06-11-flask-no-harness-codex-pilot.md`](2026-06-11-flask-no-harness-codex-pilot.md) —
+Codex CLI live adapter, 3/4 successes across the plain Flask task suite, with 0
+wrong-file edits and 0 forbidden-file edits. The latest repeated comparable
+snapshot remains [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
 Detailed reports:
 
-- [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md) ← latest
+- [`2026-06-11-flask-no-harness-codex-pilot.md`](2026-06-11-flask-no-harness-codex-pilot.md) ← latest
+- [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md)
+- [`2026-06-11-flask-no-harness-noop-baseline.md`](2026-06-11-flask-no-harness-noop-baseline.md)
 - [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md)
 - [`2026-06-11-claude-code-5runs.md`](2026-06-11-claude-code-5runs.md)
 - [`2026-06-11-claude-as-agent-8.md`](2026-06-11-claude-as-agent-8.md)
@@ -36,6 +41,14 @@ The Claude Code multi-repetition run remains useful comparison evidence: 37/40
 successes, 0 timeouts, and 0 file-boundary violations. Next milestone: separate
 agent quality failures from timeout/concurrency pressure by re-running Codex
 with lower parallelism or higher task timeouts.
+
+The `flask-no-harness` row is a negative-control baseline for a newly created
+plain Flask target. It validates that the four Flask-specific oracles reject an
+empty change set before any live agent score is collected.
+
+The Flask Codex pilot then shows 4/4 deterministic verification passes and 0
+boundary violations, but only 3/4 scored successes because `flask-order-quote`
+hit the 600-second agent timeout after producing a verifying solution.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
