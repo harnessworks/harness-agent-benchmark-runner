@@ -25,6 +25,26 @@ file-boundary expectations discoverable to the agent.
 Detailed report:
 [`docs/benchmarks/2026-06-11-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-harness-effect-ab-3x.md).
 
+## What Yes-Harness Improved
+
+The harnessed Flask target did not make the underlying app easier. It made the
+repository's expectations easier for the agent to discover and follow.
+
+| Dimension | `flask-no-harness` | `flask-yes-harness` | Observed effect |
+| --- | --- | --- | --- |
+| Scored success | 4/6 | 6/6 | Harnessed tasks completed more reliably. |
+| Verification | 5/6 | 6/6 | Harnessed runs consistently satisfied deterministic oracles. |
+| File boundaries | 1 wrong-file edit | 0 wrong-file edits | Harness guidance kept edits inside expected paths. |
+| Timeouts | 1 timeout | 0 timeouts | Harnessed runs avoided the long-tail failure seen in the bare target. |
+| Companion docs | Inconsistent path choice | Decision/glossary docs in expected locations | Harness guidance pointed agents to durable knowledge locations. |
+
+The most important difference is not raw Flask coding ability. Both targets
+were solvable. The benefit appeared when the task depended on repository-local
+rules: response shape, documentation side effects, and allowed edit boundaries.
+Without harness guidance, Codex sometimes still found a passing implementation,
+but it was more likely to edit outside the expected boundary or stall before
+making the required change.
+
 ## Benchmark Evidence
 
 | Scope | Agent | Mode | Runs | Successes | Success rate | Wrong-file edits | Forbidden-file edits | Timeouts |
