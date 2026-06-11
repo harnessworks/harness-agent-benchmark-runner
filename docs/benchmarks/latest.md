@@ -11,14 +11,28 @@ Updated: 2026-06-11
 | `harness-starter-kit` | Codex CLI | Live adapter (5×) | 40 | 34 | 85% | 0 | 0 | 4 |
 | `harness-starter-kit` | Claude Opus | Patch replay (1×) | 8 | 8 | 100% | 0 | 0 | 0 |
 | `harness-starter-kit` | Claude Code CLI | Live adapter (5×) | 40 | 37 | 92.5% | 0 | 0 | 0 |
+| `flask-no-harness` | No-op | Target validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Live adapter pilot (1×) | 4 | 3 | 75% | 0 | 0 | 1 |
+| `flask-yes-harness` | No-op | Target validation | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Live adapter pilot (1×) | 4 | 3 | 75% | 0 | 0 | 1 |
+| `flask-no-harness` | Codex CLI | Harness-effect A/B (3×) | 6 | 4 | 66.7% | 1 | 0 | 1 |
+| `flask-yes-harness` | Codex CLI | Harness-effect A/B (3×) | 6 | 6 | 100% | 0 | 0 | 0 |
 
-Latest run: [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md) —
-Codex CLI live adapter, 34/40 successes across 8 tasks × 5 runs, with 0
-wrong-file edits and 0 forbidden-file edits.
+Latest run: [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md) —
+Codex CLI A/B on two harness-effect Flask tasks. The harnessed target reached
+6/6 successes with 0 boundary violations, while the bare target reached 4/6
+with 1 wrong-file edit and 1 timeout. The latest broader repeated snapshot
+remains
+[`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
 Detailed reports:
 
-- [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md) ← latest
+- [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md) ← latest
+- [`2026-06-11-flask-yes-harness-codex-pilot.md`](2026-06-11-flask-yes-harness-codex-pilot.md)
+- [`2026-06-11-flask-yes-harness-noop-baseline.md`](2026-06-11-flask-yes-harness-noop-baseline.md)
+- [`2026-06-11-flask-no-harness-codex-pilot.md`](2026-06-11-flask-no-harness-codex-pilot.md)
+- [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md)
+- [`2026-06-11-flask-no-harness-noop-baseline.md`](2026-06-11-flask-no-harness-noop-baseline.md)
 - [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md)
 - [`2026-06-11-claude-code-5runs.md`](2026-06-11-claude-code-5runs.md)
 - [`2026-06-11-claude-as-agent-8.md`](2026-06-11-claude-as-agent-8.md)
@@ -36,6 +50,25 @@ The Claude Code multi-repetition run remains useful comparison evidence: 37/40
 successes, 0 timeouts, and 0 file-boundary violations. Next milestone: separate
 agent quality failures from timeout/concurrency pressure by re-running Codex
 with lower parallelism or higher task timeouts.
+
+The `flask-no-harness` row is a negative-control baseline for a newly created
+plain Flask target. It validates that the four Flask-specific oracles reject an
+empty change set before any live agent score is collected.
+
+The Flask Codex pilot then shows 4/4 deterministic verification passes and 0
+boundary violations, but only 3/4 scored successes because `flask-order-quote`
+hit the 600-second agent timeout after producing a verifying solution.
+
+The `flask-yes-harness` pilot has the same aggregate score: 3/4 scored
+successes, 4/4 verification passes, and 0 boundary violations. Its timeout moved
+from `flask-order-quote` to `flask-health-version`, so the current A/B evidence
+does not show a success-rate lift from the harness. It mainly shows timeout
+variance under one parallel run.
+
+The later harness-effect A/B suite changes the benchmark shape: detailed API
+contracts and companion-document rules live in the harnessed repository rather
+than the prompt. Under sequential 3x Codex runs, `flask-yes-harness` scored 6/6
+while `flask-no-harness` scored 4/6.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

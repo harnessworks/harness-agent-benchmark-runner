@@ -22,6 +22,16 @@ Current infrastructure status:
 - Current note: repeated live measurements now exist for Codex CLI and Claude
   Code CLI. Claude Opus patch replay remains a deterministic solution-quality
   check, not a live latency or cost measurement.
+- New target: local `flask-no-harness` validates a plain Flask app without
+  harness-specific files. No-op is 0/4 with clean boundaries; the first Codex
+  live pilot is 3/4 with 4/4 verification passes and one timeout.
+- Paired target: local `flask-yes-harness` adds project-specific harness
+  guidance and a normal harness gate. First Codex pilot is also 3/4 with 4/4
+  verification passes and one timeout, so the current A/B signal is timeout
+  variance rather than a clear harness success-rate lift.
+- Harness-effect A/B: after adding convention-discovery tasks where detailed
+  API and documentation rules live in the harnessed repo, Codex scored 6/6 on
+  `flask-yes-harness` versus 4/6 on `flask-no-harness`.
 
 | Scope | Agent | Mode | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -29,6 +39,12 @@ Current infrastructure status:
 | `harness-starter-kit` 8-task dry run | Claude Code CLI | Live adapter (5×) | 40 | 37 | 0 | 0 | 0 |
 | `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter (1×) | 8 | 8 | 0 | 0 | 0 |
 | `harness-starter-kit` 8-task dry run | Claude Opus | Patch replay | 8 | 8 | 0 | 0 | 0 |
+| `flask-no-harness` 4-task baseline | No-op | Target validation | 4 | 0 | 0 | 0 | 0 |
+| `flask-no-harness` 4-task pilot | Codex CLI | Live adapter (1×) | 4 | 3 | 0 | 0 | 1 |
+| `flask-yes-harness` 4-task baseline | No-op | Target validation | 4 | 0 | 0 | 0 | 0 |
+| `flask-yes-harness` 4-task pilot | Codex CLI | Live adapter (1×) | 4 | 3 | 0 | 0 | 1 |
+| `flask-no-harness` harness-effect A/B | Codex CLI | Live adapter (3×) | 6 | 4 | 1 | 0 | 1 |
+| `flask-yes-harness` harness-effect A/B | Codex CLI | Live adapter (3×) | 6 | 6 | 0 | 0 | 0 |
 
 ```mermaid
 xychart-beta
