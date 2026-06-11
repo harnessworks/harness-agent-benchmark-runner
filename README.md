@@ -9,6 +9,31 @@ repository-specific harness tasks.
 This repository owns the runner infrastructure. The repositories being measured
 own their task definitions, success oracles, and project-specific checks.
 
+## Benchmark Status
+
+Current infrastructure status:
+
+- Runner: operational for isolated clone execution, deterministic verification,
+  file-boundary scoring, and JSONL result collection.
+- First target: `harnessworks/harness-starter-kit`.
+- Latest Codex dry run: 2026-06-11, 3 runs, 2 successes, 0 wrong-file edits,
+  0 forbidden-file edits, 0 timeouts.
+- Current note: one docs-only task failed because its oracle required brittle
+  exact substrings even though Codex changed only the expected file.
+
+| Scope | Agent | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `harness-starter-kit` dry run | Codex CLI | 3 | 2 | 0 | 0 | 0 |
+
+```mermaid
+pie showData
+    title Latest Codex dry run outcomes
+    "Success" : 2
+    "Verification failure" : 1
+```
+
+Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
+
 ## Goal
 
 Run agent tasks repeatedly in isolated clones, collect deterministic evidence,
@@ -25,20 +50,6 @@ and produce comparable metrics:
 The runner should not decide product quality by itself. It records deterministic
 signals first, then leaves judgment-heavy fields to a reviewer or a separate
 read-only evaluation agent.
-
-## Benchmark Status
-
-Current infrastructure status:
-
-- Runner: operational for isolated clone execution, deterministic verification,
-  file-boundary scoring, and JSONL result collection.
-- First target: `harnessworks/harness-starter-kit`.
-- Latest Codex dry run: 2026-06-11, 3 runs, 2 successes, 0 wrong-file edits,
-  0 forbidden-file edits, 0 timeouts.
-- Current note: one docs-only task failed because its oracle required brittle
-  exact substrings even though Codex changed only the expected file.
-
-Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
 
 ## Repository Layout
 
