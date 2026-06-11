@@ -10,10 +10,10 @@ eight deterministic benchmark tasks in the first target repository,
 
 | Target | Agent | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `harness-starter-kit` | Codex CLI | 8 | 7 | 0 | 0 | 0 |
+| `harness-starter-kit` | Codex CLI | 8 | 8 | 0 | 0 | 0 |
 
 Latest detailed report:
-[`2026-06-11-codex-dry-run-8.md`](2026-06-11-codex-dry-run-8.md).
+[`2026-06-11-codex-dry-run-8-oracle-fix.md`](2026-06-11-codex-dry-run-8-oracle-fix.md).
 
 ## Interpretation
 
@@ -22,7 +22,7 @@ claim. It proves that the runner can execute real Codex tasks in isolated
 clones, collect deterministic evidence, and separate verification failures from
 file-boundary violations.
 
-The next evidence milestone is to run the expanded task set repeatedly and then
+The next evidence milestone is to run the expanded task set repeatedly, then
 compare baseline versus harnessed target repositories.
 
 ## Raw Artifacts

@@ -16,21 +16,21 @@ Current infrastructure status:
 - Runner: operational for isolated clone execution, deterministic verification,
   file-boundary scoring, and JSONL result collection.
 - First target: `harnessworks/harness-starter-kit`.
-- Latest Codex dry run: 2026-06-11, 8 runs, 7 successes, 0 wrong-file edits,
+- Latest Codex dry run: 2026-06-11, 8 runs, 8 successes, 0 wrong-file edits,
   0 forbidden-file edits, 0 timeouts.
-- Current note: one command-workflow task failed because its oracle checked
-  exact phrases without normalizing line-wrapped text.
+- Current note: the first expanded 8-task dry run is green after the target
+  repository fixed a brittle command-workflow oracle.
 
 | Scope | Agent | Runs | Successes | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `harness-starter-kit` dry run | Codex CLI | 8 | 7 | 0 | 0 | 0 |
+| `harness-starter-kit` dry run | Codex CLI | 8 | 8 | 0 | 0 | 0 |
 
 ```mermaid
 xychart-beta
     title "Success Rate by Scope"
     x-axis ["starter-kit 8-task dry run"]
     y-axis "Success %" 0 --> 100
-    bar [88]
+    bar [100]
 ```
 
 Latest summary: [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md).
