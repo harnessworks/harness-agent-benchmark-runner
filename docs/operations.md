@@ -38,6 +38,57 @@ done
 python3 -m harness_agent_benchmark_runner summarize --results results
 ```
 
+## Hidden Flask Harness A/B
+
+Use `scripts/run_hidden_flask_ab.py` for the next hidden-oracle Flask A/B run.
+It interleaves A (`flask-no-harness`) and B (`flask-yes-harness`) by
+round/task/group, pins Codex to one model configuration, and defaults to a
+no-cost dry run. Live agent execution requires `--execute`.
+
+Dry-run the pilot plan:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py --mode pilot
+```
+
+Run the pilot only after approving live Codex usage:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --mode pilot \
+  --execute
+```
+
+The current committed hidden Flask set has ten task pairs. A representative
+large run uses all hidden task pairs and 10 repeats:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --mode large \
+  --execute
+```
+
+The script sets:
+
+- `CODEX_MODEL=gpt-5.5`
+- `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`
+
+Keep `max_attempts=1` for A/B measurements. A failed task is benchmark data, so
+the A/B script continues after non-zero runner exits and writes every result it
+can collect.
+
+Use
+`docs/benchmarks/templates/hidden-flask-ab-report-template.md` for the public
+summary. To generate the headline and per-task Markdown tables from local JSONL
+records, run:
+
+```bash
+python3 scripts/summarize_hidden_ab.py --results results/<run-id>
+```
+
+Do not commit raw `runs/`, `results/`, logs, cloned repositories, or
+credentials.
+
 ## launchd Shape
 
 On macOS, prefer a thin `launchd` job that calls a shell script in this

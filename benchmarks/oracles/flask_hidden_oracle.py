@@ -18,10 +18,16 @@ def main(argv: list[str]) -> int:
         fail("usage: flask_hidden_oracle.py <task-id>")
 
     checks = {
+        "hidden-effect-availability-badge": check_availability_badge,
         "hidden-effect-stock-risk": check_stock_risk,
         "hidden-effect-supplier-readiness": check_supplier_readiness,
         "hidden-effect-bundle-quote": check_bundle_quote,
+        "hidden-effect-cart-validation": check_cart_validation,
+        "hidden-effect-catalog-metrics": check_catalog_metrics,
+        "hidden-effect-catalog-segments": check_catalog_segments,
+        "hidden-effect-pick-list": check_pick_list,
         "hidden-effect-reservation-preview": check_reservation_preview,
+        "hidden-effect-tax-preview": check_tax_preview,
     }
     task_id = argv[1]
     if task_id not in checks:
@@ -36,6 +42,39 @@ def client():
     app = create_app()
     app.config.update(TESTING=True)
     return app.test_client()
+
+
+def check_availability_badge() -> None:
+    response = client().get("/products/standing-mat/availability")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    product = payload.get("product")
+    availability = payload.get("availability")
+    meta = payload.get("meta")
+
+    expect(product == {"sku": "standing-mat", "stock": 3}, "availability product summary is wrong")
+    expect(isinstance(availability, dict), "availability badge must include availability object")
+    expect(availability.get("badge") == "low_stock", "standing-mat availability badge is wrong")
+    expect(availability.get("orderable") is True, "standing-mat must be orderable")
+    expect(availability.get("restock_recommended") is True, "standing-mat must recommend restock")
+    expect("low stock" in str(availability.get("message", "")).lower(), "availability message must mention low stock")
+    expect(isinstance(meta, dict), "availability badge must include meta object")
+    expect(meta.get("service") == "flask-no-harness", "availability meta.service is wrong")
+    expect(meta.get("source") == "catalog", "availability meta.source must be catalog")
+
+    in_stock = json_payload(client().get("/products/desk-lamp/availability"))
+    expect(in_stock.get("availability", {}).get("badge") == "in_stock", "desk-lamp badge must be in_stock")
+    expect(in_stock.get("availability", {}).get("restock_recommended") is False, "desk-lamp must not recommend restock")
+
+    missing = client().get("/products/missing/availability")
+    assert_status(missing, 404)
+    missing_payload = json_payload(missing)
+    expect(missing_payload.get("error") == "product_not_found", "missing availability SKU must return product_not_found")
+    expect(missing_payload.get("sku") == "missing", "missing availability response must echo sku")
+
+    glossary = glossary_text()
+    expect("availability badge endpoint" in glossary, "glossary must mention availability badge endpoint")
+    expect("in_stock" in glossary and "low_stock" in glossary, "glossary must document availability badges")
 
 
 def check_stock_risk() -> None:
@@ -203,6 +242,211 @@ def check_reservation_preview() -> None:
     expect("reservation preview endpoint" in glossary, "glossary must mention reservation preview endpoint")
     expect("safety stock" in glossary, "glossary must mention safety stock")
     expect("2" in glossary, "glossary must document safety stock value 2")
+
+
+def check_cart_validation() -> None:
+    response = client().post(
+        "/cart/validate",
+        json={
+            "items": [
+                {"sku": "desk-lamp", "quantity": 2},
+                {"sku": "standing-mat", "quantity": 5},
+            ]
+        },
+    )
+    assert_status(response, 200)
+    payload = json_payload(response)
+    items = payload.get("items")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(items, list), "cart validation must return items list")
+    expect(
+        [
+            (
+                item.get("sku"),
+                item.get("status"),
+                item.get("requested_quantity"),
+                item.get("accepted_quantity"),
+                item.get("rejected_quantity"),
+            )
+            for item in items
+        ]
+        == [
+            ("desk-lamp", "accepted", 2, 2, 0),
+            ("standing-mat", "limited", 5, 3, 2),
+        ],
+        "cart validation rows are wrong",
+    )
+    expect(summary == {"requested": 7, "accepted": 5, "rejected": 2}, "cart validation summary is wrong")
+    expect(isinstance(meta, dict), "cart validation must include meta object")
+    expect(meta.get("mode") == "validation", "cart validation meta.mode is wrong")
+    expect(meta.get("service") == "flask-no-harness", "cart validation meta.service is wrong")
+
+    products = json_payload(client().get("/products")).get("products")
+    standing_mat = next(product for product in products if product["sku"] == "standing-mat")
+    expect(standing_mat.get("stock") == 3, "cart validation must not mutate stock")
+
+    unknown = client().post("/cart/validate", json={"items": [{"sku": "missing", "quantity": 1}]})
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown cart SKU must return unknown_sku")
+
+    invalid = client().post("/cart/validate", json={"items": [{"sku": "desk-lamp", "quantity": 0}]})
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid cart quantity must return invalid_quantity")
+
+    decision = " ".join(docs_text("docs/decisions").split()).lower()
+    expect("post /cart/validate" in decision, "decision must mention POST /cart/validate")
+    expect("preview-only" in decision, "decision must describe preview-only validation")
+    expect("limited" in decision, "decision must mention limited cart status")
+
+
+def check_catalog_metrics() -> None:
+    response = client().get("/catalog/metrics")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    metrics = payload.get("metrics")
+    meta = payload.get("meta")
+
+    expect(isinstance(metrics, dict), "catalog metrics must return metrics object")
+    expect(metrics.get("total_skus") == 3, "catalog metrics total_skus is wrong")
+    expect(metrics.get("total_units") == 63, "catalog metrics total_units is wrong")
+    expect_money(metrics.get("inventory_value"), Decimal("573.00"), "catalog metrics inventory_value")
+    expect_money(metrics.get("average_price"), Decimal("22.92"), "catalog metrics average_price")
+    expect(metrics.get("highest_stock_sku") == "notebook", "catalog metrics highest_stock_sku is wrong")
+    expect(metrics.get("lowest_stock_sku") == "standing-mat", "catalog metrics lowest_stock_sku is wrong")
+    expect(isinstance(meta, dict), "catalog metrics must include meta object")
+    expect(meta.get("source") == "catalog", "catalog metrics meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "catalog metrics meta.service is wrong")
+    expect(meta.get("rules") == "catalog-metrics-v1", "catalog metrics rules marker is wrong")
+
+    glossary = glossary_text()
+    expect("catalog metrics endpoint" in glossary, "glossary must mention catalog metrics endpoint")
+    expect("inventory value" in glossary, "glossary must mention inventory value")
+    expect("average price" in glossary, "glossary must mention average price")
+
+
+def check_catalog_segments() -> None:
+    response = client().get("/catalog/segments")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    segments = payload.get("segments")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(segments, list), "catalog segments must return segments list")
+    expect(
+        [
+            (item.get("sku"), item.get("price_band"), item.get("stock_band"))
+            for item in segments
+        ]
+        == [
+            ("desk-lamp", "standard", "steady"),
+            ("notebook", "budget", "deep"),
+            ("standing-mat", "premium", "scarce"),
+        ],
+        "catalog segment rows are wrong",
+    )
+    expect(
+        summary == {
+            "price_bands": {"budget": 1, "standard": 1, "premium": 1},
+            "stock_bands": {"scarce": 1, "steady": 1, "deep": 1},
+        },
+        "catalog segment summary is wrong",
+    )
+    expect(isinstance(meta, dict), "catalog segments must include meta object")
+    expect(meta.get("source") == "catalog", "catalog segments meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "catalog segments meta.service is wrong")
+    expect(meta.get("rules") == "catalog-segments-v1", "catalog segments rules marker is wrong")
+
+    glossary = glossary_text()
+    expect("catalog segments endpoint" in glossary, "glossary must mention catalog segments endpoint")
+    expect("budget" in glossary and "standard" in glossary and "premium" in glossary, "glossary must define price bands")
+    expect("scarce" in glossary and "steady" in glossary and "deep" in glossary, "glossary must define stock bands")
+
+
+def check_pick_list() -> None:
+    response = client().post(
+        "/warehouse/pick-list",
+        json={
+            "items": [
+                {"sku": "notebook", "quantity": 3},
+                {"sku": "desk-lamp", "quantity": 1},
+            ]
+        },
+    )
+    assert_status(response, 200)
+    payload = json_payload(response)
+    picks = payload.get("picks")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(picks, list), "pick list must return picks list")
+    expect(
+        [
+            (item.get("sku"), item.get("bin"), item.get("quantity"))
+            for item in picks
+        ]
+        == [
+            ("desk-lamp", "A1", 1),
+            ("notebook", "B2", 3),
+        ],
+        "pick list rows are wrong",
+    )
+    expect(summary == {"total_units": 4, "distinct_skus": 2}, "pick list summary is wrong")
+    expect(isinstance(meta, dict), "pick list must include meta object")
+    expect(meta.get("mode") == "pick", "pick list meta.mode is wrong")
+    expect(meta.get("service") == "flask-no-harness", "pick list meta.service is wrong")
+
+    unknown = client().post("/warehouse/pick-list", json={"items": [{"sku": "missing", "quantity": 1}]})
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown pick SKU must return unknown_sku")
+
+    invalid = client().post("/warehouse/pick-list", json={"items": [{"sku": "desk-lamp", "quantity": 0}]})
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid pick quantity must return invalid_quantity")
+
+    decision = " ".join(docs_text("docs/decisions").split()).lower()
+    expect("post /warehouse/pick-list" in decision, "decision must mention POST /warehouse/pick-list")
+    expect("bin map" in decision, "decision must mention bin map")
+    expect("a1" in decision and "b2" in decision and "c3" in decision, "decision must document pick bins")
+
+
+def check_tax_preview() -> None:
+    response = client().post(
+        "/orders/tax-preview",
+        json={
+            "items": [
+                {"sku": "desk-lamp", "quantity": 1},
+                {"sku": "notebook", "quantity": 2},
+            ]
+        },
+    )
+    assert_status(response, 200)
+    payload = json_payload(response)
+    expect(payload.get("currency") == "USD", "tax preview currency must be USD")
+    expect(payload.get("item_count") == 3, "tax preview item_count is wrong")
+    expect_money(payload.get("subtotal"), Decimal("31.00"), "tax preview subtotal")
+    expect(str(payload.get("tax_rate")) in {"0.0825", "0.08250"}, "tax preview tax_rate is wrong")
+    expect_money(payload.get("tax"), Decimal("2.56"), "tax preview tax")
+    expect_money(payload.get("total"), Decimal("33.56"), "tax preview total")
+    meta = payload.get("meta")
+    expect(isinstance(meta, dict), "tax preview must include meta object")
+    expect(meta.get("mode") == "tax_preview", "tax preview meta.mode is wrong")
+    expect(meta.get("service") == "flask-no-harness", "tax preview meta.service is wrong")
+
+    unknown = client().post("/orders/tax-preview", json={"items": [{"sku": "missing", "quantity": 1}]})
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown tax preview SKU must return unknown_sku")
+
+    invalid = client().post("/orders/tax-preview", json={"items": [{"sku": "desk-lamp", "quantity": 0}]})
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid tax preview quantity must return invalid_quantity")
+
+    decision = " ".join(docs_text("docs/decisions").split()).lower()
+    expect("post /orders/tax-preview" in decision, "decision must mention POST /orders/tax-preview")
+    expect("preview-only" in decision, "decision must describe preview-only tax behavior")
+    expect("tax rate" in decision and "0.0825" in decision, "decision must mention tax rate 0.0825")
 
 
 def assert_status(response: Any, expected_status: int) -> None:
