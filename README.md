@@ -70,9 +70,12 @@ The next product-value experiment should still use a fixed three-arm structure:
 `bare`, `workflow-only`, and `memory-harness`, but the first pilot shows that a
 larger run is premature. The main product experiment is `partial-realistic`
 held-out work where task-specific answer strings are absent from the target
-repositories. Before another promotion attempt, the memory-harness arm needs
-lower first-edit latency and stronger generalized behavior guidance without
-adding held-out route names, oracle payloads, or exact task answers.
+repositories. A targeted rerun of the previous memory-harness
+`catalog-segments` no-edit failure passed after trimming the memory guidance
+into a shorter feature fast path, but this is still only a one-record
+mitigation check. Before another promotion attempt, rerun the full 12-record
+three-arm pilot with the trimmed memory target and require 0 no-edit watchdog
+stops.
 `full-contract` prompts remain useful controls; small gaps there are expected
 because the prompt already supplies much of the answer.
 

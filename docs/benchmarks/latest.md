@@ -83,6 +83,15 @@ strict with the only no-edit watchdog stop. Schema-contract signal improved
 from the prior aborted pilot (`workflow-only` 3/4, `memory-harness` 2/4), but
 memory-harness did not show product lift over workflow-only.
 
+Latest targeted mitigation check:
+[`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) —
+after trimming the memory target guidance into a shorter benchmark feature fast
+path, the previous `memory-harness` `catalog-segments` no-edit case completed
+in 76 seconds and passed strict scoring. This clears the immediate one-record
+reproduction, but it does not unblock a 100-run promotion by itself. The next
+step remains a fresh full 12-record three-arm pilot with 0 no-edit watchdog
+stops required.
+
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
 Codex CLI repeated the balanced 20-run task set under the revised concept-docs
@@ -94,6 +103,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) ← latest targeted mitigation check
 - [`2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md) ← latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md)
 - [`2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md) ← latest full-contract control
