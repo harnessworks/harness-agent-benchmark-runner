@@ -10,6 +10,8 @@ from pathlib import Path
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_hidden_flask_ab.py"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+BALANCED_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-balanced"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -57,6 +59,47 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 self.assertNotIn("README.md", expected_files)
                 self.assertIn("documented docs location", prompt)
                 self.assertIn("Do not update the root README", prompt)
+
+    def test_balanced_hidden_flask_task_set_plans_exactly_twenty_runs(self) -> None:
+        pairs = hidden_ab.load_task_pairs(BALANCED_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+        schedule = hidden_ab.build_schedule(pairs, repeats=1, pair_order="alternate")
+
+        self.assertEqual(len(pairs), 10)
+        self.assertEqual(len(schedule), 20)
+        for pair in pairs:
+            for task_path in (pair.no_harness, pair.yes_harness):
+                data = hidden_ab.read_json(task_path)
+                self.assertNotEqual(data["repo"]["ref"], "HEAD")
+
+    def test_balanced_hidden_flask_prompts_match_and_include_contracts(self) -> None:
+        pairs = hidden_ab.load_task_pairs(BALANCED_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+
+        for pair in pairs:
+            no_harness = hidden_ab.read_json(pair.no_harness)
+            yes_harness = hidden_ab.read_json(pair.yes_harness)
+            prompt = no_harness["prompt"]
+
+            self.assertEqual(
+                prompt,
+                yes_harness["prompt"],
+                msg=f"{pair.task_id} balanced prompt differs between A/B targets",
+            )
+            for phrase in (
+                "Endpoint and method:",
+                "Success status:",
+                "Top-level",
+                "Core business rule:",
+                "source of truth",
+                "documented docs location",
+                "Do not update the root README",
+            ):
+                self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+
+            if "POST " in prompt:
+                for phrase in ("Request JSON schema:", "unknown_sku", "invalid_quantity"):
+                    self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
 
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

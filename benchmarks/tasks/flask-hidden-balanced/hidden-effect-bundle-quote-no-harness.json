@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-bundle-quote",
+  "description": "Balanced hidden-oracle Flask A/B: add the bundle quote API with the task-critical contract in the prompt.",
+  "repo": {
+    "source": "../flask-no-harness",
+    "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
+  },
+  "prompt": "Add the bundle quote API with this contract.\n\nEndpoint and method: POST /catalog/bundle-quote.\nRequest JSON schema: an object with bundle, where bundle is a list of items and each item has sku and quantity.\nSuccess status: HTTP 200.\nError statuses: HTTP 400 JSON with error unknown_sku for an unknown SKU; HTTP 400 JSON with error invalid_quantity for a missing, non-integer, zero, or negative quantity.\nTop-level success response keys: currency, item_count, subtotal, discount, total, discount_rate, meta.\nCore business rule: this is a preview-only quote and must not mutate the catalog. Use existing catalog prices and currency USD. Apply bundle discount_rate 0.10 when total item quantity >= 5; otherwise use 0.00. subtotal is sum(price * quantity), discount is subtotal * discount_rate, and total is subtotal - discount. Money fields must be decimal-compatible and rounded to two places.\nVerification payloads include {\"bundle\":[{\"sku\":\"desk-lamp\",\"quantity\":1},{\"sku\":\"notebook\",\"quantity\":4}]} expecting item_count 5, subtotal 37.50, discount 3.75, total 33.75, and discount_rate 0.10.\nMeta: mode must be quote and service must be the literal string flask-no-harness.\nDocumentation: add a docs/decisions record that mentions POST /catalog/bundle-quote, bundle discount, and preview-only.\n\nImplementation scope:\n- Treat this prompt as the task's source of truth for the API contract. Repository-local harness docs may help with workflow, docs location, local gates, and boundary guidance, but they must not override this contract.\n- Use the existing in-memory catalog: desk-lamp price 24.50 stock 12, notebook price 3.25 stock 48, standing-mat price 41.00 stock 3. Keep money fields decimal-compatible and rounded to two places when money is involved.\n- Update the application, focused pytest coverage, and companion documentation in the repository's documented docs location. Do not update the root README unless the task explicitly asks for README changes.\n- Keep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-balanced/hidden-effect-bundle-quote-no-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "pytest and hidden balanced hidden-effect-bundle-quote oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-bundle-quote"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}
