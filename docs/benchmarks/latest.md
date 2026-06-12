@@ -62,9 +62,13 @@ guidance. A canary no longer stalled, but the next fresh pilot again stopped at
 record 4 after the workflow-only agent ran `rg --files` against
 `benchmarks/oracles` and `benchmarks/tasks`. The hidden directories were not
 visible, but this is still a valid abnormal signal because agent-visible
-workflow docs point at paths the heldout runner intentionally hides. This
-diagnostic should not be promoted to official product evidence and does not
-justify starting the 100-record heldout run.
+workflow docs point at paths the heldout runner intentionally hides. The target
+workflow ref was then cleaned and repinned to
+`3a8f7ff50d967275156e48056598a6babb9686a9`; a canary showed hidden access 0,
+and the next fresh pilot reached record 7 before stopping on a bare
+`hidden-effect-catalog-metrics` stall. This diagnostic should not be promoted
+to official product evidence and does not justify starting the 100-record
+heldout run.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —

@@ -19,6 +19,9 @@ The pilot was stopped early under the stated mid-run abnormal-signal rule:
   narrow canary completed without a stall, but the fresh 10-record pilot was
   stopped during record 4 because the workflow-only agent attempted to enumerate
   hidden `benchmarks/oracles` and `benchmarks/tasks` paths.
+- After updating the workflow target ref to remove hidden-path guidance, the
+  workflow-only canary completed with zero hidden access. A fresh 10-record
+  pilot then reached record 7 before stopping on a bare `catalog-metrics` stall.
 
 Do not start the 100-record heldout run from this state.
 
@@ -223,6 +226,63 @@ agent-visible workflow docs and `AGENTS.md` mention local benchmark/oracle
 paths, so the workflow-only agent naturally tried to inspect paths that the
 heldout runner intentionally hides.
 
+## Target-Clean Canary
+
+The workflow target repository was updated to remove direct hidden
+benchmark/oracle path guidance from agent-visible docs and to make
+`scripts/check_harness.py` skip benchmark task-contract checks when
+`benchmarks/` is intentionally absent during agent execution.
+
+- Updated target ref: `flask-yes-harness` @
+  `3a8f7ff50d967275156e48056598a6babb9686a9`
+- Workspace:
+  `runs/hidden-flask-bundle-workflow-targetclean-canary-20260612T1335Z`
+- Results:
+  `results/hidden-flask-bundle-workflow-targetclean-canary-20260612T1335Z`
+- Task: `hidden-effect-bundle-quote`
+- Target arm: `workflow-only`
+- Agent duration: 135.967 seconds
+- Stall/timeout: no
+- Hidden access: 0
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+- Excluded-path conflicts: 0
+
+The canary failed hidden functional/schema checks but passed workflow and
+boundary checks. This is acceptable diagnostic evidence: the target-clean ref
+removed the hidden-path abnormal without turning the heldout task into a
+full-contract success.
+
+## Fresh Pilot With Target-Clean Ref
+
+- Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
+- Planned shape: 5 tasks x 2 arms x 1 repeat = 10 records
+- Completed records before stop: 7
+- Workspace: `runs/hidden-flask-heldout-10-targetclean-20260612T1338Z`
+- Results: `results/hidden-flask-heldout-10-targetclean-20260612T1338Z`
+- Command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-limit 5 --repeats 1 --agent-stall-timeout 330 --stop-on-abnormal --workspace runs/hidden-flask-heldout-10-targetclean-20260612T1338Z --results results/hidden-flask-heldout-10-targetclean-20260612T1338Z --execute`
+- Stop reason: record 7, `bare` `hidden-effect-catalog-metrics`, stopped by
+  the stall watchdog at 330.004 seconds.
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | Wrong-file edits | Forbidden-file edits |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 4 | 0 | 0 | 0 | 3 | 4 | 0 | 1 | 1 | 0 | 0 |
+| `workflow-only` | 3 | 0 | 0 | 1 | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
+
+| Record | Target | Task | Agent duration | Stall | Hidden access | Result |
+| --- | --- | --- | ---: | --- | --- | --- |
+| `20260612T133834Z-hidden-effect-availability-badge-0828e050` | `bare` | `hidden-effect-availability-badge` | 63.404s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T133945Z-hidden-effect-availability-badge-55259745` | `workflow-only` | `hidden-effect-availability-badge` | 71.662s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T134105Z-hidden-effect-bundle-quote-b2ff6ce3` | `bare` | `hidden-effect-bundle-quote` | 166.064s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T134359Z-hidden-effect-bundle-quote-d70d4583` | `workflow-only` | `hidden-effect-bundle-quote` | 122.259s | no | no | Schema passed, functional failed; workflow and boundary passed. |
+| `20260612T134608Z-hidden-effect-cart-validation-733788e3` | `bare` | `hidden-effect-cart-validation` | 81.569s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T134736Z-hidden-effect-cart-validation-64e1ac2c` | `workflow-only` | `hidden-effect-cart-validation` | 115.744s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T134959Z-hidden-effect-catalog-metrics-9924a689` | `bare` | `hidden-effect-catalog-metrics` | 330.004s | yes | no | No files changed; workflow failed because the agent was stopped by the watchdog. |
+
+This run confirms that the target-clean ref removed the hidden benchmark path
+abnormal from the workflow-only arm. It does not clear promotion criteria:
+record 7 produced a first-class `agent_stalled=true` signal on the bare arm.
+
 ## Recommendation
 
 Do not proceed to the 100-record heldout run yet.
@@ -236,11 +296,11 @@ Before the next promotion attempt:
 - Use the runner's `--agent-stall-timeout` pilot watchdog so "no result after N
   seconds" is captured as a first-class `agent_stalled` record rather than
   requiring manual termination.
-- Fix the target workflow-harness refs before rerunning: heldout workflow and
-  memory harnesses should not instruct agents to inspect `benchmarks/tasks` or
-  `benchmarks/oracles` when those paths are hidden. Keep the generic local gate
-  visible through `scripts/check_harness.py` or equivalent answer-free docs,
-  then update the pinned task refs.
+- Keep the target-clean workflow ref pinned for future pilots:
+  `flask-yes-harness` @ `3a8f7ff50d967275156e48056598a6babb9686a9`.
+- Investigate the remaining bare `hidden-effect-catalog-metrics` stall before
+  another promotion attempt. The stopped record made no edits and had no hidden
+  access, so this is an execution-stability issue rather than a leakage issue.
 - Only rerun the fresh 10-record pilot after the stall is explained or made
   consistently non-recurring and the agent-visible docs no longer point at
   hidden benchmark/oracle directories. Promote to 100 records only if the

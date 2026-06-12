@@ -29,7 +29,9 @@ watchdog, then stopped the fresh 10-record pilot at record 4 with a recorded
 execpolicy `.rules` files and plugin loading by default, a canary no longer
 stalled, but the fresh pilot again stopped at record 4 because the
 workflow-only agent attempted to enumerate hidden `benchmarks/oracles` and
-`benchmarks/tasks` paths. It is not official product evidence and does not
+`benchmarks/tasks` paths. After the target workflow ref was cleaned, hidden
+access dropped to 0, but the next fresh pilot stopped at record 7 on a bare
+`catalog-metrics` stall. It is not official product evidence and does not
 justify starting the 100-record heldout run yet.
 
 This is representative for the explicitly measured `jobs=2` run shape. It is
