@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -14,6 +15,7 @@ from harness_agent_benchmark_runner.runner import (
     materialize_verification_command,
     run_task,
     run_task_with_retries,
+    write_result,
 )
 from harness_agent_benchmark_runner.summary import summarize_results
 from harness_agent_benchmark_runner.tasks import load_task
@@ -262,6 +264,37 @@ class RunnerTests(unittest.TestCase):
             materialize_verification_command("python {task_dir}/check.py", task_path),
             "python /tmp/benchmarks/tasks/check.py",
         )
+
+    def test_write_result_supports_concurrent_jsonl_appends(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            results_dir = root / "results"
+            records = [
+                {
+                    "schema_version": 1,
+                    "run_id": f"run-{index}",
+                    "task": {"id": "fixture-task"},
+                    "scoring": {"success": True},
+                }
+                for index in range(20)
+            ]
+
+            def write(index: int) -> None:
+                run_dir = root / f"run-{index}"
+                run_dir.mkdir()
+                write_result(records[index], results_dir, run_dir)
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                list(executor.map(write, range(len(records))))
+
+            jsonl_files = sorted(results_dir.glob("*.jsonl"))
+            self.assertEqual(len(jsonl_files), 1)
+            lines = jsonl_files[0].read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), len(records))
+            self.assertEqual(
+                {json.loads(line)["run_id"] for line in lines},
+                {record["run_id"] for record in records},
+            )
 
 
 def create_git_repo(path: Path) -> Path:

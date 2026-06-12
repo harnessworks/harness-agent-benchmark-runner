@@ -31,6 +31,8 @@ Updated: 2026-06-12
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (20-run, run-time oracle) | 10 | 10 | 100% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (post-hoc concept-docs rescore) | 10 | 9 | 90% | 0 | 0 | 0 |
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (post-hoc concept-docs rescore) | 10 | 10 | 100% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B `jobs=2` calibration | 10 | 9 | 90% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B `jobs=2` calibration | 10 | 10 | 100% | 0 | 0 | 0 |
 
 Latest run:
 [`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) —
@@ -50,8 +52,18 @@ The latest repeated hidden-oracle evidence remains
 and the latest broader repeated snapshot remains
 [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
+Recent throughput calibration:
+[`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
+Codex CLI repeated the balanced 20-run task set under the revised concept-docs
+oracle with `--jobs 2`. It completed 20/20 records in about 22 minutes with 0
+wrong-file edits, 0 forbidden-file edits, 0 timeouts, and 0 runner errors.
+`flask-no-harness` scored 9/10; `flask-yes-harness` scored 10/10. This is a
+parallel throughput calibration, not a replacement for representative
+sequential evidence.
+
 Detailed reports:
 
+- [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) ← latest throughput calibration
 - [`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) ← latest pilot
 - [`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md)
 - [`2026-06-12-hidden-flask-ab-partial-calibration-35.md`](2026-06-12-hidden-flask-ab-partial-calibration-35.md)
@@ -132,6 +144,13 @@ no-harness failures were docs phrase misses under the original pilot oracle, so
 the docs oracle has now been revised to check route and domain-term coverage
 rather than exact English phrases. The saved run directories rescore to 9/10 vs
 10/10 under that revised oracle; the remaining no-harness miss is functional.
+
+The `jobs=2` calibration then reran the balanced 20-run task set with the
+revised concept-docs oracle and low parallelism. It completed cleanly with 0
+timeouts and 0 boundary violations, scoring 9/10 for `flask-no-harness` and
+10/10 for `flask-yes-harness`. This supports `jobs=2` as a candidate
+wall-clock-saving shape, but any 100-run report that uses it must state the
+parallelism explicitly and keep timeout behavior separate from task quality.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

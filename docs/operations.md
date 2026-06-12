@@ -86,10 +86,19 @@ The script sets:
 
 - `CODEX_MODEL=gpt-5.5`
 - `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`
+- `--jobs 1` by default, so representative runs are sequential unless
+  parallelism is explicitly part of the measured condition
 
 Keep `max_attempts=1` for A/B measurements. A failed task is benchmark data, so
 the A/B script continues after non-zero runner exits and writes every result it
 can collect.
+
+Use `--jobs 2` only as a throughput calibration before promoting it to a
+representative run shape. Record the job count in the report, and treat any
+timeout under parallel execution as possibly caused by scheduler or service
+pressure until a sequential follow-up rules that out. Avoid higher concurrency
+for Codex evidence runs unless the experiment is explicitly measuring
+concurrency pressure.
 
 Treat interrupted large runs as diagnostic only. Do not promote partial JSONL
 records to `docs/benchmarks/latest.md` or README evidence tables. When reporting

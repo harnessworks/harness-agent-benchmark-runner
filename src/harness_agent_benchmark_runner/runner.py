@@ -12,6 +12,11 @@ from typing import Any
 from .models import ProcessResult, RunnerConfig, TaskSpec
 from .processes import run_process
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - fcntl is unavailable on Windows.
+    fcntl = None
+
 
 def run_task(
     task: TaskSpec,
@@ -364,8 +369,21 @@ def write_result(result: dict[str, Any], results_dir: Path, run_dir: Path) -> No
 
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     jsonl_path = results_dir / f"{day}.jsonl"
-    with jsonl_path.open("a", encoding="utf-8") as stream:
-        stream.write(json.dumps(result, sort_keys=True) + "\n")
+    line = json.dumps(result, sort_keys=True) + "\n"
+
+    if fcntl is None:
+        with jsonl_path.open("a", encoding="utf-8") as stream:
+            stream.write(line)
+        return
+
+    lock_path = results_dir / f"{day}.jsonl.lock"
+    with lock_path.open("w", encoding="utf-8") as lock_stream:
+        fcntl.flock(lock_stream.fileno(), fcntl.LOCK_EX)
+        try:
+            with jsonl_path.open("a", encoding="utf-8") as stream:
+                stream.write(line)
+        finally:
+            fcntl.flock(lock_stream.fileno(), fcntl.LOCK_UN)
 
 
 def make_run_id(task_id: str) -> str:
