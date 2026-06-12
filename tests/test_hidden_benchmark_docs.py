@@ -31,11 +31,13 @@ class HiddenBenchmarkDocsTests(unittest.TestCase):
         text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         normalized = " ".join(text.split())
 
-        self.assertIn("Run-time strict successes", text)
-        self.assertIn("Current concept-docs rescore", text)
+        self.assertIn("Strict successes", text)
         self.assertIn("Verification passed", text)
+        self.assertIn("Timeouts", text)
+        self.assertIn("Boundary issues", text)
         self.assertIn("strict boundary miss", text)
         self.assertIn("not a functional failure by itself", normalized)
+        self.assertIn("timeout stability remains unresolved", normalized)
 
 
 if __name__ == "__main__":

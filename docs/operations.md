@@ -59,26 +59,33 @@ python3 scripts/run_hidden_flask_ab.py \
   --execute
 ```
 
-The current committed hidden Flask set has ten task pairs. A representative
-large run uses all hidden task pairs and 10 repeats. Before running it, use one
-full-pass calibration over all task pairs:
+The current committed balanced hidden Flask set has ten task pairs under
+`benchmarks/tasks/flask-hidden-balanced`. A 100-record A/B run uses all ten task
+pairs and `repeats=5`:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
   --mode large \
-  --repeats 1 \
+  --task-dir benchmarks/tasks/flask-hidden-balanced \
+  --repeats 5 \
   --execute
 ```
 
-The 2026-06-12 calibration produced 20 records: `flask-no-harness` reached
-0/10 strict scored successes and 0/10 verification passes, while
-`flask-yes-harness` reached 10/10 on both measures. Both targets had 0
-wrong-file edits, 0 forbidden-file edits, 0 timeouts, and 0 root `README.md`
-edits. That calibration supports proceeding to the representative large run:
+The 2026-06-12 100-record `jobs=2` evidence run produced 46/50 strict scored
+successes for `flask-no-harness` and 48/50 for `flask-yes-harness`.
+Verification passed was 46/50 vs 49/50. Both targets had 0 wrong-file edits and
+0 forbidden-file edits, but `jobs=2` introduced timeout noise: 1 no-harness
+timeout and 2 yes-harness timeouts. Treat that result as representative for the
+explicit `jobs=2` condition, not as a pure sequential claim.
+
+For the cleanest timeout-stability follow-up, rerun the same 100-record shape
+sequentially:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
   --mode large \
+  --task-dir benchmarks/tasks/flask-hidden-balanced \
+  --repeats 5 \
   --execute
 ```
 
