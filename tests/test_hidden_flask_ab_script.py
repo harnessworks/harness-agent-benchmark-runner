@@ -18,6 +18,9 @@ SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_hidden_flas
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BALANCED_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-balanced"
 MEDIUM_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-medium"
+WORKFLOW_SMOKE_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-workflow-smoke"
+HELDOUT_10_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-heldout-10"
+CLEAN_YES_HARNESS_REF = "91da156916e4cf924ded1fdc4d4db80338b19284"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -156,6 +159,67 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
             for phrase in exact_contract_markers:
                 self.assertNotIn(phrase, prompt, msg=f"{pair.task_id} still has exact marker {phrase!r}")
+
+    def test_workflow_smoke_uses_clean_harness_ref_and_equal_contract_prompts(self) -> None:
+        pairs = hidden_ab.load_task_pairs(WORKFLOW_SMOKE_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+        schedule = hidden_ab.build_schedule(pairs, repeats=1, pair_order="alternate")
+
+        self.assertEqual(len(pairs), 10)
+        self.assertEqual(len(schedule), 20)
+        for pair in pairs:
+            no_harness = hidden_ab.read_json(pair.no_harness)
+            yes_harness = hidden_ab.read_json(pair.yes_harness)
+            prompt = no_harness["prompt"]
+
+            self.assertEqual(
+                prompt,
+                yes_harness["prompt"],
+                msg=f"{pair.task_id} workflow smoke prompt differs between A/B targets",
+            )
+            self.assertEqual(
+                yes_harness["repo"]["ref"],
+                CLEAN_YES_HARNESS_REF,
+                msg=f"{pair.task_id} does not use the clean yes-harness ref",
+            )
+            for phrase in (
+                "Endpoint and method:",
+                "Success status:",
+                "Top-level",
+                "Core business rule:",
+                "Treat this prompt as the task's source of truth",
+                "documented docs location",
+                "Do not update the root README",
+            ):
+                self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+
+    def test_heldout_10_uses_clean_harness_ref_and_partial_prompts(self) -> None:
+        pairs = hidden_ab.load_task_pairs(HELDOUT_10_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+        schedule = hidden_ab.build_schedule(pairs, repeats=1, pair_order="alternate")
+
+        self.assertEqual(len(pairs), 5)
+        self.assertEqual(len(schedule), 10)
+        for pair in pairs:
+            no_harness = hidden_ab.read_json(pair.no_harness)
+            yes_harness = hidden_ab.read_json(pair.yes_harness)
+            prompt = no_harness["prompt"]
+
+            self.assertEqual(
+                prompt,
+                yes_harness["prompt"],
+                msg=f"{pair.task_id} heldout prompt differs between A/B targets",
+            )
+            self.assertEqual(
+                yes_harness["repo"]["ref"],
+                CLEAN_YES_HARNESS_REF,
+                msg=f"{pair.task_id} does not use the clean yes-harness ref",
+            )
+            self.assertIn("Follow the repository's existing public API response style", prompt)
+            self.assertIn("documented docs location", prompt)
+            self.assertIn("Do not update the root README", prompt)
+            self.assertNotIn("Treat this prompt as the task's source of truth", prompt)
+            self.assertNotIn("Endpoint and method:", prompt)
 
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

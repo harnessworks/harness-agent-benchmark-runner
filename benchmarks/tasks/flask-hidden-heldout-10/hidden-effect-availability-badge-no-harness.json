@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-availability-badge",
+  "description": "Held-out 10-run product evidence smoke: realistic partial prompt, answer-memory-free yes-harness ref, deterministic hidden oracle.",
+  "repo": {
+    "source": "../flask-no-harness",
+    "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
+  },
+  "prompt": "Add an availability badge endpoint for individual products.\n\nAdd GET /products/<sku>/availability. It should summarize the product's current catalog availability for customers, including whether the product is orderable, whether a restock should be recommended, and a short human-readable availability message. Treat stock below 10 as low stock, and distinguish in-stock, low-stock, and out-of-stock cases. Missing SKUs should use the same JSON error style as nearby product lookup APIs.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, and status codes. Add focused pytest coverage for the normal, low-stock, and missing-SKU cases. Update companion documentation in the repository's documented docs location so future maintainers can find the availability badge behavior. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-heldout-10/hidden-effect-availability-badge-no-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "pytest and heldout-10 hidden-effect-availability-badge oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-availability-badge"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}
