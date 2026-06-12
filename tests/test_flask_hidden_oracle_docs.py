@@ -79,6 +79,12 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
                     "glossary must document stock risk route and bands",
                 )
 
+    def test_schema_money_key_detection_allows_band_labels(self) -> None:
+        self.assertFalse(flask_hidden_oracle.is_money_key("price_band"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("price_bands"))
+        self.assertTrue(flask_hidden_oracle.is_money_key("unit_price"))
+        self.assertTrue(flask_hidden_oracle.is_money_key("total_amount"))
+
 
 if __name__ == "__main__":
     unittest.main()

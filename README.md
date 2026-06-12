@@ -33,8 +33,13 @@ workflow-only agent attempted to enumerate hidden `benchmarks/oracles` and
 access dropped to 0, but the next fresh pilot stopped at record 7 on a bare
 `catalog-metrics` stall. A narrow recheck of that exact bare task completed,
 but the next fresh 10-record rerun stopped at record 2 on a workflow-only
-`availability-badge` stall. It is not official product evidence and does not
-justify starting the 100-record heldout run yet.
+`availability-badge` stall. A later post-triage fresh 10 completed without
+stalls but exposed an over-strict API style gate when the agent edited
+`scripts/check_api_style.py`; the generic `_band`/`_bands` schema rule was
+fixed in the target gate and hidden oracle. A gate-fix canary cleared the
+boundary issue, but the next fresh 10 again stopped at record 2 on the same
+workflow-only `availability-badge` stall. It is not official product evidence
+and does not justify starting the 100-record heldout run yet.
 
 This is representative for the explicitly measured `jobs=2` run shape. It is
 not a pure sequential claim: the run produced timeout noise, so strict scored

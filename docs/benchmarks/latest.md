@@ -68,9 +68,16 @@ workflow ref was then cleaned and repinned to
 and the next fresh pilot reached record 7 before stopping on a bare
 `hidden-effect-catalog-metrics` stall. A narrow recheck of that exact bare task
 completed without a stall, but the next fresh 10-record rerun stopped at record
-2 on a workflow-only `hidden-effect-availability-badge` stall. This diagnostic
-should not be promoted to official product evidence and does not justify
-starting the 100-record heldout run.
+2 on a workflow-only `hidden-effect-availability-badge` stall. A later
+post-triage fresh 10 completed without stalls but exposed an over-strict API
+style gate/schema rule when the workflow-only `catalog-segments` agent edited
+`scripts/check_api_style.py`; the generic `_band`/`_bands` money-key exception
+was fixed in the target gate and hidden oracle, and the workflow target was
+repinned to `0f478ddede915b2f0cf41662373c53d8c70f3f86`. A gate-fix canary
+cleared the boundary issue, but the next fresh 10 again stopped at record 2 on
+the same workflow-only `hidden-effect-availability-badge` stall. This
+diagnostic should not be promoted to official product evidence and does not
+justify starting the 100-record heldout run.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —

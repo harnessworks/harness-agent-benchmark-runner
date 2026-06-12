@@ -4,7 +4,7 @@
   "description": "Held-out 10-run product evidence smoke: realistic partial prompt, answer-memory-free yes-harness ref, deterministic hidden oracle.",
   "repo": {
     "source": "../flask-yes-harness",
-    "ref": "3a8f7ff50d967275156e48056598a6babb9686a9"
+    "ref": "0f478ddede915b2f0cf41662373c53d8c70f3f86"
   },
   "prompt": "Add a catalog metrics endpoint.\n\nAdd GET /catalog/metrics. It should summarize the current in-memory catalog with SKU count, total units, inventory value, average item price, and the SKUs with the highest and lowest stock. Use the project's normal decimal-compatible money formatting for calculated money values.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, and status codes. Add focused pytest coverage for the current catalog metrics. Update companion documentation in the repository's documented docs location so future maintainers can find the inventory value and average price definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-hidden-heldout-10/hidden-effect-catalog-metrics-yes-harness.json",

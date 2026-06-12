@@ -20,7 +20,7 @@ BALANCED_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-balanced"
 MEDIUM_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-medium"
 WORKFLOW_SMOKE_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-workflow-smoke"
 HELDOUT_10_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-heldout-10"
-CLEAN_YES_HARNESS_REF = "3a8f7ff50d967275156e48056598a6babb9686a9"
+CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)

@@ -25,6 +25,15 @@ The pilot was stopped early under the stated mid-run abnormal-signal rule:
 - A narrow recheck of that exact bare `catalog-metrics` task completed without
   a stall, but the next fresh 10-record rerun stopped at record 2 on a
   workflow-only `availability-badge` stall.
+- A narrow recheck of workflow-only `availability-badge` completed three clean
+  records, and a post-triage fresh 10 then completed without stalls. That run
+  still stopped on the final record because workflow-only `catalog-segments`
+  edited `scripts/check_api_style.py`, exposing an over-strict generic API
+  style/schema rule for `_band` and `_bands` label fields.
+- After fixing the target gate and hidden schema oracle and repinning the
+  workflow target to `0f478ddede915b2f0cf41662373c53d8c70f3f86`, a
+  `catalog-segments` canary cleared the boundary issue. The next fresh 10
+  again stopped at record 2 on a workflow-only `availability-badge` stall.
 
 Do not start the 100-record heldout run from this state.
 
@@ -331,6 +340,98 @@ local Flask routes, tests, docs, and harness guidance, then stalled before
 making edits. This keeps the blocker in execution stability rather than hidden
 content leakage.
 
+## Availability Narrow Recheck
+
+- Workspace: `runs/hidden-flask-availability-workflow-stall-triage-20260612T1410Z`
+- Results: `results/hidden-flask-availability-workflow-stall-triage-20260612T1410Z`
+- Task: `hidden-effect-availability-badge`
+- Target arm: `workflow-only`
+- Repeats: 3
+- Stall/timeout: 0
+- Hidden access: 0
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+- Agent durations: 65.954s, 111.507s, 65.072s
+
+All three narrow records failed hidden functional/schema checks but passed
+workflow and boundary checks. This showed that the workflow-only availability
+stall is intermittent rather than a deterministic task-specific deadlock.
+
+## Post-Triage Fresh Pilot
+
+- Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
+- Planned shape: 5 tasks x 2 arms x 1 repeat = 10 records
+- Completed records before stop: 10
+- Workspace: `runs/hidden-flask-heldout-10-posttriage-20260612T141605Z`
+- Results: `results/hidden-flask-heldout-10-posttriage-20260612T141605Z`
+- Command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-limit 5 --repeats 1 --agent-stall-timeout 330 --stop-on-abnormal --workspace runs/hidden-flask-heldout-10-posttriage-20260612T141605Z --results results/hidden-flask-heldout-10-posttriage-20260612T141605Z --execute`
+- Stop reason: record 10, `workflow-only` `hidden-effect-catalog-segments`,
+  stopped after result collection because of 1 wrong-file edit.
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | Wrong-file edits | Forbidden-file edits |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 5 | 0 | 0 | 0 | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
+| `workflow-only` | 5 | 0 | 1 | 0 | 4 | 4 | 0 | 0 | 0 | 1 | 0 |
+
+The first nine records had no stalls, timeouts, hidden access, wrong-file
+edits, or forbidden-file edits. The final workflow-only `catalog-segments`
+record passed hidden functional checks but failed schema and boundary checks.
+The agent edited `scripts/check_api_style.py` and `tests/test_api_style_gate.py`
+so local API style validation would not treat `price_band` and `price_bands` as
+money fields. Because task expected files are limited to `app/**`, `tests/**`,
+and `docs/**`, this correctly counted as a wrong-file edit.
+
+The diagnosis is that the local target gate and hidden schema oracle were too
+strict: `_band` and `_bands` are categorical label/count fields, not decimal
+money fields. The target gate was fixed at `flask-yes-harness` commit
+`0f478ddede915b2f0cf41662373c53d8c70f3f86`, and the runner hidden oracle now
+uses the same generic exception.
+
+## Gate-Fix Canary
+
+- Workspace: `runs/hidden-flask-catalog-segments-workflow-gatefix-canary-20260612T143544Z`
+- Results: `results/hidden-flask-catalog-segments-workflow-gatefix-canary-20260612T143544Z`
+- Task: `hidden-effect-catalog-segments`
+- Target arm: `workflow-only`
+- Updated target ref: `flask-yes-harness` @
+  `0f478ddede915b2f0cf41662373c53d8c70f3f86`
+- Agent duration: 67.134 seconds
+- Functional: passed
+- Schema contract: failed because the response omitted `meta`
+- Workflow: passed
+- Boundary: passed
+- Stall/timeout: no
+- Hidden access: 0
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+
+This canary confirms that the `_band`/`_bands` exception removes the wrong-file
+pressure without adding task-specific hidden answers to the target docs. The
+remaining schema failure is a product implementation miss under the
+partial-realistic prompt, not an infrastructure abnormal.
+
+## Gate-Fix Fresh Pilot
+
+- Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
+- Planned shape: 5 tasks x 2 arms x 1 repeat = 10 records
+- Completed records before stop: 2
+- Workspace: `runs/hidden-flask-heldout-10-gatefix-20260612T143727Z`
+- Results: `results/hidden-flask-heldout-10-gatefix-20260612T143727Z`
+- Command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-limit 5 --repeats 1 --agent-stall-timeout 330 --stop-on-abnormal --workspace runs/hidden-flask-heldout-10-gatefix-20260612T143727Z --results results/hidden-flask-heldout-10-gatefix-20260612T143727Z --execute`
+- Stop reason: record 2, `workflow-only` `hidden-effect-availability-badge`,
+  stopped by the stall watchdog at 330.004 seconds.
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | Wrong-file edits | Forbidden-file edits |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 1 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| `workflow-only` | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 1 | 0 | 0 |
+
+The stopped workflow-only record made no file changes and had no hidden
+benchmark access pattern. The agent read local Flask routes, tests, docs, and
+harness guidance, then stalled before editing. This re-establishes the current
+promotion blocker as intermittent workflow-only availability execution
+stability.
+
 ## Recommendation
 
 Do not proceed to the 100-record heldout run yet.
@@ -345,7 +446,7 @@ Before the next promotion attempt:
   seconds" is captured as a first-class `agent_stalled` record rather than
   requiring manual termination.
 - Keep the target-clean workflow ref pinned for future pilots:
-  `flask-yes-harness` @ `3a8f7ff50d967275156e48056598a6babb9686a9`.
+  `flask-yes-harness` @ `0f478ddede915b2f0cf41662373c53d8c70f3f86`.
 - Investigate the remaining stall instability before another promotion attempt.
   It has now appeared on bare `hidden-effect-catalog-metrics` and workflow-only
   `hidden-effect-availability-badge`. Both stopped records made no edits and
