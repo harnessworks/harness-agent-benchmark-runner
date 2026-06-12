@@ -21,6 +21,13 @@ boundary, and local-gate guidance.
 Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
 
+Latest heldout mitigation diagnostic:
+[`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md).
+That run found and fixed a hidden-path leakage issue, then stopped the fresh
+10-record pilot at record 3 because the agent produced no result after about
+5m30s. It is not official product evidence and does not justify starting the
+100-record heldout run yet.
+
 This is representative for the explicitly measured `jobs=2` run shape. It is
 not a pure sequential claim: the run produced timeout noise, so strict scored
 success and verification passed should be read separately.
@@ -161,6 +168,7 @@ parallel scheduler pressure.
 
 ## Reports
 
+- [`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md)

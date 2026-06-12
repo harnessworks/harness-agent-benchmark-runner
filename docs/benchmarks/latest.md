@@ -48,6 +48,16 @@ yes-harness had 2 timeouts. This is representative for the measured `jobs=2`
 condition, not a pure sequential claim. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
+Latest heldout diagnostic:
+[`2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md) —
+a fresh 10-record heldout pilot was stopped early under the abnormal-signal
+rule. A first attempt found real hidden-content leakage through
+`../_agent_excluded/benchmarks/...`; after the runner was changed to hide
+excluded paths via in-memory snapshots and a temporary git baseline, a fresh
+pilot completed two clean records and then stopped record 3 after about 5m30s
+without an agent result. This diagnostic should not be promoted to official
+product evidence and does not justify starting the 100-record heldout run.
+
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
 Codex CLI repeated the balanced 20-run task set under the revised concept-docs
@@ -59,6 +69,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md) ← latest heldout diagnostic
 - [`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) ← latest 100-run evidence
 - [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) ← latest throughput calibration
 - [`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) ← latest pilot

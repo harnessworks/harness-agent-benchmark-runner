@@ -344,6 +344,7 @@ class RunnerTests(unittest.TestCase):
                         "import subprocess",
                         "repo = Path(os.environ['BENCHMARK_REPO'])",
                         "visible = (repo / 'benchmarks').exists()",
+                        "parent_leak = any('_agent_excluded' in str(path) for path in repo.parent.rglob('*'))",
                         "show = subprocess.run(",
                         "    ['git', 'show', 'HEAD:benchmarks/oracles/secret.txt'],",
                         "    cwd=repo,",
@@ -352,7 +353,7 @@ class RunnerTests(unittest.TestCase):
                         ")",
                         "leaked = show.returncode == 0",
                         "(repo / 'README.md').write_text(",
-                        "    f'benchmarks visible: {visible}; git leaked: {leaked}\\n',",
+                        "    f'benchmarks visible: {visible}; git leaked: {leaked}; parent leaked: {parent_leak}\\n',",
                         "    encoding='utf-8',",
                         ")",
                     ]
@@ -372,7 +373,7 @@ class RunnerTests(unittest.TestCase):
                             (
                                 "from pathlib import Path; "
                                 "assert Path('README.md').read_text() == "
-                                "'benchmarks visible: False; git leaked: False\\n'; "
+                                "'benchmarks visible: False; git leaked: False; parent leaked: False\\n'; "
                                 "assert Path('benchmarks/oracles/secret.txt').read_text() == 'hidden answer\\n'"
                             ),
                         ],

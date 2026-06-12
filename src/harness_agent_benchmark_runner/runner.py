@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
 import uuid
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -79,8 +80,8 @@ def run_task(
             write_result(result, config.results_dir.expanduser().resolve(), run_dir)
             return result
 
-        agent_exclusions = hide_agent_excluded_paths(task, repo_dir, run_dir / "_agent_excluded")
-        agent_git = isolate_agent_git_if_needed(task, repo_dir, run_dir / "_agent_excluded_git")
+        agent_exclusions = hide_agent_excluded_paths(task, repo_dir)
+        agent_git = isolate_agent_git_if_needed(task, repo_dir)
         agent_setup_results = run_agent_setup_commands(task, config, repo_dir, logs_dir)
         prompt_path.write_text(task.prompt, encoding="utf-8")
         agent_env = {
@@ -308,7 +309,6 @@ def run_agent_setup_commands(
 def hide_agent_excluded_paths(
     task: TaskSpec,
     repo_dir: Path,
-    hidden_root: Path,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for raw_path in task.agent_excluded_paths:
@@ -316,22 +316,19 @@ def hide_agent_excluded_paths(
         source = repo_dir / relative_path
         if not source.exists():
             continue
-        destination = hidden_root / relative_path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(source), str(destination))
         records.append(
             {
                 "path": relative_path.as_posix(),
-                "hidden_path": str(destination),
+                "entries": snapshot_path(source, repo_dir),
             }
         )
+        remove_path(source)
     return records
 
 
 def isolate_agent_git_if_needed(
     task: TaskSpec,
     repo_dir: Path,
-    hidden_root: Path,
 ) -> dict[str, str]:
     if not task.agent_excluded_paths:
         return {}
@@ -339,6 +336,7 @@ def isolate_agent_git_if_needed(
     if not original_git.exists():
         return {}
 
+    hidden_root = Path(tempfile.mkdtemp(prefix="harness-agent-git-"))
     hidden_root.mkdir(parents=True, exist_ok=True)
     original_git_path = hidden_root / "original.git"
     agent_git_path = hidden_root / "agent.git"
@@ -349,6 +347,7 @@ def isolate_agent_git_if_needed(
     run_git(repo_dir, ["git", "add", "-A"])
     run_git(repo_dir, ["git", "commit", "--quiet", "-m", "Agent visible baseline"])
     return {
+        "hidden_root": str(hidden_root),
         "original_git_path": str(original_git_path),
         "agent_git_path": str(agent_git_path),
     }
@@ -363,6 +362,9 @@ def restore_agent_git(state: dict[str, str], repo_dir: Path) -> None:
     original_git = Path(state["original_git_path"])
     if original_git.exists():
         shutil.move(str(original_git), str(agent_git))
+    hidden_root = Path(state["hidden_root"])
+    if hidden_root.exists():
+        shutil.rmtree(hidden_root, ignore_errors=True)
 
 
 def restore_agent_excluded_paths(
@@ -373,7 +375,6 @@ def restore_agent_excluded_paths(
     conflicts: list[dict[str, str]] = []
     for record in reversed(records):
         relative_path = Path(record["path"])
-        hidden_path = Path(record["hidden_path"])
         destination = repo_dir / relative_path
         if destination.exists():
             conflict_path = conflict_root / relative_path
@@ -386,9 +387,66 @@ def restore_agent_excluded_paths(
                 }
             )
         destination.parent.mkdir(parents=True, exist_ok=True)
-        if hidden_path.exists():
-            shutil.move(str(hidden_path), str(destination))
+        restore_snapshot(record["entries"], repo_dir)
     return sorted(conflicts, key=lambda item: item["path"])
+
+
+def snapshot_path(path: Path, repo_dir: Path) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    paths = [path]
+    if path.is_dir() and not path.is_symlink():
+        paths.extend(sorted(path.rglob("*")))
+
+    for item in paths:
+        relative_path = item.relative_to(repo_dir).as_posix()
+        if item.is_symlink():
+            entries.append(
+                {
+                    "type": "symlink",
+                    "path": relative_path,
+                    "target": os.readlink(item),
+                }
+            )
+        elif item.is_dir():
+            entries.append(
+                {
+                    "type": "dir",
+                    "path": relative_path,
+                    "mode": item.stat().st_mode & 0o777,
+                }
+            )
+        elif item.is_file():
+            entries.append(
+                {
+                    "type": "file",
+                    "path": relative_path,
+                    "mode": item.stat().st_mode & 0o777,
+                    "content": item.read_bytes(),
+                }
+            )
+    return entries
+
+
+def restore_snapshot(entries: list[dict[str, Any]], repo_dir: Path) -> None:
+    for entry in entries:
+        path = repo_dir / entry["path"]
+        if entry["type"] == "dir":
+            path.mkdir(parents=True, exist_ok=True)
+            path.chmod(entry["mode"])
+        elif entry["type"] == "file":
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(entry["content"])
+            path.chmod(entry["mode"])
+        elif entry["type"] == "symlink":
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to(entry["target"])
+
+
+def remove_path(path: Path) -> None:
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
 
 
 def normalize_agent_excluded_path(value: str) -> Path:
