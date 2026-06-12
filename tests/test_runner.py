@@ -324,6 +324,209 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["preflight"]["findings"][0]["type"], "forbidden_text")
             self.assertEqual(result["preflight"]["findings"][0]["path"], "docs/memory.md")
 
+    def test_runner_hides_agent_excluded_paths_until_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            (source_repo / "benchmarks" / "oracles").mkdir(parents=True)
+            (source_repo / "benchmarks" / "oracles" / "secret.txt").write_text(
+                "hidden answer\n",
+                encoding="utf-8",
+            )
+            run(["git", "add", "benchmarks/oracles/secret.txt"], cwd=source_repo)
+            run(["git", "commit", "-m", "Add benchmark oracle"], cwd=source_repo)
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "import subprocess",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "visible = (repo / 'benchmarks').exists()",
+                        "show = subprocess.run(",
+                        "    ['git', 'show', 'HEAD:benchmarks/oracles/secret.txt'],",
+                        "    cwd=repo,",
+                        "    stdout=subprocess.PIPE,",
+                        "    stderr=subprocess.PIPE,",
+                        ")",
+                        "leaked = show.returncode == 0",
+                        "(repo / 'README.md').write_text(",
+                        "    f'benchmarks visible: {visible}; git leaked: {leaked}\\n',",
+                        "    encoding='utf-8',",
+                        ")",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {
+                        "name": "excluded path restored",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            (
+                                "from pathlib import Path; "
+                                "assert Path('README.md').read_text() == "
+                                "'benchmarks visible: False; git leaked: False\\n'; "
+                                "assert Path('benchmarks/oracles/secret.txt').read_text() == 'hidden answer\\n'"
+                            ),
+                        ],
+                    }
+                ],
+                extra_fields={"agent_excluded_paths": ["benchmarks"]},
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                ),
+            )
+
+            self.assertTrue(result["scoring"]["success"])
+            self.assertEqual(result["git"]["changed_files"], ["README.md"])
+            self.assertEqual(result["git"]["agent_excluded_path_conflicts"], [])
+            self.assertEqual(result["task"]["agent_excluded_paths"], ["benchmarks"])
+
+    def test_runner_runs_agent_setup_and_prepends_venv_bin_to_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            (source_repo / ".gitignore").write_text(".venv/\n", encoding="utf-8")
+            run(["git", "add", ".gitignore"], cwd=source_repo)
+            run(["git", "commit", "-m", "Ignore virtualenv"], cwd=source_repo)
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "import shutil",
+                        "import subprocess",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "sentinel = shutil.which('sentinel')",
+                        "assert sentinel is not None",
+                        "subprocess.run(['sentinel'], cwd=repo, check=True)",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {
+                        "name": "setup path used",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "from pathlib import Path; assert Path('README.md').read_text() == 'setup path used\\n'",
+                        ],
+                    }
+                ],
+                extra_fields={
+                    "agent_setup": {
+                        "commands": [
+                            {
+                                "name": "create sentinel in venv bin",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    (
+                                        "from pathlib import Path; "
+                                        "p=Path('.venv/bin'); p.mkdir(parents=True); "
+                                        "s=p/'sentinel'; "
+                                        "s.write_text('#!/bin/sh\\necho \"setup path used\" > README.md\\n'); "
+                                        "s.chmod(0o755)"
+                                    ),
+                                ],
+                            }
+                        ]
+                    }
+                },
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                ),
+            )
+
+            self.assertTrue(result["scoring"]["success"])
+            self.assertEqual(result["agent_setup"][0]["label"], "create sentinel in venv bin")
+            self.assertEqual(result["agent_setup"][0]["exit_code"], 0)
+            self.assertEqual(result["git"]["changed_files"], ["README.md"])
+
+    def test_runner_scores_agent_excluded_path_conflict_as_boundary_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            (source_repo / "benchmarks").mkdir()
+            (source_repo / "benchmarks" / "oracle.txt").write_text("original\n", encoding="utf-8")
+            run(["git", "add", "benchmarks/oracle.txt"], cwd=source_repo)
+            run(["git", "commit", "-m", "Add benchmark oracle"], cwd=source_repo)
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "(repo / 'README.md').write_text('updated\\n', encoding='utf-8')",
+                        "(repo / 'benchmarks').mkdir()",
+                        "(repo / 'benchmarks' / 'oracle.txt').write_text('agent-created\\n', encoding='utf-8')",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {
+                        "name": "original restored",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "from pathlib import Path; assert Path('benchmarks/oracle.txt').read_text() == 'original\\n'",
+                        ],
+                    }
+                ],
+                extra_fields={
+                    "agent_excluded_paths": ["benchmarks"],
+                    "forbidden_files": ["benchmarks/**"],
+                },
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                ),
+            )
+
+            self.assertFalse(result["scoring"]["success"])
+            self.assertEqual(result["git"]["changed_files"], ["README.md"])
+            self.assertEqual(
+                result["git"]["agent_excluded_path_conflicts"][0]["path"],
+                "benchmarks",
+            )
+            self.assertEqual(result["scoring"]["forbidden_files"], ["benchmarks"])
+
     def test_summary_counts_results(self) -> None:
         records = [
             {

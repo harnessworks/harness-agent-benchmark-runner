@@ -49,6 +49,8 @@ class TaskSpec:
     max_cost_usd: float | None = None
     expected_files: tuple[str, ...] = ()
     forbidden_files: tuple[str, ...] = ()
+    agent_excluded_paths: tuple[str, ...] = ()
+    agent_setup_commands: tuple[CommandSpec, ...] = ()
     verification_commands: tuple[CommandSpec, ...] = ()
     benchmark: dict[str, Any] = field(default_factory=dict)
     leakage_audit: LeakageAuditSpec = field(default_factory=LeakageAuditSpec)
@@ -68,6 +70,15 @@ class TaskSpec:
         if not isinstance(repo_ref, str):
             raise ValueError("repo.ref must be a string when provided")
 
+        agent_setup_data = data.get("agent_setup", {})
+        if agent_setup_data is None:
+            agent_setup_data = {}
+        if not isinstance(agent_setup_data, dict):
+            raise ValueError("agent_setup must be an object when provided")
+        raw_agent_setup_commands = agent_setup_data.get("commands", [])
+        if not isinstance(raw_agent_setup_commands, list):
+            raise ValueError("agent_setup.commands must be a list")
+
         verification_data = data.get("verification", {})
         if verification_data is None:
             verification_data = {}
@@ -78,6 +89,7 @@ class TaskSpec:
         if not isinstance(raw_commands, list):
             raise ValueError("verification.commands must be a list")
 
+        agent_setup_commands = tuple(parse_command_spec(item) for item in raw_agent_setup_commands)
         commands = tuple(parse_command_spec(item) for item in raw_commands)
         benchmark = parse_benchmark_metadata(data.get("benchmark", {}))
         leakage_audit = parse_leakage_audit(data.get("leakage_audit", {}))
@@ -94,6 +106,8 @@ class TaskSpec:
             max_cost_usd=optional_non_negative_float(data, "max_cost_usd"),
             expected_files=tuple(string_list(data, "expected_files")),
             forbidden_files=tuple(string_list(data, "forbidden_files")),
+            agent_excluded_paths=tuple(string_list(data, "agent_excluded_paths")),
+            agent_setup_commands=agent_setup_commands,
             verification_commands=commands,
             benchmark=benchmark,
             leakage_audit=leakage_audit,

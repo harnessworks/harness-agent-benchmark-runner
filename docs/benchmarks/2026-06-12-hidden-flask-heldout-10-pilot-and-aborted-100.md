@@ -54,12 +54,77 @@ itself was not clean enough to finish unchanged. Two bare-arm timeouts in the
 first 14 completed records indicate either model/service tail latency or task
 prompt/agent behavior that can consume the full 600-second task timeout.
 
-The next run should either:
+Both timeout records failed before hidden verification became the bottleneck:
 
-- keep `jobs=1` and raise the task timeout cap deliberately, reporting timeout
-  stability as a measured condition; or
-- keep the 600-second cap and reduce task ambiguity or agent looping before
-  another 100-record attempt.
+- `20260612T104903Z-hidden-effect-availability-badge-e436af4e` ran for
+  600.005 seconds, timed out inside `codex_exec_agent.py`, and changed only
+  `app/catalog.py`. The agent log shows broad `rg` output from `benchmarks/`
+  and direct reads from `benchmarks/oracles/check_task.py` before it added only
+  a small `get_product` helper.
+- `20260612T110253Z-hidden-effect-bundle-quote-613c8aec` ran for 600.003
+  seconds, timed out inside `codex_exec_agent.py`, and changed no files. The
+  agent log shows broad `rg` output from `benchmarks/`, then extra docs and git
+  history exploration (`git log`, `git ls-tree`, `git show`) after it had
+  already decided the intended implementation.
+
+The likely failure mode is not a hidden-oracle mismatch. It is a combination of
+underspecified bare-repository exploration, answer-adjacent benchmark/oracle
+files being visible to the agent, git-history exploration, and local Codex
+configuration/plugin loading noise. The successful bare runs in the same
+partial 100-run often inspected benchmark/oracle files too, which also weakens
+the product-value interpretation even when they complete.
+
+## Follow-Up Mitigation
+
+The runner and Codex adapter now apply generic benchmark hygiene before another
+large held-out run:
+
+- It passes `--ignore-user-config` to `codex exec` by default unless
+  `CODEX_PROFILE` is set, reducing local plugin/MCP/config effects in evidence
+  runs.
+- Held-out task specs set `agent_excluded_paths: ["benchmarks"]`, so target
+  benchmark specs and target-local oracle files are hidden while the agent runs
+  and restored before verification. The runner now uses a temporary
+  agent-visible git baseline for these runs so the hidden files are not still
+  readable through `git show`.
+- Held-out task specs set `agent_setup.commands` to create `.venv` and install
+  `requirements.txt` before the agent starts, and the runner prepends
+  `.venv/bin` to PATH. This matches hidden-oracle dependency setup and avoids
+  measuring recovery from a missing local pytest executable.
+- The optional Codex prompt guard remains disabled by default
+  (`CODEX_PROMPT_GUARD=0`) because changing the prompt would weaken
+  comparability between arms and with prior runs.
+- Runtime controls remain env-configurable for deliberate compatibility checks:
+  `CODEX_IGNORE_USER_CONFIG=0` or `CODEX_PROMPT_GUARD=1`.
+
+## Post-Mitigation Checks
+
+Two follow-up checks were run before starting another 100-record attempt:
+
+- `runs/hidden-flask-heldout-10-isolatedgit-20260612T1158Z` was stopped after
+  three records because `hidden-effect-bundle-quote` on `bare` still hit the
+  600-second agent timeout. This time the agent log had no `./benchmarks`,
+  `benchmarks/oracles`, `benchmarks/tasks`, `git show`, `git log`, or
+  `git ls-tree` hits, confirming the benchmark-file leakage path was closed.
+  The timeout happened after the agent had implemented files and passed a
+  manual bundle quote client check.
+- After adding `agent_setup.commands`, the targeted canary
+  `runs/hidden-flask-bundle-bare-setup-canary-20260612T1213Z` completed the
+  same `bare` bundle-quote task without timeout: agent setup took 4.328
+  seconds, agent execution took 160.203 seconds, there were no excluded-path
+  conflicts, and the log had no benchmark/git-history leakage hits. Strict
+  success still failed on hidden functional/schema expectations, which is a
+  task-behavior result rather than a loop/timeout failure.
+
+Based on these checks, do not start the 100-record held-out run yet. First run a
+fresh 10-record pilot with both `agent_excluded_paths` and `agent_setup.commands`
+enabled. Promote to 100 records only if that pilot has zero agent timeouts, zero
+excluded-path conflicts, zero preflight failures, and no benchmark/git-history
+leakage hits in agent logs.
+
+Keep the 600-second cap for the next product-value pilot. Raise the timeout only
+for a separate timeout-pressure diagnostic, not for the representative
+held-out product run.
 
 Do not compare this partial 100-run against prior representative runs as if it
 were complete.

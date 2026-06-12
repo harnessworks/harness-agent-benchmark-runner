@@ -255,6 +255,10 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                         for command in hidden_commands
                     ]
                     if task_dir == HELDOUT_10_TASK_DIR:
+                        self.assertEqual(data.get("agent_excluded_paths"), ["benchmarks"])
+                        setup_commands = data.get("agent_setup", {}).get("commands", [])
+                        self.assertEqual(len(setup_commands), 1)
+                        self.assertIn("pip install", " ".join(setup_commands[0]["command"]))
                         self.assertEqual(dimensions, ["functional", "schema"])
                         self.assertIn("functional", hidden_commands[0]["command"])
                         self.assertIn("schema", hidden_commands[1]["command"])

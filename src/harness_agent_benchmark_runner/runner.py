@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 import shutil
 import subprocess
 import uuid
@@ -78,6 +79,9 @@ def run_task(
             write_result(result, config.results_dir.expanduser().resolve(), run_dir)
             return result
 
+        agent_exclusions = hide_agent_excluded_paths(task, repo_dir, run_dir / "_agent_excluded")
+        agent_git = isolate_agent_git_if_needed(task, repo_dir, run_dir / "_agent_excluded_git")
+        agent_setup_results = run_agent_setup_commands(task, config, repo_dir, logs_dir)
         prompt_path.write_text(task.prompt, encoding="utf-8")
         agent_env = {
             "BENCHMARK_REPO": str(repo_dir),
@@ -90,18 +94,29 @@ def run_task(
             "BENCHMARK_TIMEOUT_SECONDS": str(agent_timeout_seconds),
             **config.extra_env,
         }
+        venv_bin = repo_dir / ".venv" / "bin"
+        if venv_bin.is_dir():
+            agent_env["PATH"] = str(venv_bin) + os.pathsep + os.environ.get("PATH", "")
         if max_cost_usd is not None:
             agent_env["BENCHMARK_MAX_COST_USD"] = str(max_cost_usd)
 
-        agent_result = run_process(
-            config.agent_command,
-            cwd=repo_dir,
-            label="agent",
-            timeout_seconds=agent_timeout_seconds,
-            env=agent_env,
-            log_path=logs_dir / "agent.log",
-            tail_chars=config.output_tail_chars,
-        )
+        try:
+            agent_result = run_process(
+                config.agent_command,
+                cwd=repo_dir,
+                label="agent",
+                timeout_seconds=agent_timeout_seconds,
+                env=agent_env,
+                log_path=logs_dir / "agent.log",
+                tail_chars=config.output_tail_chars,
+            )
+        finally:
+            restore_agent_git(agent_git, repo_dir)
+            agent_exclusion_conflicts = restore_agent_excluded_paths(
+                agent_exclusions,
+                repo_dir,
+                run_dir / "_agent_excluded_conflicts",
+            )
 
         diff_check = run_process(
             ["git", "diff", "--check"],
@@ -114,8 +129,11 @@ def run_task(
 
         verification_results = run_verification_commands(task, config, repo_dir, logs_dir)
         changed_files = collect_changed_files(repo_dir)
-        wrong_files = classify_wrong_files(changed_files, task.expected_files)
-        forbidden_files = matching_files(changed_files, task.forbidden_files)
+        changed_files_for_scoring = sorted(
+            {*changed_files, *(conflict["path"] for conflict in agent_exclusion_conflicts)}
+        )
+        wrong_files = classify_wrong_files(changed_files_for_scoring, task.expected_files)
+        forbidden_files = matching_files(changed_files_for_scoring, task.forbidden_files)
         verification_passed = all(result.exit_code == 0 for result in verification_results)
         dimension_scoring = calculate_dimension_scoring(
             preflight_passed=preflight["passed"],
@@ -159,9 +177,11 @@ def run_task(
                 "isolated_path": str(repo_dir),
             },
             "preflight": preflight,
+            "agent_setup": [result.to_dict() for result in agent_setup_results],
             "agent": agent_result.to_dict(),
             "git": {
                 "changed_files": changed_files,
+                "agent_excluded_path_conflicts": agent_exclusion_conflicts,
                 "diff_stat": git_output(repo_dir, ["git", "diff", "--stat"], allow_failure=True),
                 "status": git_output(repo_dir, ["git", "status", "--short"], allow_failure=True),
                 "diff_check": diff_check.to_dict(),
@@ -249,9 +269,149 @@ def task_result_metadata(task: TaskSpec) -> dict[str, Any]:
         "expected_files": list(task.expected_files),
         "forbidden_files": list(task.forbidden_files),
     }
+    if task.agent_excluded_paths:
+        metadata["agent_excluded_paths"] = list(task.agent_excluded_paths)
+    if task.agent_setup_commands:
+        metadata["agent_setup"] = {
+            "commands": [command.label for command in task.agent_setup_commands],
+        }
     if task.benchmark:
         metadata["benchmark"] = task.benchmark
     return metadata
+
+
+def run_agent_setup_commands(
+    task: TaskSpec,
+    config: RunnerConfig,
+    repo_dir: Path,
+    logs_dir: Path,
+) -> list[ProcessResult]:
+    results: list[ProcessResult] = []
+    for index, command in enumerate(task.agent_setup_commands, start=1):
+        timeout = command.timeout_seconds or config.default_command_timeout_seconds
+        results.append(
+            replace(
+                run_process(
+                    materialize_verification_command(command.command, task.source_path),
+                    cwd=repo_dir,
+                    label=command.label,
+                    timeout_seconds=timeout,
+                    log_path=logs_dir / f"agent-setup-{index}.log",
+                    tail_chars=config.output_tail_chars,
+                ),
+                dimensions=command.dimensions,
+            )
+        )
+    return results
+
+
+def hide_agent_excluded_paths(
+    task: TaskSpec,
+    repo_dir: Path,
+    hidden_root: Path,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for raw_path in task.agent_excluded_paths:
+        relative_path = normalize_agent_excluded_path(raw_path)
+        source = repo_dir / relative_path
+        if not source.exists():
+            continue
+        destination = hidden_root / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), str(destination))
+        records.append(
+            {
+                "path": relative_path.as_posix(),
+                "hidden_path": str(destination),
+            }
+        )
+    return records
+
+
+def isolate_agent_git_if_needed(
+    task: TaskSpec,
+    repo_dir: Path,
+    hidden_root: Path,
+) -> dict[str, str]:
+    if not task.agent_excluded_paths:
+        return {}
+    original_git = repo_dir / ".git"
+    if not original_git.exists():
+        return {}
+
+    hidden_root.mkdir(parents=True, exist_ok=True)
+    original_git_path = hidden_root / "original.git"
+    agent_git_path = hidden_root / "agent.git"
+    shutil.move(str(original_git), str(original_git_path))
+    run_git(repo_dir, ["git", "init", "-b", "main"])
+    run_git(repo_dir, ["git", "config", "user.email", "benchmark@example.com"])
+    run_git(repo_dir, ["git", "config", "user.name", "Benchmark Runner"])
+    run_git(repo_dir, ["git", "add", "-A"])
+    run_git(repo_dir, ["git", "commit", "--quiet", "-m", "Agent visible baseline"])
+    return {
+        "original_git_path": str(original_git_path),
+        "agent_git_path": str(agent_git_path),
+    }
+
+
+def restore_agent_git(state: dict[str, str], repo_dir: Path) -> None:
+    if not state:
+        return
+    agent_git = repo_dir / ".git"
+    if agent_git.exists():
+        shutil.move(str(agent_git), state["agent_git_path"])
+    original_git = Path(state["original_git_path"])
+    if original_git.exists():
+        shutil.move(str(original_git), str(agent_git))
+
+
+def restore_agent_excluded_paths(
+    records: list[dict[str, Any]],
+    repo_dir: Path,
+    conflict_root: Path,
+) -> list[dict[str, str]]:
+    conflicts: list[dict[str, str]] = []
+    for record in reversed(records):
+        relative_path = Path(record["path"])
+        hidden_path = Path(record["hidden_path"])
+        destination = repo_dir / relative_path
+        if destination.exists():
+            conflict_path = conflict_root / relative_path
+            conflict_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(destination), str(conflict_path))
+            conflicts.append(
+                {
+                    "path": relative_path.as_posix(),
+                    "preserved_path": str(conflict_path),
+                }
+            )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if hidden_path.exists():
+            shutil.move(str(hidden_path), str(destination))
+    return sorted(conflicts, key=lambda item: item["path"])
+
+
+def normalize_agent_excluded_path(value: str) -> Path:
+    path = Path(value)
+    if (
+        not value.strip()
+        or value.strip() == "."
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in path.parts)
+    ):
+        raise ValueError(f"agent_excluded_paths entries must be relative paths under the repo: {value!r}")
+    return path
+
+
+def run_git(repo_dir: Path, command: list[str]) -> None:
+    subprocess.run(
+        command,
+        cwd=str(repo_dir),
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
 
 def run_preflight_audit(task: TaskSpec, repo_dir: Path) -> dict[str, Any]:

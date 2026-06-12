@@ -120,6 +120,29 @@ The script sets:
 - `--jobs 1` by default, so representative runs are sequential unless
   parallelism is explicitly part of the measured condition
 
+The Codex adapter also applies runtime hygiene by default:
+
+- `CODEX_IGNORE_USER_CONFIG=1` unless `CODEX_PROFILE` is set, so local Codex
+  plugins, MCP clients, and personal config do not affect evidence runs.
+- `CODEX_PROMPT_GUARD=0`; representative evidence runs leave the task prompt
+  unchanged. Turn this on only for deliberate adapter debugging, and report it.
+
+Hidden held-out tasks can also set `agent_excluded_paths`, typically
+`["benchmarks"]`, so benchmark specs and target-local oracle files are hidden
+while the agent runs and restored before verification. This is the preferred way
+to prevent answer-adjacent benchmark files from shaping agent behavior without
+adding prompt guidance.
+
+Hidden Flask held-out tasks also use `agent_setup.commands` to create `.venv`
+and install `requirements.txt` before the agent starts. The runner prepends
+`.venv/bin` to the agent PATH when present. This matches the hidden oracle's
+dependency setup and avoids measuring whether the agent can recover from a
+missing local pytest executable.
+
+These controls are answer-free operational controls. Disable or change them
+only for a deliberate adapter compatibility check, and record that in the
+benchmark report.
+
 Keep `max_attempts=1` for A/B measurements. A failed task is benchmark data, so
 the A/B script continues after non-zero runner exits and writes every result it
 can collect.

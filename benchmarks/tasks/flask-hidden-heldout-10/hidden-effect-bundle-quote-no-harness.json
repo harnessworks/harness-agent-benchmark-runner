@@ -24,6 +24,22 @@
     "runs/**",
     "results/**"
   ],
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
+    "commands": [
+      {
+        "name": "install Python dependencies for agent",
+        "command": [
+          "bash",
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  },
   "verification": {
     "commands": [
       {
