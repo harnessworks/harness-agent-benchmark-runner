@@ -66,9 +66,11 @@ workflow docs point at paths the heldout runner intentionally hides. The target
 workflow ref was then cleaned and repinned to
 `3a8f7ff50d967275156e48056598a6babb9686a9`; a canary showed hidden access 0,
 and the next fresh pilot reached record 7 before stopping on a bare
-`hidden-effect-catalog-metrics` stall. This diagnostic should not be promoted
-to official product evidence and does not justify starting the 100-record
-heldout run.
+`hidden-effect-catalog-metrics` stall. A narrow recheck of that exact bare task
+completed without a stall, but the next fresh 10-record rerun stopped at record
+2 on a workflow-only `hidden-effect-availability-badge` stall. This diagnostic
+should not be promoted to official product evidence and does not justify
+starting the 100-record heldout run.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —

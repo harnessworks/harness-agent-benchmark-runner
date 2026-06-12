@@ -31,7 +31,9 @@ stalled, but the fresh pilot again stopped at record 4 because the
 workflow-only agent attempted to enumerate hidden `benchmarks/oracles` and
 `benchmarks/tasks` paths. After the target workflow ref was cleaned, hidden
 access dropped to 0, but the next fresh pilot stopped at record 7 on a bare
-`catalog-metrics` stall. It is not official product evidence and does not
+`catalog-metrics` stall. A narrow recheck of that exact bare task completed,
+but the next fresh 10-record rerun stopped at record 2 on a workflow-only
+`availability-badge` stall. It is not official product evidence and does not
 justify starting the 100-record heldout run yet.
 
 This is representative for the explicitly measured `jobs=2` run shape. It is

@@ -22,6 +22,9 @@ The pilot was stopped early under the stated mid-run abnormal-signal rule:
 - After updating the workflow target ref to remove hidden-path guidance, the
   workflow-only canary completed with zero hidden access. A fresh 10-record
   pilot then reached record 7 before stopping on a bare `catalog-metrics` stall.
+- A narrow recheck of that exact bare `catalog-metrics` task completed without
+  a stall, but the next fresh 10-record rerun stopped at record 2 on a
+  workflow-only `availability-badge` stall.
 
 Do not start the 100-record heldout run from this state.
 
@@ -283,6 +286,51 @@ This run confirms that the target-clean ref removed the hidden benchmark path
 abnormal from the workflow-only arm. It does not clear promotion criteria:
 record 7 produced a first-class `agent_stalled=true` signal on the bare arm.
 
+## Catalog-Metrics Narrow Recheck
+
+- Workspace: `runs/hidden-flask-catalog-metrics-bare-stall-recheck-20260612T1358Z`
+- Results: `results/hidden-flask-catalog-metrics-bare-stall-recheck-20260612T1358Z`
+- Task: `hidden-effect-catalog-metrics`
+- Target arm: `bare`
+- Agent duration: 53.577 seconds
+- Stall/timeout: no
+- Hidden access: 0
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+
+The narrow recheck completed and failed only hidden functional/schema checks:
+the domain glossary requirement was missed and the catalog metrics response did
+not include the expected `meta` object. This suggests the previous
+`catalog-metrics` stall was not immediately reproducible as a task-specific
+deadlock.
+
+## Target-Clean Fresh Rerun
+
+- Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
+- Planned shape: 5 tasks x 2 arms x 1 repeat = 10 records
+- Completed records before stop: 2
+- Workspace: `runs/hidden-flask-heldout-10-targetclean-rerun-20260612T1359Z`
+- Results: `results/hidden-flask-heldout-10-targetclean-rerun-20260612T1359Z`
+- Command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-limit 5 --repeats 1 --agent-stall-timeout 330 --stop-on-abnormal --workspace runs/hidden-flask-heldout-10-targetclean-rerun-20260612T1359Z --results results/hidden-flask-heldout-10-targetclean-rerun-20260612T1359Z --execute`
+- Stop reason: record 2, `workflow-only` `hidden-effect-availability-badge`,
+  stopped by the stall watchdog at 330.003 seconds.
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | Wrong-file edits | Forbidden-file edits |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 1 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| `workflow-only` | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 1 | 0 | 0 |
+
+| Record | Target | Task | Agent duration | Stall | Hidden access | Result |
+| --- | --- | --- | ---: | --- | --- | --- |
+| `20260612T135953Z-hidden-effect-availability-badge-751d4eb6` | `bare` | `hidden-effect-availability-badge` | 67.084s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T140131Z-hidden-effect-availability-badge-00a8d69e` | `workflow-only` | `hidden-effect-availability-badge` | 330.003s | yes | no | No files changed; workflow failed because the agent was stopped by the watchdog. |
+
+The stopped workflow-only record had no wrong-file edits, forbidden-file edits,
+excluded-path conflicts, or hidden benchmark access patterns. The agent read
+local Flask routes, tests, docs, and harness guidance, then stalled before
+making edits. This keeps the blocker in execution stability rather than hidden
+content leakage.
+
 ## Recommendation
 
 Do not proceed to the 100-record heldout run yet.
@@ -298,9 +346,11 @@ Before the next promotion attempt:
   requiring manual termination.
 - Keep the target-clean workflow ref pinned for future pilots:
   `flask-yes-harness` @ `3a8f7ff50d967275156e48056598a6babb9686a9`.
-- Investigate the remaining bare `hidden-effect-catalog-metrics` stall before
-  another promotion attempt. The stopped record made no edits and had no hidden
-  access, so this is an execution-stability issue rather than a leakage issue.
+- Investigate the remaining stall instability before another promotion attempt.
+  It has now appeared on bare `hidden-effect-catalog-metrics` and workflow-only
+  `hidden-effect-availability-badge`. Both stopped records made no edits and
+  had no hidden access, so this is an execution-stability issue rather than a
+  leakage issue.
 - Only rerun the fresh 10-record pilot after the stall is explained or made
   consistently non-recurring and the agent-visible docs no longer point at
   hidden benchmark/oracle directories. Promote to 100 records only if the
