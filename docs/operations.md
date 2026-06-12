@@ -154,11 +154,32 @@ python3 scripts/run_hidden_flask_ab.py \
   --execute
 ```
 
-The current committed answer-free heldout, reduced heldout, quarantine, and
-workflow-smoke suite manifests are still legacy two-arm calibrations. In the
+The original answer-free heldout, reduced heldout, quarantine, and
+workflow-smoke suite manifests are legacy two-arm calibrations. In the
 three-arm taxonomy, `no-harness` maps to `bare`, and the clean `yes-harness`
 ref maps to `workflow-only`. They do not measure `memory-harness` product
 value.
+
+`benchmarks/suites/flask-hidden-three-arm-stable4.json` is the first scaffolded
+three-arm partial-realistic pilot suite. It uses the same stable four heldout
+task groups as the reduced suite, adds a `memory-harness` arm, and plans
+4 tasks x 3 arms = 12 records per repeat. The memory arm points at the sibling
+target repository `../flask-memory-harness` pinned to
+`bc097c48d592e7ddcd26beb7bb2c185d7a33fa59`, which adds generalized
+response-key failure memory without adding heldout route names or exact oracle
+answers.
+
+Dry-run the three-arm pilot plan:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --suite benchmarks/suites/flask-hidden-three-arm-stable4.json \
+  --repeats 1 \
+  --agent-timeout-override 900 \
+  --agent-idle-timeout 300 \
+  --agent-no-edit-timeout 240 \
+  --stop-on-abnormal
+```
 
 A true product-value run should use a suite with:
 

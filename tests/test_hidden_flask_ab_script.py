@@ -23,10 +23,14 @@ HELDOUT_10_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-heldout
 STABLE_HELDOUT_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-stable-8.json"
 )
+THREE_ARM_STABLE_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-three-arm-stable4.json"
+)
 BUNDLEQUOTE_QUARANTINE_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
 )
 CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
+MEMORY_HARNESS_REF = "bc097c48d592e7ddcd26beb7bb2c185d7a33fa59"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -391,6 +395,30 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         self.assertEqual(len(selected), 4)
         self.assertEqual(len(schedule), 8)
         self.assertNotIn("hidden-effect-bundle-quote", [group.task_id for group in selected])
+
+    def test_three_arm_stable_suite_adds_memory_harness_arm(self) -> None:
+        suite = hidden_ab.load_suite(THREE_ARM_STABLE_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual(suite.arms, ("bare", "workflow-only", "memory-harness"))
+        self.assertEqual(len(selected), 4)
+        self.assertEqual(len(schedule), 12)
+        self.assertNotIn("hidden-effect-bundle-quote", [group.task_id for group in selected])
+        self.assertEqual(
+            [label for label, _ in hidden_ab.ordered_group_arms(selected[0], 1, "rotate")],
+            ["A:bare", "B:workflow-only", "C:memory-harness"],
+        )
+
+        for group in selected:
+            prompts = {hidden_ab.read_json(path)["prompt"] for path in group.arms.values()}
+            self.assertEqual(len(prompts), 1, msg=f"{group.task_id} prompts differ across arms")
+            memory = hidden_ab.read_json(group.arms["memory-harness"])
+            self.assertEqual(memory["repo"]["source"], "../flask-memory-harness")
+            self.assertEqual(memory["repo"]["ref"], MEMORY_HARNESS_REF)
+            self.assertEqual(memory["benchmark"]["target_arm"], "memory-harness")
 
     def test_bundlequote_quarantine_suite_selects_only_bundle_quote(self) -> None:
         suite = hidden_ab.load_suite(BUNDLEQUOTE_QUARANTINE_SUITE)

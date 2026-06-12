@@ -196,11 +196,14 @@ guard now requires `--agent-no-edit-timeout` alongside
 The current blocker is product signal quality: the latest partial-realistic
 stable-8 pilot had 0/16 strict successes and 0/16 schema-contract successes,
 while the full-contract control path now passes after tightening the
-cart-validation summary contract. Before spending on another near-100 product
-run, build the intended three-arm held-out suite with `bare`, `workflow-only`,
-and `memory-harness`, or create a smaller partial-realistic convention pilot
-that produces nonzero schema-contract signal. Keep functional, schema-contract,
-workflow, boundary, strict success, and timeout counts separate in the report.
+cart-validation summary contract. The intended three-arm held-out suite is now
+scaffolded as `benchmarks/suites/flask-hidden-three-arm-stable4.json`, with a
+local `../flask-memory-harness` target pinned to
+`bc097c48d592e7ddcd26beb7bb2c185d7a33fa59`. Before spending on another near-100
+product run, use that 12-record three-arm pilot or another small
+partial-realistic convention pilot to establish nonzero schema-contract signal.
+Keep functional, schema-contract, workflow, boundary, strict success, and
+timeout counts separate in the report.
 For held-out pilots, use either a short
 `--agent-stall-timeout` when deliberately testing pilot-stop behavior or
 `--agent-idle-timeout` when long active runs should continue. For promotion,

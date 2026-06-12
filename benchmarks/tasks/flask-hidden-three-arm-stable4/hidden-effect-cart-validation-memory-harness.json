@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-cart-validation",
+  "description": "Held-out 10-run product evidence smoke: realistic partial prompt, answer-memory-free yes-harness ref, deterministic hidden oracle.",
+  "repo": {
+    "source": "../flask-memory-harness",
+    "ref": "bc097c48d592e7ddcd26beb7bb2c185d7a33fa59"
+  },
+  "prompt": "Add a cart validation endpoint.\n\nAdd POST /cart/validate for previewing whether requested cart quantities can be fulfilled from current catalog stock. The endpoint should not mutate stock. Fully available lines should be accepted, while lines above available stock should be limited to the available quantity with the remainder rejected. Include an aggregate summary of requested, accepted, and rejected quantities. Handle unknown SKUs and invalid quantities consistently with nearby item-list APIs.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, and status codes. Add focused pytest coverage for accepted, limited, unknown-SKU, and invalid-quantity cases. Update companion documentation in the repository's documented docs location so future maintainers can find the preview-only cart validation behavior. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-three-arm-stable4/hidden-effect-cart-validation-memory-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
+    "commands": [
+      {
+        "name": "install Python dependencies for agent",
+        "command": [
+          "bash",
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  },
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "workflow"
+      },
+      {
+        "name": "functional heldout oracle for hidden-effect-cart-validation",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-cart-validation",
+          "functional"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "functional"
+      },
+      {
+        "name": "generic schema style oracle for hidden-effect-cart-validation",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-cart-validation",
+          "schema"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
+      }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-three-arm-stable4",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "memory-harness"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1"
+    ]
+  }
+}
