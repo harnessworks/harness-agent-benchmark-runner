@@ -35,6 +35,9 @@ Updated: 2026-06-13
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B `jobs=2` calibration | 10 | 10 | 100% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B 100-run `jobs=2` | 50 | 46 | 92% | 0 | 0 | 1 |
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B 100-run `jobs=2` | 50 | 48 | 96% | 0 | 0 | 2 |
+| `flask-no-harness` | Codex CLI | Three-arm stable-4 product pilot, aborted | 2 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Three-arm stable-4 product pilot, aborted | 2 | 0 | 0% | 0 | 0 | 1 |
+| `flask-memory-harness` | Codex CLI | Three-arm stable-4 product pilot, aborted | 1 | 0 | 0% | 0 | 0 | 0 |
 
 Latest run:
 [`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) —
@@ -70,6 +73,17 @@ with 0 stalls, 0 timeouts, 0 wrong-file edits, 0 forbidden-file edits, and 0
 hidden-access findings. This indicates the hidden oracle and agent path can
 pass these tasks when the exact contract is explicit.
 
+Latest three-arm product diagnostic:
+[`2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md) —
+the first fresh `bare` / `workflow-only` / `memory-harness` stable-4 pilot used
+partial-realistic heldout prompts and stopped at 5/12 records. The abnormal
+record was `workflow-only` `cart-validation`, which hit
+`termination_reason=no_edit_watchdog` after 240 seconds with no repository
+changes. This blocks a 100-run promotion from the current state. The completed
+records had 0/5 strict, 0/5 functional, and 0/5 schema-contract successes, so
+the current partial-realistic shape still needs stronger generalized,
+non-task-specific API convention guidance before scaling.
+
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
 Codex CLI repeated the balanced 20-run task set under the revised concept-docs
@@ -81,6 +95,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md) ← latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md) ← latest full-contract control
 - [`2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md) ← latest heldout diagnostic
 - [`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md)
