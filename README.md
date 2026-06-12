@@ -15,16 +15,18 @@ agent-visible target clone. Codex was run with medium reasoning and priority
 service tier:
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
-| Target | Harness | Agent | Runs | Successes | Success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Target | Harness | Agent | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-no-harness` | No | Codex CLI | 12 | 0 | 0% | 0 | 11 | 0 | 3 |
 | `flask-yes-harness` | Yes | Codex CLI | 12 | 11 | 91.7% | 11 | 0 | 0 | 0 |
 
 Interpretation: when the exact scoring contract is hidden from the target
-repository, the harness produces a large lift in both functional success and
-file-boundary discipline. The bare target repeatedly guessed route names and
-response shapes, while the harnessed target discovered the repository-local
-contracts from its agent instructions and conventions.
+repository, the harnessed target improved hidden contract discovery and strict
+boundary adherence. Verification success measures functional correctness;
+wrong-file edits measure whether the agent kept changes inside the task
+boundary. The bare target repeatedly guessed route names and response shapes,
+while the harnessed target discovered the repository-local contracts from its
+agent instructions and conventions.
 
 Detailed report:
 [`docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md).
@@ -36,9 +38,9 @@ repository's expectations easier for the agent to discover and follow.
 
 | Dimension | `flask-no-harness` | `flask-yes-harness` | Observed effect |
 | --- | --- | --- | --- |
-| Scored success | 0/12 | 11/12 | Harnessed tasks completed the hidden contracts reliably. |
-| Verification | 0/12 | 11/12 | Functional correctness became the main separator once the oracle was hidden. |
-| File boundaries | 11 wrong-file edits | 0 wrong-file edits | Harness guidance kept edits inside expected paths. |
+| Strict scored success | 0/12 | 11/12 | Harnessed tasks completed the hidden contracts while staying inside strict scoring rules. |
+| Verification passed | 0/12 | 11/12 | Functional correctness became the main separator once the oracle was hidden. |
+| File boundaries | 11 task-boundary misses | 0 task-boundary misses | Harness guidance kept edits inside the task's expected paths. |
 | Timeouts | 3 timeouts | 0 timeouts | Harness guidance reduced long-running failed exploration. |
 | Contract discovery | Guessed routes and response shapes | Used documented conventions | Repository-local knowledge translated into concrete API behavior. |
 
@@ -49,7 +51,7 @@ allowed edit boundaries.
 
 ## Benchmark Evidence
 
-| Scope | Agent | Mode | Runs | Successes | Success rate | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Scope | Agent | Mode | Runs | Strict scored successes | Strict success rate | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-yes-harness` hidden-oracle A/B | Codex CLI | Live adapter (3x) | 12 | 11 | 91.7% | 0 | 0 | 0 |
 | `flask-no-harness` hidden-oracle A/B | Codex CLI | Live adapter (3x) | 12 | 0 | 0% | 11 | 0 | 3 |
@@ -78,11 +80,15 @@ xychart-beta
 
 ## What The Metrics Mean
 
-- `Successes`: scored success after agent exit, diff check, verification, and
-  file-boundary checks.
+- `Strict scored success`: final scored success after agent exit, diff check,
+  verification, and file-boundary checks.
 - `Verification passed`: deterministic oracle success before file-boundary
   penalties.
 - `Wrong-file edits`: changed files outside the task's expected file boundary.
+  In the Flask hidden-oracle runs this primarily means root `README.md` edits
+  outside `expected_files` (`app/**`, `tests/**`, and `docs/**`); it is not a
+  functional failure by itself and not a general claim that README edits are
+  bad. It is a strict boundary miss.
 - `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
 
@@ -93,6 +99,8 @@ are violated.
 
 - Hidden-oracle Flask A/B is the strongest harness-positive evidence so far:
   `flask-yes-harness` reached 11/12 while `flask-no-harness` reached 0/12.
+  Its wrong-file signal should be read as task-boundary adherence, especially
+  around root `README.md` versus allowed companion docs under `docs/**`.
 - The earlier complex run remains useful as a methodology lesson: when oracle
   code is visible in both target clones, a capable no-harness agent can recover
   much of the expected contract.

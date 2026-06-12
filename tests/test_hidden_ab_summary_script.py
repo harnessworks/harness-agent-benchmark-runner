@@ -26,6 +26,9 @@ class HiddenABSummaryScriptTests(unittest.TestCase):
 
         markdown = hidden_summary.format_markdown(records)
 
+        self.assertIn("Strict scored successes", markdown)
+        self.assertIn("Verification passed", markdown)
+        self.assertIn("Wrong-file edits", markdown)
         self.assertIn("| `flask-no-harness` | 2 | 1 | 50.0% | 1 |", markdown)
         self.assertIn("| `flask-yes-harness` | 2 | 2 | 100.0% | 2 |", markdown)
         self.assertIn("| `flask-no-harness` | `alpha` | 2 | 1 | 50.0% |", markdown)

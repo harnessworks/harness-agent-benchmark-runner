@@ -6,7 +6,7 @@
     "source": "../flask-no-harness",
     "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
   },
-  "prompt": "Add the reservation preview API described by this repository's conventions. Update the application, tests, and related project docs. Keep the change focused and do not modify benchmark task specs or oracle code.",
+  "prompt": "Add the reservation preview API described by this repository's conventions. Update the application, tests, and companion documentation in the repository's documented docs location. Do not update the root README unless the task explicitly asks for README changes. Keep the change focused and do not modify benchmark task specs or oracle code.",
   "prompt_ref": "benchmarks/tasks/flask-hidden/hidden-effect-reservation-preview-no-harness.json",
   "timeout_seconds": 600,
   "max_attempts": 1,

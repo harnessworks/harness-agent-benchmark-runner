@@ -7,20 +7,22 @@ Adapter: `examples/agents/codex_exec_agent.py`
 
 ## Headline
 
-| Target | Harness | Runs | Successes | Success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Target | Harness | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-no-harness` | No | 12 | 0 | 0% | 0 | 11 | 0 | 3 |
 | `flask-yes-harness` | Yes | 12 | 11 | 91.7% | 11 | 0 | 0 | 0 |
 
-This is the strongest Flask A/B evidence so far. Unlike the previous complex
-run, the task specs and deterministic oracle live in this runner repository,
-not in the target clone. The agent-visible target clone no longer contains the
-exact scoring contract.
+This is the strongest Flask A/B evidence so far. The harnessed target improved
+hidden contract discovery and strict boundary adherence. Verification passed
+measures functional correctness; wrong-file edits measure whether changes stayed
+inside the task boundary. Unlike the previous complex run, the task specs and
+deterministic oracle live in this runner repository, not in the target clone.
+The agent-visible target clone no longer contains the exact scoring contract.
 
 ## Targets
 
 - Bare target: local `flask-no-harness` @ `b5351eae78ed9f17d46a43eee05354e9e13f6b94`
-- Harnessed target: local `flask-yes-harness` @ `2aa110a5e37e60ce6249d64f6c8f2c2999f51bb5`
+- Harnessed target: local `flask-yes-harness` @ `2aa110a37f1ed213470be41155c82b59ad06f549`
 
 ## Task Design
 
@@ -28,6 +30,13 @@ Four hidden-oracle task specs were added under
 `benchmarks/tasks/flask-hidden/` in this runner. Their prompts are intentionally
 vague and refer to repository conventions; the exact scoring oracle is
 `benchmarks/oracles/flask_hidden_oracle.py`.
+
+The historical 2026-06-11 run used prompt wording that asked for "related
+project docs." That wording can reasonably be read as inviting root `README.md`
+edits, so the README signal below is interpreted only as strict task-boundary
+adherence. Current task specs tighten this before the large rerun by asking for
+companion documentation in the repository's documented docs location and by
+explicitly excluding root `README.md` unless a task asks for README changes.
 
 | Task | Prompt-level instruction | Hidden oracle checks |
 | --- | --- | --- |
@@ -43,7 +52,7 @@ The yes-harness target documents these contracts in `AGENTS.md` and
 
 No-op baseline over the same four hidden tasks:
 
-| Target | Runs | Successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Target | Runs | Strict scored successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-no-harness` | 4 | 0 | 0 | 0 | 0 | 0 |
 | `flask-yes-harness` | 4 | 0 | 0 | 0 | 0 | 0 |
@@ -64,7 +73,7 @@ Both targets correctly rejected empty changes for all four hidden tasks.
 
 ## Per-Task Results
 
-| Target | Task | Successes | Verification passed | Wrong-file edits | Timeouts | Agent durations |
+| Target | Task | Strict scored successes | Verification passed | Wrong-file edits | Timeouts | Agent durations |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | `flask-no-harness` | `hidden-effect-stock-risk` | 0/3 | 0/3 | 3 | 1 | 183s, 600s, 197s |
 | `flask-no-harness` | `hidden-effect-supplier-readiness` | 0/3 | 0/3 | 2 | 1 | 112s, 140s, 600s |
@@ -81,8 +90,12 @@ Both targets correctly rejected empty changes for all four hidden tasks.
 
 - The agent guessed route names or response shapes that did not match the
   hidden contract, often producing Flask 404s for the oracle endpoint.
-- The agent edited `README.md` in 11/12 runs, outside the expected boundary of
-  `app/**`, `tests/**`, and `docs/**`.
+- The agent edited root `README.md` in 11/12 runs, outside this task suite's
+  expected boundary of `app/**`, `tests/**`, and `docs/**`. This is a strict
+  task-boundary miss, not a functional failure by itself and not a general
+  judgment that README edits are bad. The prompt's "related project docs"
+  wording may reasonably invite documentation work; the scored distinction is
+  that this benchmark only allowed companion project docs under `docs/**`.
 - Three no-harness runs timed out at 600 seconds.
 
 `flask-yes-harness` had one failure:
@@ -103,7 +116,9 @@ The measured harness effect is strongest in three dimensions:
 
 - contract discovery: yes-harness found repository-specific route names,
   thresholds, supplier maps, discount rules, and safety-stock semantics
-- boundary discipline: yes-harness had 0 wrong-file edits vs 11 in no-harness
+- strict task-boundary adherence: yes-harness had 0 wrong-file edits vs 11 in
+  no-harness, where the no-harness misses were root `README.md` edits outside
+  this task suite's allowed `docs/**` companion-document path
 - timeout behavior: yes-harness had 0 timeouts vs 3 in no-harness
 
 Scope still matters. This proves a meaningful effect for tasks where success
