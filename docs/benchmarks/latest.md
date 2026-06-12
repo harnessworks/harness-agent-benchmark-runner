@@ -49,35 +49,16 @@ condition, not a pure sequential claim. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
 Latest heldout diagnostic:
-[`2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md) —
-a fresh 10-record heldout pilot was stopped early under the abnormal-signal
-rule. A first attempt found real hidden-content leakage through
-`../_agent_excluded/benchmarks/...`; after the runner was changed to hide
-excluded paths via in-memory snapshots, a temporary git baseline, and a pilot
-stall watchdog, a fresh pilot completed three clean records and then stopped
-record 4 with `agent_stalled=true`. The Codex adapter was then hardened to add
-`--ignore-rules --disable plugins` by default, which disables execpolicy
-`.rules` files and plugin loading without disabling repository `AGENTS.md`
-guidance. A canary no longer stalled, but the next fresh pilot again stopped at
-record 4 after the workflow-only agent ran `rg --files` against
-`benchmarks/oracles` and `benchmarks/tasks`. The hidden directories were not
-visible, but this is still a valid abnormal signal because agent-visible
-workflow docs point at paths the heldout runner intentionally hides. The target
-workflow ref was then cleaned and repinned to
-`3a8f7ff50d967275156e48056598a6babb9686a9`; a canary showed hidden access 0,
-and the next fresh pilot reached record 7 before stopping on a bare
-`hidden-effect-catalog-metrics` stall. A narrow recheck of that exact bare task
-completed without a stall, but the next fresh 10-record rerun stopped at record
-2 on a workflow-only `hidden-effect-availability-badge` stall. A later
-post-triage fresh 10 completed without stalls but exposed an over-strict API
-style gate/schema rule when the workflow-only `catalog-segments` agent edited
-`scripts/check_api_style.py`; the generic `_band`/`_bands` money-key exception
-was fixed in the target gate and hidden oracle, and the workflow target was
-repinned to `0f478ddede915b2f0cf41662373c53d8c70f3f86`. A gate-fix canary
-cleared the boundary issue, but the next fresh 10 again stopped at record 2 on
-the same workflow-only `hidden-effect-availability-badge` stall. This
-diagnostic should not be promoted to official product evidence and does not
-justify starting the 100-record heldout run.
+[`2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md) —
+after the hidden-path, adapter-isolation, target-clean, and `_band`/`_bands`
+API-style fixes, `CODEX_PROMPT_GUARD=1` completed a fresh 10-record heldout
+pilot with zero stalls, timeouts, hidden access, wrong-file edits, forbidden
+edits, or excluded-path conflicts. The follow-up 100-record sequential attempt
+used the same mitigation and stopped at record 14 on bare
+`hidden-effect-bundle-quote` when the 330-second pilot watchdog fired. The
+stopped record had already made active edits and had no hidden access or
+boundary issue, so this is not official product evidence and also shows the
+330-second wall-clock watchdog is too strict as a 100-record promotion cutoff.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -90,7 +71,8 @@ sequential evidence.
 
 Detailed reports:
 
-- [`2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md) ← latest heldout diagnostic
+- [`2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md) ← latest heldout diagnostic
+- [`2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md)
 - [`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) ← latest 100-run evidence
 - [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) ← latest throughput calibration
 - [`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) ← latest pilot

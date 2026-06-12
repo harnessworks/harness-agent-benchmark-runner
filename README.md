@@ -22,24 +22,14 @@ Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
 
 Latest heldout mitigation diagnostic:
-[`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md).
-That diagnostic found and fixed a hidden-path leakage issue, added a stall
-watchdog, then stopped the fresh 10-record pilot at record 4 with a recorded
-`agent_stalled=true` signal. After the Codex adapter was hardened to disable
-execpolicy `.rules` files and plugin loading by default, a canary no longer
-stalled, but the fresh pilot again stopped at record 4 because the
-workflow-only agent attempted to enumerate hidden `benchmarks/oracles` and
-`benchmarks/tasks` paths. After the target workflow ref was cleaned, hidden
-access dropped to 0, but the next fresh pilot stopped at record 7 on a bare
-`catalog-metrics` stall. A narrow recheck of that exact bare task completed,
-but the next fresh 10-record rerun stopped at record 2 on a workflow-only
-`availability-badge` stall. A later post-triage fresh 10 completed without
-stalls but exposed an over-strict API style gate when the agent edited
-`scripts/check_api_style.py`; the generic `_band`/`_bands` schema rule was
-fixed in the target gate and hidden oracle. A gate-fix canary cleared the
-boundary issue, but the next fresh 10 again stopped at record 2 on the same
-workflow-only `availability-badge` stall. It is not official product evidence
-and does not justify starting the 100-record heldout run yet.
+[`docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md).
+After hidden-path, adapter-isolation, target-clean, and `_band`/`_bands`
+API-style fixes, a prompt-guarded fresh 10-record pilot completed with zero
+stalls, timeouts, hidden access, or boundary issues. The follow-up 100-record
+attempt still stopped at record 14 on bare `bundle-quote` when the 330-second
+pilot watchdog fired. That stopped record had active edits, so the current
+watchdog is too strict for 100-record promotion as a wall-clock cap. It is not
+official product evidence.
 
 This is representative for the explicitly measured `jobs=2` run shape. It is
 not a pure sequential claim: the run produced timeout noise, so strict scored
@@ -189,6 +179,7 @@ parallel scheduler pressure.
 
 ## Reports
 
+- [`docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md)

@@ -131,6 +131,12 @@ accounting, and writes the result before moving to the next scheduled record.
 Use it to diagnose promotion readiness; do not hide stall counts inside
 functional or schema success rates.
 
+Do not use a short pilot watchdog as the automatic cutoff for 100-record
+promotion. In the 2026-06-12 prompt-guard heldout attempt, a 330-second
+wall-clock watchdog stopped a record that had active edits. For 100-record
+promotion, either rely on the task timeout or add an idle-progress watchdog
+that can distinguish no-output hangs from long-but-active runs.
+
 The Codex adapter also applies runtime hygiene by default:
 
 - `CODEX_IGNORE_USER_CONFIG=1` unless `CODEX_PROFILE` is set, reducing local
