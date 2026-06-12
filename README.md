@@ -78,8 +78,10 @@ least two clean rounds. A second clean round did pass and the 96-record
 promotion guard accepted the combined 24 readiness records, but the live
 promotion aborted at record 2/96 on a `workflow-only` `availability-badge`
 360-second no-edit watchdog stop. The next mitigation is to apply the same
-short benchmark-feature fast path to `workflow-only` before rebuilding the
-two-clean-round gate.
+short benchmark-feature fast path to `workflow-only`; a targeted rerun of that
+task/arm then completed in 88 seconds with no stall or timeout. Because the
+`workflow-only` target ref changed, the two-clean-round gate must be rebuilt
+before any new promotion attempt.
 `full-contract` prompts remain useful controls; small gaps there are expected
 because the prompt already supplies much of the answer.
 

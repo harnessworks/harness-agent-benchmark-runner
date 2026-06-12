@@ -94,6 +94,15 @@ The abnormal record was `workflow-only` `availability-badge`, which hit the
 blocked until the workflow-only first-edit tail is mitigated and the two-clean
 round readiness gate is rebuilt for the updated target refs.
 
+Latest workflow-tail mitigation check:
+[`2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md`](2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md) —
+after trimming the `workflow-only` target guidance into a shorter feature fast
+path, the exact task/arm that aborted promotion completed in 88 seconds with no
+stall, timeout, hidden-access finding, or boundary issue. It still failed the
+functional oracle, so this is operational mitigation evidence only. Because the
+`workflow-only` target ref changed, the two-clean-round readiness gate must be
+rebuilt before another promotion attempt.
+
 Latest targeted mitigation check:
 [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) —
 after trimming the memory target guidance into a shorter benchmark feature fast
@@ -114,6 +123,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md`](2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md) ← latest workflow-tail mitigation check
 - [`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) ← latest promotion attempt
 - [`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md) ← latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) ← latest targeted mitigation check
