@@ -17,7 +17,8 @@ JSONL result. A separate job can summarize results every hour or at the end of a
 
 - Use a dedicated benchmark machine or self-hosted runner.
 - Run with a dedicated API key and budget limit.
-- Set per-task timeout, runner `--max-agent-timeout`, and global scheduler timeout.
+- Set per-task timeout, optional runner `--agent-timeout-override`, runner
+  `--max-agent-timeout`, and global scheduler timeout.
 - For pilots, set runner `--agent-stall-timeout` below the task timeout so
   stalled agent attempts are recorded as JSONL evidence instead of being
   terminated manually.
@@ -139,6 +140,14 @@ stops the agent only after no stdout/stderr output has been observed for the
 configured interval. Both watchdogs record `scoring.agent_stalled=true`; use
 `agent.termination_reason` to distinguish `stall_watchdog` from
 `idle_watchdog`.
+
+Use `--agent-timeout-override` when a promotion run intentionally needs a
+different effective task timeout than the task JSON. The runner applies that
+override before `--max-agent-timeout`, so `--max-agent-timeout` remains a cap.
+For example, a 900-second heldout promotion should pass both
+`--agent-timeout-override 900` and a `--max-agent-timeout` of at least `900`.
+Without the override, a task with `timeout_seconds: 600` still times out at
+600 seconds even if `--max-agent-timeout 900` is present.
 
 The Codex adapter also applies runtime hygiene by default:
 

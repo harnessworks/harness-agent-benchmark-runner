@@ -68,6 +68,7 @@ def run_task(
                 "limits": {
                     "agent_timeout_seconds": agent_timeout_seconds,
                     "agent_process_timeout_seconds": agent_process_timeout_seconds,
+                    "agent_timeout_override_seconds": config.agent_timeout_override_seconds,
                     "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                     "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
                     "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
@@ -176,6 +177,7 @@ def run_task(
             "limits": {
                 "agent_timeout_seconds": agent_timeout_seconds,
                 "agent_process_timeout_seconds": agent_process_timeout_seconds,
+                "agent_timeout_override_seconds": config.agent_timeout_override_seconds,
                 "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                 "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
@@ -237,6 +239,7 @@ def run_task(
             "limits": {
                 "agent_timeout_seconds": agent_timeout_seconds,
                 "agent_process_timeout_seconds": agent_process_timeout_seconds,
+                "agent_timeout_override_seconds": config.agent_timeout_override_seconds,
                 "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                 "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
@@ -734,9 +737,10 @@ def resolve_attempt_limit(task: TaskSpec, config: RunnerConfig) -> int:
 
 
 def effective_agent_timeout_seconds(task: TaskSpec, config: RunnerConfig) -> int:
+    task_timeout = config.agent_timeout_override_seconds or task.timeout_seconds
     if config.max_agent_timeout_seconds is None:
-        return task.timeout_seconds
-    return min(task.timeout_seconds, config.max_agent_timeout_seconds)
+        return task_timeout
+    return min(task_timeout, config.max_agent_timeout_seconds)
 
 
 def effective_agent_process_timeout(

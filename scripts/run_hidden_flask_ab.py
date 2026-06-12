@@ -153,6 +153,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--max-agent-timeout", type=positive_int, default=900)
     parser.add_argument(
+        "--agent-timeout-override",
+        type=positive_int,
+        help="replace task agent timeout before the runner applies --max-agent-timeout",
+    )
+    parser.add_argument(
         "--agent-stall-timeout",
         type=positive_int,
         help="optional shorter pilot watchdog timeout passed to the runner",
@@ -455,6 +460,8 @@ def print_plan(
     print(f"Arm order: {args.arm_order or arm_order_from_pair_order(args.pair_order)}")
     print(f"Model: {args.model}")
     print(f"Codex exec args: {codex_exec_args(args)}")
+    if args.agent_timeout_override:
+        print(f"Agent timeout override: {args.agent_timeout_override}s")
     if args.agent_stall_timeout:
         print(f"Agent stall timeout: {args.agent_stall_timeout}s")
     if args.agent_idle_timeout:
@@ -760,6 +767,8 @@ def build_runner_command(args: argparse.Namespace, item: ScheduledRun) -> list[s
         "--max-cost-usd",
         str(args.max_cost_usd),
     ]
+    if args.agent_timeout_override is not None:
+        command.extend(["--agent-timeout-override", str(args.agent_timeout_override)])
     if args.agent_stall_timeout is not None:
         command.extend(["--agent-stall-timeout", str(args.agent_stall_timeout)])
     if args.agent_idle_timeout is not None:

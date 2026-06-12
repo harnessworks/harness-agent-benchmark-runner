@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
             keep_runs=not args.delete_run_dir,
             default_command_timeout_seconds=args.command_timeout,
             max_attempts_override=args.max_attempts,
+            agent_timeout_override_seconds=args.agent_timeout_override,
             max_agent_timeout_seconds=args.max_agent_timeout,
             agent_stall_timeout_seconds=args.agent_stall_timeout,
             agent_idle_timeout_seconds=args.agent_idle_timeout,
@@ -96,6 +97,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-agent-timeout",
         type=positive_int_arg,
         help="cap the task agent timeout in seconds",
+    )
+    run_parser.add_argument(
+        "--agent-timeout-override",
+        type=positive_int_arg,
+        help="replace the task agent timeout in seconds before applying --max-agent-timeout",
     )
     run_parser.add_argument(
         "--agent-stall-timeout",

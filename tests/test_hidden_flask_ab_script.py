@@ -392,6 +392,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 stop_on_abnormal=False,
                 agent_command="fixture-agent",
                 max_agent_timeout=60,
+                agent_timeout_override=None,
                 agent_stall_timeout=None,
                 agent_idle_timeout=None,
                 max_cost_usd=1.0,
@@ -439,6 +440,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 stop_on_abnormal=True,
                 agent_command="fixture-agent",
                 max_agent_timeout=60,
+                agent_timeout_override=None,
                 agent_stall_timeout=5,
                 agent_idle_timeout=None,
                 max_cost_usd=1.0,
@@ -511,6 +513,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             results=Path("results"),
             agent_command="fixture-agent",
             max_agent_timeout=60,
+            agent_timeout_override=90,
             agent_stall_timeout=5,
             agent_idle_timeout=7,
             max_cost_usd=1.0,
@@ -520,6 +523,8 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         command = hidden_ab.build_runner_command(args, item)
 
         self.assertIn("--agent-stall-timeout", command)
+        override_index = command.index("--agent-timeout-override")
+        self.assertEqual(command[override_index + 1], "90")
         index = command.index("--agent-stall-timeout")
         self.assertEqual(command[index + 1], "5")
         self.assertIn("--agent-idle-timeout", command)

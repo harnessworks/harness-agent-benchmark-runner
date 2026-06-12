@@ -181,8 +181,8 @@ wrong-file edits, 0 forbidden-file edits, and 0 excluded-path conflicts. It is
 not product evidence because the 100 did not complete and strict successes
 remained 0, but it shows the 330-second wall-clock watchdog has been replaced
 by a better idle-output policy. The remaining decision is whether 600-second
-task timeouts are part of the product signal or should be raised for promotion
-runs.
+task timeouts are part of the product signal or whether promotion runs should
+use an explicit `--agent-timeout-override`.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

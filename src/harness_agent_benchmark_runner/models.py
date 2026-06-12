@@ -266,6 +266,7 @@ class RunnerConfig:
     keep_runs: bool = True
     default_command_timeout_seconds: int = 300
     max_attempts_override: int | None = None
+    agent_timeout_override_seconds: int | None = None
     max_agent_timeout_seconds: int | None = None
     agent_stall_timeout_seconds: int | None = None
     agent_idle_timeout_seconds: int | None = None

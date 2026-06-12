@@ -211,6 +211,107 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["limits"]["agent_timeout_seconds"], 3)
             self.assertEqual(result["limits"]["max_cost_usd"], 1.25)
 
+    def test_runner_overrides_agent_timeout_before_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "timeout = os.environ['BENCHMARK_TIMEOUT_SECONDS']",
+                        "(repo / 'README.md').write_text(f'{timeout}\\n', encoding='utf-8')",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {
+                        "name": "timeout override passed",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "from pathlib import Path; assert Path('README.md').read_text() == '20\\n'",
+                        ],
+                    }
+                ],
+                extra_fields={"timeout_seconds": 10},
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                    agent_timeout_override_seconds=20,
+                    max_agent_timeout_seconds=30,
+                ),
+            )
+
+            self.assertTrue(result["scoring"]["success"])
+            self.assertEqual(result["limits"]["agent_timeout_seconds"], 20)
+            self.assertEqual(result["limits"]["agent_process_timeout_seconds"], 20)
+            self.assertEqual(result["limits"]["agent_timeout_override_seconds"], 20)
+            self.assertEqual(result["limits"]["max_agent_timeout_seconds"], 30)
+
+    def test_runner_caps_agent_timeout_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "timeout = os.environ['BENCHMARK_TIMEOUT_SECONDS']",
+                        "(repo / 'README.md').write_text(f'{timeout}\\n', encoding='utf-8')",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {
+                        "name": "timeout override capped",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "from pathlib import Path; assert Path('README.md').read_text() == '15\\n'",
+                        ],
+                    }
+                ],
+                extra_fields={"timeout_seconds": 10},
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                    agent_timeout_override_seconds=20,
+                    max_agent_timeout_seconds=15,
+                ),
+            )
+
+            self.assertTrue(result["scoring"]["success"])
+            self.assertEqual(result["limits"]["agent_timeout_seconds"], 15)
+            self.assertEqual(result["limits"]["agent_timeout_override_seconds"], 20)
+            self.assertEqual(result["limits"]["max_agent_timeout_seconds"], 15)
+
     def test_runner_records_agent_stall_watchdog(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

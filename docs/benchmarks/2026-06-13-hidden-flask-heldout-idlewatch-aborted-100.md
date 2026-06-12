@@ -18,9 +18,9 @@ diagnostic evidence:
 - The run reached 62/100 records with 0 hidden access, 0 wrong-file edits,
   0 forbidden-file edits, and 0 excluded-path conflicts.
 - The stop was a real task timeout, not hidden leakage or a boundary failure.
-- `--max-agent-timeout 900` did not raise the effective timeout because the task
-  specs set `timeout_seconds` to 600; the runner caps task timeout, it does not
-  extend it.
+- `--max-agent-timeout 900` did not raise the effective timeout because this
+  run did not use `--agent-timeout-override`; the task specs set
+  `timeout_seconds` to 600, and `--max-agent-timeout` is only a cap.
 
 Strict successes remain 0 because these are partial-realistic prompts and the
 hidden functional/schema contract is intentionally not fully supplied. The
@@ -134,8 +134,9 @@ This does not justify another immediate identical 100-run. The next run should
 first decide which timeout policy is being measured:
 
 - Keep 600 seconds when timeout stability is part of the product signal.
-- Raise the heldout task `timeout_seconds` or create a promotion variant if the
-  goal is to separate implementation quality from agent process tail latency.
+- Use `--agent-timeout-override 900` or higher if the goal is to separate
+  implementation quality from agent process tail latency. Keep
+  `--max-agent-timeout` at or above the override value because it remains a cap.
 - Keep `--agent-idle-timeout 300` in either case so no-output hangs are still
   caught without cutting off active records.
 
@@ -154,7 +155,8 @@ Before the next full heldout promotion attempt:
   `--stop-on-abnormal`.
 - Keep `--agent-idle-timeout 300`.
 - Decide whether the 100-record promotion timeout should remain 600 seconds or
-  whether task specs should explicitly move to 900 or 1200 seconds.
+  whether the next promotion should use `--agent-timeout-override 900` or
+  `--agent-timeout-override 1200`.
 - Add the `memory-harness` arm before making a product-value claim.
 - Continue reporting strict success, functional success, schema-contract
   success, workflow success, boundary success, stalls, and timeouts separately.

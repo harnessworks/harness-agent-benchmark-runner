@@ -173,10 +173,10 @@ For held-out pilots, use either a short `--agent-stall-timeout` when deliberatel
 testing pilot-stop behavior or `--agent-idle-timeout` when long active runs
 should continue. For 100-record promotion, prefer `--agent-idle-timeout` plus
 the task timeout so long-but-active runs are not stopped by a short wall-clock
-pilot cap. If a promotion run needs more than 600 seconds, update the heldout
-task specs or use an explicit promotion suite; `--max-agent-timeout` only caps
-task timeouts and does not extend a task whose `timeout_seconds` is already
-lower.
+pilot cap. If a promotion run needs more than 600 seconds, pass an explicit
+`--agent-timeout-override` and keep `--max-agent-timeout` at or above that
+value; `--max-agent-timeout` only caps task timeouts and does not extend a task
+whose `timeout_seconds` is already lower.
 Keep adapter hygiene enabled during promotion checks:
 `CODEX_IGNORE_USER_CONFIG=1`, `CODEX_IGNORE_RULES=1`, and
 `CODEX_DISABLE_PLUGINS=1`.
