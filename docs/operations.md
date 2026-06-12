@@ -38,30 +38,54 @@ done
 python3 -m harness_agent_benchmark_runner summarize --results results
 ```
 
-## Hidden Flask Harness A/B
+## Hidden Flask Harness Arm Runs
 
-Use `scripts/run_hidden_flask_ab.py` for the next hidden-oracle Flask A/B run.
-It interleaves A (`flask-no-harness`) and B (`flask-yes-harness`) by
-round/task/group, pins Codex to one model configuration, and defaults to a
-no-cost dry run. Live agent execution requires `--execute`.
+Use `scripts/run_hidden_flask_ab.py` for hidden-oracle Flask arm runs. It
+supports legacy two-arm task pairs and the preferred three-arm shape:
+
+- `bare`: no harness.
+- `workflow-only`: `AGENTS`, local gate, docs placement, and boundary rules.
+- `memory-harness`: workflow harness plus generalized project conventions and
+  failure memory.
+
+The script interleaves arms by round/task/group, pins Codex to one model
+configuration, and defaults to a no-cost dry run. Live agent execution requires
+`--execute`.
 
 Dry-run the pilot plan:
 
 ```bash
-python3 scripts/run_hidden_flask_ab.py --mode pilot
+python3 scripts/run_hidden_flask_ab.py \
+  --suite benchmarks/suites/flask-hidden-heldout-10.json \
+  --mode pilot
 ```
 
 Run the pilot only after approving live Codex usage:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
+  --suite benchmarks/suites/flask-hidden-heldout-10.json \
   --mode pilot \
   --execute
 ```
 
-The current committed balanced hidden Flask set has ten task pairs under
-`benchmarks/tasks/flask-hidden-balanced`. A 100-record A/B run uses all ten task
-pairs and `repeats=5`:
+The current committed answer-free heldout and workflow-smoke suite manifests
+are still legacy two-arm calibrations. In the three-arm taxonomy,
+`no-harness` maps to `bare`, and the clean `yes-harness` ref maps to
+`workflow-only`. They do not measure `memory-harness` product value.
+
+A true product-value run should use a suite with:
+
+- all three arms fixed to `bare`, `workflow-only`, and `memory-harness`
+- `partial-realistic` prompts as the main experiment
+- `full-contract` prompts only as controls
+- held-out tasks that apply existing conventions to new API surfaces
+- `leakage_audit` entries that block exact held-out route names, response
+  constants, oracle filenames, raw `runs/`, and raw `results/` before the agent
+  runs
+
+For a 100-record legacy A/B control over the balanced hidden Flask set, use all
+ten task pairs and `repeats=5`:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
@@ -100,6 +124,10 @@ Keep `max_attempts=1` for A/B measurements. A failed task is benchmark data, so
 the A/B script continues after non-zero runner exits and writes every result it
 can collect.
 
+Use `--arm-order rotate` for multi-arm runs unless ordering effects are the
+thing being measured. The legacy `--pair-order alternate` maps to the same
+rotation behavior for two arms.
+
 Use `--jobs 2` only as a throughput calibration before promoting it to a
 representative run shape. Record the job count in the report, and treat any
 timeout under parallel execution as possibly caused by scheduler or service
@@ -114,14 +142,12 @@ wrong-file edits, describe them as task-boundary misses relative to
 allowed companion-document path (`docs/**`), not inherently bad documentation
 changes.
 
-Before a representative hidden Flask A/B run, verify that each no-harness and
-yes-harness task prompt is identical within its pair and says to update
-companion documentation in the repository's documented docs location. If
-`expected_files` includes `docs/**` but not `README.md`, the prompt must
-explicitly exclude root `README.md` unless the task asks for README changes.
-Keep reporting strict scored success separately from verification passed:
-verification passed is the functional signal, while wrong-file edits are the
-strict boundary signal.
+Before a representative hidden Flask run, verify that every task prompt is
+identical across arms and says to update companion documentation in the
+repository's documented docs location. If `expected_files` includes `docs/**`
+but not `README.md`, the prompt must explicitly exclude root `README.md` unless
+the task asks for README changes. Keep reporting strict scored success
+separately from functional, schema-contract, workflow, and boundary success.
 
 Use
 `docs/benchmarks/templates/hidden-flask-ab-report-template.md` for the public

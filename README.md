@@ -12,10 +12,11 @@ specs, runner code, and detailed benchmark reports.
 
 ## Benchmark Status
 
-Current official evidence is the balanced hidden-oracle Flask A/B 100-run
-`jobs=2` evidence run. Both targets received the task-critical API contract in
-the prompt, while only the harnessed target retained repository-local workflow,
-documentation, boundary, and local-gate guidance.
+Current official evidence is still the balanced hidden-oracle Flask A/B 100-run
+`jobs=2` evidence run, but it should now be read as a full-contract control.
+Both targets received the task-critical API contract in the prompt, while only
+the harnessed target retained repository-local workflow, documentation,
+boundary, and local-gate guidance.
 
 Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
@@ -23,6 +24,13 @@ Detailed report:
 This is representative for the explicitly measured `jobs=2` run shape. It is
 not a pure sequential claim: the run produced timeout noise, so strict scored
 success and verification passed should be read separately.
+
+The next product-value experiment should use a fixed three-arm structure:
+`bare`, `workflow-only`, and `memory-harness`. The main product experiment is
+`partial-realistic` held-out work where task-specific answer strings are absent
+from the target repositories. `full-contract` prompts remain useful controls;
+small gaps there are expected because the prompt already supplies much of the
+answer.
 
 ## Current Evidence
 
@@ -67,6 +75,11 @@ calibration: the harness appears to produce a small residual verification-rate
 lift under the measured Flask API task shape. It is not a generic claim about
 all coding tasks or all repositories.
 
+It is also not a clean `memory-harness` product claim. A valid product claim
+needs the three arms separated so `workflow-only` cannot be confused with
+generalized memory, and so task-specific hidden answers cannot leak into target
+docs or failure memory.
+
 ## Why Use The Harness
 
 The harness is useful when agent success depends on more than writing code that
@@ -108,8 +121,14 @@ xychart-beta
 
 ## Metric Definitions
 
-- `Strict scored success`: final scored success after agent exit, diff check,
-  verification, and file-boundary checks. A passing test suite alone is not
+- `Functional success`: hidden-oracle behavior for commands tagged
+  `functional`.
+- `Schema contract success`: response envelope, key, metadata, and API-style
+  checks for commands tagged `schema`.
+- `Workflow success`: agent exit, diff check, local workflow/gate commands
+  tagged `workflow`, and file-boundary checks.
+- `Strict scored success`: final scored success after preflight, agent exit,
+  diff check, verification, and file-boundary checks. A passing test suite alone is not
   counted as full success if file boundaries are violated.
 - `Verification passed`: deterministic pytest plus hidden-oracle success before
   any file-boundary penalty.
@@ -124,14 +143,21 @@ xychart-beta
   claim that README edits are bad; it is a strict boundary miss.
 - `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
+- `Preflight failures`: leakage audit failures before agent execution. These
+  should fail the run without spending model budget.
 
 ## What Comes Next
 
-The next useful follow-up is not another identical `jobs=2` run. To separate
-task quality from scheduler pressure, either rerun the same 100-record shape
-sequentially or rerun `jobs=2` with an explicitly higher timeout cap. Keep
-strict scored success, verification passed, and timeout counts separate in the
-report.
+The next useful follow-up is not another identical `jobs=2` run. Build a
+three-arm held-out suite with `bare`, `workflow-only`, and `memory-harness`,
+then run `partial-realistic` prompts as the main product experiment and
+`full-contract` prompts as controls. Keep functional, schema-contract,
+workflow, boundary, strict success, and timeout counts separate in the report.
+
+To separate task quality from scheduler pressure, either rerun representative
+shapes sequentially or rerun `jobs=2` with an explicitly higher timeout cap.
+Timeout stability remains unresolved until a sequential follow-up rules out
+parallel scheduler pressure.
 
 ## Reports
 

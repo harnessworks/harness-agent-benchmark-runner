@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 import uuid
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,36 @@ def run_task(
         clone_repository(resolved_source, repo_dir)
         checkout_ref(repo_dir, repo_ref)
         repository_ref = git_output(repo_dir, ["git", "rev-parse", "HEAD"])
+        preflight = run_preflight_audit(task, repo_dir)
+        if not preflight["passed"]:
+            finished_at = now_iso()
+            result = {
+                "schema_version": 1,
+                "run_id": run_id,
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "attempt": {
+                    "number": attempt_number,
+                    "limit": attempt_limit,
+                },
+                "limits": {
+                    "agent_timeout_seconds": agent_timeout_seconds,
+                    "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
+                    "max_cost_usd": max_cost_usd,
+                },
+                "task": task_result_metadata(task),
+                "repo": {
+                    "source": repo_source,
+                    "resolved_source": resolved_source,
+                    "ref": repo_ref,
+                    "repository_ref": repository_ref,
+                    "isolated_path": str(repo_dir),
+                },
+                "preflight": preflight,
+                "scoring": preflight_failure_scoring(preflight),
+            }
+            write_result(result, config.results_dir.expanduser().resolve(), run_dir)
+            return result
 
         prompt_path.write_text(task.prompt, encoding="utf-8")
         agent_env = {
@@ -86,8 +117,18 @@ def run_task(
         wrong_files = classify_wrong_files(changed_files, task.expected_files)
         forbidden_files = matching_files(changed_files, task.forbidden_files)
         verification_passed = all(result.exit_code == 0 for result in verification_results)
+        dimension_scoring = calculate_dimension_scoring(
+            preflight_passed=preflight["passed"],
+            agent_result=agent_result,
+            diff_check=diff_check,
+            verification_results=verification_results,
+            verification_passed=verification_passed,
+            wrong_files=wrong_files,
+            forbidden_files=forbidden_files,
+        )
         success = (
-            agent_result.exit_code == 0
+            preflight["passed"]
+            and agent_result.exit_code == 0
             and diff_check.exit_code == 0
             and verification_passed
             and not wrong_files
@@ -109,16 +150,7 @@ def run_task(
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
-            "task": {
-                "id": task.task_id,
-                "description": task.description,
-                "prompt_ref": task.prompt_ref,
-                "timeout_seconds": task.timeout_seconds,
-                "max_attempts": task.max_attempts,
-                "max_cost_usd": task.max_cost_usd,
-                "expected_files": list(task.expected_files),
-                "forbidden_files": list(task.forbidden_files),
-            },
+            "task": task_result_metadata(task),
             "repo": {
                 "source": repo_source,
                 "resolved_source": resolved_source,
@@ -126,6 +158,7 @@ def run_task(
                 "repository_ref": repository_ref,
                 "isolated_path": str(repo_dir),
             },
+            "preflight": preflight,
             "agent": agent_result.to_dict(),
             "git": {
                 "changed_files": changed_files,
@@ -136,6 +169,14 @@ def run_task(
             "verification": [result.to_dict() for result in verification_results],
             "scoring": {
                 "success": success,
+                "strict_success": dimension_scoring["strict_success"],
+                "functional_success": dimension_scoring["functional_success"],
+                "schema_contract_success": dimension_scoring["schema_contract_success"],
+                "workflow_success": dimension_scoring["workflow_success"],
+                "boundary_success": dimension_scoring["boundary_success"],
+                "execution_success": dimension_scoring["execution_success"],
+                "preflight_passed": preflight["passed"],
+                "dimensions": dimension_scoring,
                 "agent_exit_code": agent_result.exit_code,
                 "agent_timed_out": agent_result.timed_out,
                 "verification_passed": verification_passed,
@@ -166,7 +207,7 @@ def run_task(
             },
             "task": {"id": task.task_id, "description": task.description},
             "repo": {"source": config.repo_source_override or task.repo.source},
-            "scoring": {"success": False, "runner_error": type(exc).__name__},
+            "scoring": runner_error_scoring(type(exc).__name__),
             "error": str(exc),
         }
         write_result(result, config.results_dir.expanduser().resolve(), run_dir)
@@ -197,6 +238,209 @@ def run_task_with_retries(task: TaskSpec, config: RunnerConfig) -> list[dict[str
     return results
 
 
+def task_result_metadata(task: TaskSpec) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "id": task.task_id,
+        "description": task.description,
+        "prompt_ref": task.prompt_ref,
+        "timeout_seconds": task.timeout_seconds,
+        "max_attempts": task.max_attempts,
+        "max_cost_usd": task.max_cost_usd,
+        "expected_files": list(task.expected_files),
+        "forbidden_files": list(task.forbidden_files),
+    }
+    if task.benchmark:
+        metadata["benchmark"] = task.benchmark
+    return metadata
+
+
+def run_preflight_audit(task: TaskSpec, repo_dir: Path) -> dict[str, Any]:
+    audit = task.leakage_audit
+    files = collect_repository_files(repo_dir)
+    findings: list[dict[str, Any]] = []
+
+    status = git_output(repo_dir, ["git", "status", "--porcelain=v1"], allow_failure=True)
+    if status.strip():
+        findings.append(
+            {
+                "type": "dirty_isolated_clone",
+                "path": ".",
+                "detail": status.strip().splitlines()[0],
+            }
+        )
+
+    for path in files:
+        for pattern in audit.forbidden_paths:
+            if path_matches(path, pattern):
+                findings.append(
+                    {
+                        "type": "forbidden_path",
+                        "path": path,
+                        "pattern": pattern,
+                    }
+                )
+
+    if audit.forbidden_text:
+        for path in files:
+            full_path = repo_dir / path
+            if not full_path.is_file():
+                continue
+            text = read_text_for_audit(full_path)
+            if text is None:
+                continue
+            for needle in audit.forbidden_text:
+                if not needle:
+                    continue
+                index = text.find(needle)
+                if index >= 0:
+                    findings.append(
+                        {
+                            "type": "forbidden_text",
+                            "path": path,
+                            "text": needle,
+                            "line": text.count("\n", 0, index) + 1,
+                        }
+                    )
+
+    return {
+        "passed": not findings,
+        "findings": findings,
+        "checked": {
+            "repository_files": len(files),
+            "isolated_clone_clean": not status.strip(),
+            "forbidden_paths": list(audit.forbidden_paths),
+            "forbidden_text": list(audit.forbidden_text),
+        },
+    }
+
+
+def collect_repository_files(repo_dir: Path) -> list[str]:
+    completed = subprocess.run(
+        ["git", "ls-files", "-co", "--exclude-standard", "-z"],
+        cwd=str(repo_dir),
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if completed.returncode == 0:
+        return sorted(path for path in completed.stdout.split("\0") if path)
+
+    files = []
+    for path in repo_dir.rglob("*"):
+        if ".git" in path.parts or not path.is_file():
+            continue
+        files.append(path.relative_to(repo_dir).as_posix())
+    return sorted(files)
+
+
+def read_text_for_audit(path: Path) -> str | None:
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    if b"\0" in raw:
+        return None
+    return raw.decode("utf-8", errors="ignore")
+
+
+def calculate_dimension_scoring(
+    *,
+    preflight_passed: bool,
+    agent_result: ProcessResult,
+    diff_check: ProcessResult,
+    verification_results: list[ProcessResult],
+    verification_passed: bool,
+    wrong_files: list[str],
+    forbidden_files: list[str],
+) -> dict[str, bool]:
+    execution_success = agent_result.exit_code == 0 and not agent_result.timed_out
+    boundary_success = not wrong_files and not forbidden_files
+    diff_success = diff_check.exit_code == 0
+    functional_success = preflight_passed and verification_dimension_success(
+        verification_results,
+        "functional",
+        verification_passed,
+    )
+    schema_contract_success = preflight_passed and verification_dimension_success(
+        verification_results,
+        "schema",
+        verification_passed,
+    )
+    workflow_success = (
+        preflight_passed
+        and execution_success
+        and diff_success
+        and boundary_success
+        and verification_dimension_success(verification_results, "workflow", verification_passed)
+    )
+    strict_success = (
+        preflight_passed
+        and execution_success
+        and diff_success
+        and verification_passed
+        and boundary_success
+    )
+    return {
+        "functional_success": functional_success,
+        "schema_contract_success": schema_contract_success,
+        "workflow_success": workflow_success,
+        "boundary_success": boundary_success,
+        "execution_success": execution_success,
+        "strict_success": strict_success,
+    }
+
+
+def verification_dimension_success(
+    verification_results: list[ProcessResult],
+    dimension: str,
+    legacy_fallback: bool,
+) -> bool:
+    selected = [result for result in verification_results if dimension in result.dimensions]
+    if selected:
+        return all(result.exit_code == 0 for result in selected)
+    if any(result.dimensions for result in verification_results):
+        return True
+    return legacy_fallback
+
+
+def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
+    dimensions = {
+        "functional_success": False,
+        "schema_contract_success": False,
+        "workflow_success": False,
+        "boundary_success": False,
+        "execution_success": False,
+        "strict_success": False,
+    }
+    return {
+        "success": False,
+        "strict_success": False,
+        "functional_success": False,
+        "schema_contract_success": False,
+        "workflow_success": False,
+        "boundary_success": False,
+        "execution_success": False,
+        "preflight_passed": False,
+        "preflight_findings": len(preflight.get("findings", [])),
+        "dimensions": dimensions,
+        "agent_exit_code": None,
+        "agent_timed_out": False,
+        "verification_passed": False,
+        "first_pass_verification": False,
+        "wrong_file_edits": 0,
+        "wrong_files": [],
+        "forbidden_file_edits": 0,
+        "forbidden_files": [],
+    }
+
+
+def runner_error_scoring(error_type: str) -> dict[str, Any]:
+    scoring = preflight_failure_scoring({"findings": []})
+    scoring["runner_error"] = error_type
+    return scoring
+
+
 def run_verification_commands(
     task: TaskSpec,
     config: RunnerConfig,
@@ -207,13 +451,16 @@ def run_verification_commands(
     for index, command in enumerate(task.verification_commands, start=1):
         timeout = command.timeout_seconds or config.default_command_timeout_seconds
         results.append(
-            run_process(
-                materialize_verification_command(command.command, task.source_path),
-                cwd=repo_dir,
-                label=command.label,
-                timeout_seconds=timeout,
-                log_path=logs_dir / f"verify-{index}.log",
-                tail_chars=config.output_tail_chars,
+            replace(
+                run_process(
+                    materialize_verification_command(command.command, task.source_path),
+                    cwd=repo_dir,
+                    label=command.label,
+                    timeout_seconds=timeout,
+                    log_path=logs_dir / f"verify-{index}.log",
+                    tail_chars=config.output_tail_chars,
+                ),
+                dimensions=command.dimensions,
             )
         )
     return results

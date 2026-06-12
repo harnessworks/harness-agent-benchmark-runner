@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "flask-hidden-workflow-smoke",
+  "task_dir": "../tasks/flask-hidden-workflow-smoke",
+  "arms": [
+    "no-harness",
+    "yes-harness"
+  ],
+  "split": "calibration",
+  "prompt_variant": "full-contract",
+  "notes": "Legacy two-arm full-contract workflow calibration. In the 3-arm taxonomy, no-harness maps to bare and the clean yes-harness ref maps to workflow-only; full-contract prompts are controls, not product-value evidence."
+}

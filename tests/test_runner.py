@@ -211,6 +211,119 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["limits"]["agent_timeout_seconds"], 3)
             self.assertEqual(result["limits"]["max_cost_usd"], 1.25)
 
+    def test_runner_records_dimension_scoring_and_benchmark_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "import sys",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "(repo / 'README.md').write_text('updated\\n', encoding='utf-8')",
+                        "sys.exit(1)",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {
+                        "name": "hidden behavior",
+                        "dimensions": ["functional", "schema"],
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "from pathlib import Path; assert Path('README.md').read_text() == 'updated\\n'",
+                        ],
+                    }
+                ],
+                extra_fields={
+                    "benchmark": {
+                        "suite": "fixture-suite",
+                        "split": "heldout",
+                        "prompt_variant": "partial-realistic",
+                        "target_arm": "memory-harness",
+                    }
+                },
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                ),
+            )
+
+            self.assertFalse(result["scoring"]["success"])
+            self.assertFalse(result["scoring"]["strict_success"])
+            self.assertTrue(result["scoring"]["functional_success"])
+            self.assertTrue(result["scoring"]["schema_contract_success"])
+            self.assertFalse(result["scoring"]["workflow_success"])
+            self.assertEqual(result["verification"][0]["dimensions"], ["functional", "schema"])
+            self.assertEqual(result["task"]["benchmark"]["target_arm"], "memory-harness")
+
+    def test_runner_leakage_audit_blocks_agent_before_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            (source_repo / "docs").mkdir()
+            (source_repo / "docs" / "memory.md").write_text(
+                "The hidden oracle expects catalog-metrics-v1.\n",
+                encoding="utf-8",
+            )
+            run(["git", "add", "docs/memory.md"], cwd=source_repo)
+            run(["git", "commit", "-m", "Add docs memory"], cwd=source_repo)
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import os",
+                        "repo = Path(os.environ['BENCHMARK_REPO'])",
+                        "(repo / 'README.md').write_text('should not run\\n', encoding='utf-8')",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {"name": "always passes", "command": [sys.executable, "-c", "pass"]}
+                ],
+                extra_fields={
+                    "leakage_audit": {
+                        "forbidden_text": ["catalog-metrics-v1"],
+                        "forbidden_paths": ["runs/**"],
+                    }
+                },
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                ),
+            )
+
+            self.assertFalse(result["scoring"]["success"])
+            self.assertFalse(result["scoring"]["preflight_passed"])
+            self.assertNotIn("agent", result)
+            self.assertEqual(result["preflight"]["findings"][0]["type"], "forbidden_text")
+            self.assertEqual(result["preflight"]["findings"][0]["path"], "docs/memory.md")
+
     def test_summary_counts_results(self) -> None:
         records = [
             {
@@ -241,6 +354,7 @@ class RunnerTests(unittest.TestCase):
 
         self.assertEqual(summary["total"]["runs"], 2)
         self.assertEqual(summary["total"]["successes"], 1)
+        self.assertEqual(summary["total"]["strict_successes"], 1)
         self.assertEqual(summary["total"]["wrong_file_edits"], 1)
         self.assertEqual(summary["total"]["first_pass_verification"], 1)
         self.assertEqual(summary["total"]["agent_timeouts"], 1)

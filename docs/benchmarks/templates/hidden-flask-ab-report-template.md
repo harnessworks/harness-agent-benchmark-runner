@@ -1,49 +1,75 @@
-# Hidden-Oracle Flask Harness A/B - Report Template
+# Hidden-Oracle Flask Harness Arm Benchmark - Report Template
 
 Date: YYYY-MM-DD
 Runner: `harness-agent-benchmark-runner` @ `<runner-ref>`
 Agent: Codex CLI `<version>`
 Adapter: `examples/agents/codex_exec_agent.py`
+Suite: `benchmarks/suites/<suite>.json`
 
 ## Headline
 
-| Target | Harness | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` | No |  |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | Yes |  |  |  |  |  |  |  |  |  |
+| Target arm | Target repo/ref | Prompt level | Runs | Functional success | Schema contract success | Workflow success | Strict success | Preflight failures | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |
+| `workflow-only` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |
+| `memory-harness` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |
 
 One-sentence headline:
-`flask-yes-harness` improved hidden contract discovery and strict boundary
-adherence, reaching `<x>/<n>` strict scored successes versus `<y>/<n>` for
-`flask-no-harness` under the same hidden-oracle tasks and Codex settings.
+Under `<prompt-level>`, `<arm>` reached `<x>/<n>` functional successes and
+`<y>/<n>` strict successes versus `<baseline>` at `<a>/<n>` and `<b>/<n>`.
 
 ## Scope
 
-- Benchmark type: hidden-oracle harness A/B
-- Measured scope: Flask API tasks where success depends on repository-local
-  conventions and durable project guidance
-- Not measured: cross-framework harness effectiveness, generic Flask coding
-  ability, retry recovery, or multi-model performance
-- Boundary note: wrong-file edits are task-boundary misses relative to
-  `expected_files`; root `README.md` edits should be described as outside the
-  allowed companion-document path, not as generally bad README changes.
-- Metric note: verification passed measures functional correctness; strict
-  scored success also includes agent exit, diff checks, file boundaries, and
-  forbidden-file rules.
+- Benchmark type: hidden-oracle harness arm comparison.
+- Product comparison arms:
+  - `bare`: no harness.
+  - `workflow-only`: `AGENTS`, local gate, docs placement, and boundary rules only.
+  - `memory-harness`: workflow harness plus generalized project conventions and failure memory.
+- Prompt levels:
+  - `partial-realistic`: product main experiment. The prompt gives intent and general constraints, not the full scoring contract.
+  - `full-contract`: control experiment. The prompt may state exact route, request shape, response shape, and core rules; small arm gaps are expected.
+- Not measured: cross-framework harness effectiveness, retry recovery, or generic model quality unless separately run.
 
-## Targets
+## Leakage Audit
 
-- A, no harness: `flask-no-harness` @ `<commit>`
-- B, yes harness: `flask-yes-harness` @ `<commit>`
-- Target repository cleanliness: `<clean/dirty with reason>`
+Before live execution, every task should include `leakage_audit` and the runner
+should record `preflight.passed=true`.
+
+| Check | Status | Notes |
+| --- | --- | --- |
+| Target source checkout clean before isolated clone |  |  |
+| Isolated clone clean before agent execution |  |  |
+| No hidden oracle files in target repo |  |  |
+| No held-out endpoint names or exact version constants in target docs/memory |  |  |
+| No raw `runs/` or `results/` artifacts committed |  |  |
+
+The target repository may contain generalized conventions, glossary terms, and
+failure memory. It must not contain task-specific answer strings such as exact
+held-out route names, response key sets, hidden oracle payloads, or oracle file
+names.
+
+## Scoring
+
+| Metric | Meaning |
+| --- | --- |
+| `functional_success` | Hidden oracle behavior passed for commands tagged `functional`. |
+| `schema_contract_success` | Response envelope/key/meta contract passed for commands tagged `schema`. |
+| `workflow_success` | Agent exit, diff check, file boundaries, and commands tagged `workflow` passed. |
+| `boundary_success` | No wrong-file or forbidden-file edits. |
+| `execution_success` | Agent exited successfully without timeout. |
+| `strict_success` | Final score: preflight, execution, diff check, all verification commands, and boundaries passed. |
+
+Legacy untagged verification commands are treated as combined verification for
+backward compatibility. New task specs should tag verification commands with
+`dimensions`.
 
 ## Run Conditions
 
-- Run command: `python3 scripts/run_hidden_flask_ab.py --mode <pilot|large> ...`
-- Repetitions: `<repeats>` per target/task pair
-- Task pairs: `<count>`
-- Total records: `<count * repeats * 2>`
-- Pair order: `<ab|ba|alternate>`
+- Run command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/<suite>.json ...`
+- Repetitions: `<repeats>` per task/arm
+- Task groups: `<count>`
+- Total records: `<count * repeats * arms>`
+- Arm order: `rotate` unless an ordering effect is intentionally measured
 - Concurrency: `1`, unless explicitly documented otherwise
 - Task attempts: `max_attempts=1`
 - Effective agent timeout: `<seconds>`
@@ -54,84 +80,47 @@ adherence, reaching `<x>/<n>` strict scored successes versus `<y>/<n>` for
 
 ## Task Design
 
-| Task | Prompt-level instruction | Hidden oracle checks | Difficulty |
-| --- | --- | --- | --- |
-| `hidden-effect-availability-badge` |  |  |  |
-| `hidden-effect-cart-validation` |  |  |  |
-| `hidden-effect-catalog-metrics` |  |  |  |
-| `hidden-effect-catalog-segments` |  |  |  |
-| `hidden-effect-stock-risk` |  |  |  |
-| `hidden-effect-supplier-readiness` |  |  |  |
-| `hidden-effect-bundle-quote` |  |  |  |
-| `hidden-effect-pick-list` |  |  |  |
-| `hidden-effect-reservation-preview` |  |  |  |
-| `hidden-effect-tax-preview` |  |  |  |
+| Task | Split | Prompt level | Held-out convention being generalized | Hidden oracle dimensions |
+| --- | --- | --- | --- | --- |
+| `<task-id>` | `<train|heldout|control>` | `<partial-realistic|full-contract>` |  | `functional`, `schema` |
 
 Design notes:
 
-- A/B prompts are identical.
-- Prompts must ask for companion documentation in the repository's documented
-  docs location and must explicitly exclude root `README.md` unless the task
-  asks for README changes.
-- The exact scoring contract is outside the target clone.
-- The yes-harness target may expose repository conventions through harness
-  guidance; the no-harness target must infer them from the bare codebase.
-- The task is invalid if the prompt states the full hidden oracle contract.
-- Interrupted or partial live runs are diagnostic only. Do not promote them to
-  `latest.md` or README evidence tables.
-
-## No-Op Control
-
-| Target | Runs | Strict scored successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` |  |  |  |  |  |  |
-| `flask-yes-harness` |  |  |  |  |  |  |
-
-Expected result: both targets reject empty work for every hidden task.
+- Task prompts are identical across arms.
+- Held-out tasks should apply known conventions to a new endpoint or workflow,
+  not repeat an API contract already written in target docs.
+- Full-contract controls are allowed, but they are not the product-value claim.
+- If a task fails because an oracle is brittle rather than because the agent
+  violated task intent or file boundaries, record that distinction.
 
 ## Per-Task Results
 
-| Target | Task | Runs | Strict scored successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` | `hidden-effect-availability-badge` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-cart-validation` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-catalog-metrics` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-catalog-segments` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-stock-risk` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-supplier-readiness` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-bundle-quote` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-pick-list` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-reservation-preview` |  |  |  |  |  |  |  |  |
-| `flask-no-harness` | `hidden-effect-tax-preview` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-availability-badge` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-cart-validation` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-catalog-metrics` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-catalog-segments` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-stock-risk` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-supplier-readiness` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-bundle-quote` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-pick-list` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-reservation-preview` |  |  |  |  |  |  |  |  |
-| `flask-yes-harness` | `hidden-effect-tax-preview` |  |  |  |  |  |  |  |  |
+| Target arm | Task | Runs | Functional | Schema contract | Workflow | Strict | Preflight failures | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |
+| `workflow-only` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |
+| `memory-harness` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |
 
 ## Failure Taxonomy
 
-| Cause | `flask-no-harness` | `flask-yes-harness` | Notes |
-| --- | ---: | ---: | --- |
-| Route mismatch |  |  |  |
-| Response shape mismatch |  |  |  |
-| Business rule mismatch |  |  |  |
-| Missing required docs |  |  |  |
-| Wrong-file edit |  |  |  |
-| Forbidden-file edit |  |  |  |
-| Timeout |  |  |  |
-| Brittle oracle |  |  | Mark separately from genuine task failure. |
+| Cause | `bare` | `workflow-only` | `memory-harness` | Notes |
+| --- | ---: | ---: | ---: | --- |
+| Functional behavior mismatch |  |  |  |  |
+| Schema or response-envelope mismatch |  |  |  |  |
+| Generic API style gate miss |  |  |  |  |
+| Missing required docs |  |  |  |  |
+| Wrong-file edit |  |  |  |  |
+| Forbidden-file edit |  |  |  |  |
+| Leakage preflight failure |  |  |  |  |
+| Timeout |  |  |  |  |
+| Brittle oracle |  |  |  | Mark separately from genuine task failure. |
 
 ## Interpretation
 
-State only claims supported by this measured scope. Do not generalize beyond
-Flask hidden-oracle API tasks unless another target repository has also been
-measured with the same discipline.
+State only claims supported by this measured scope. A `full-contract` arm gap
+near zero is normal: the prompt has already supplied much of the answer. The
+product-value claim requires `partial-realistic` held-out tasks where
+`memory-harness` generalizes from conventions without task-specific leakage.
 
 ## Raw Artifacts
 
@@ -139,4 +128,4 @@ Raw local records are intentionally not committed.
 
 - Results JSONL: `results/<run-id>/<date>.jsonl`
 - Run directories: `runs/<run-id>/`
-- Public-safe report: `docs/benchmarks/<date>-hidden-flask-ab-<shape>.md`
+- Public-safe report: `docs/benchmarks/<date>-hidden-flask-<shape>.md`

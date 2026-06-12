@@ -17,6 +17,9 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden"
 DEFAULT_AGENT = f"{sys.executable} {REPO_ROOT / 'examples' / 'agents' / 'codex_exec_agent.py'}"
+LEGACY_ARMS = ("no-harness", "yes-harness")
+THREE_ARMS = ("bare", "workflow-only", "memory-harness")
+KNOWN_ARM_SUFFIXES = THREE_ARMS + LEGACY_ARMS
 
 
 @dataclass(frozen=True)
@@ -24,6 +27,21 @@ class TaskPair:
     task_id: str
     no_harness: Path
     yes_harness: Path
+
+
+@dataclass(frozen=True)
+class TaskGroup:
+    task_id: str
+    arms: dict[str, Path]
+
+
+@dataclass(frozen=True)
+class SuiteSpec:
+    suite_id: str
+    task_dir: Path
+    arms: tuple[str, ...] = ()
+    split: str | None = None
+    prompt_variant: str | None = None
 
 
 @dataclass(frozen=True)
@@ -46,6 +64,11 @@ class ScheduledRunResult:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    suite = load_suite(args.suite) if args.suite else None
+    if suite is not None:
+        args.task_dir = suite.task_dir
+        if args.arms is None and suite.arms:
+            args.arms = ",".join(suite.arms)
     args.task_dir = args.task_dir.resolve()
     args.repeats = args.repeats or default_repeats(args.mode)
     args.task_limit = default_task_limit(args.mode) if args.task_limit is None else args.task_limit
@@ -56,16 +79,21 @@ def main(argv: list[str] | None = None) -> int:
         args.workspace = REPO_ROOT / "runs" / f"hidden-flask-ab-{args.mode}-{stamp}"
 
     try:
-        pairs = load_task_pairs(args.task_dir)
-        validate_pairs(pairs)
-        selected_pairs = pairs[: args.task_limit] if args.task_limit else pairs
-        validate_run_shape(args, selected_pairs)
-        schedule = build_schedule(selected_pairs, args.repeats, args.pair_order)
-        print_plan(args, selected_pairs, schedule)
+        required_arms = parse_arms(args.arms)
+        groups = load_task_groups(args.task_dir, required_arms=required_arms)
+        validate_task_groups(groups)
+        selected_groups = groups[: args.task_limit] if args.task_limit else groups
+        validate_run_shape(args, selected_groups)
+        schedule = build_group_schedule(
+            selected_groups,
+            args.repeats,
+            args.arm_order or arm_order_from_pair_order(args.pair_order),
+        )
+        print_plan(args, selected_groups, schedule, suite)
         if not args.execute:
             print("\nDry run only. Re-run with --execute to start live agent benchmark runs.")
             return 0
-        validate_live_execution(args, selected_pairs)
+        validate_live_execution(args, selected_groups)
         return execute_schedule(args, schedule)
     except BenchmarkPlanError as exc:
         print(f"benchmark plan error: {exc}", file=sys.stderr)
@@ -78,7 +106,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--mode", choices=("pilot", "large"), default="pilot")
+    parser.add_argument(
+        "--suite",
+        type=Path,
+        help="optional benchmark suite manifest; supplies task_dir, arms, and prompt-level metadata",
+    )
     parser.add_argument("--task-dir", type=Path, default=DEFAULT_TASK_DIR)
+    parser.add_argument(
+        "--arms",
+        help="comma-separated arms to require, for example bare,workflow-only,memory-harness",
+    )
     parser.add_argument(
         "--task-limit",
         type=positive_int,
@@ -90,6 +127,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         choices=("ab", "ba", "alternate"),
         default="alternate",
         help="A is no-harness, B is yes-harness",
+    )
+    parser.add_argument(
+        "--arm-order",
+        choices=("listed", "reverse", "rotate"),
+        help="ordering strategy for all arms; defaults to --pair-order compatibility",
     )
     parser.add_argument("--agent-command", default=DEFAULT_AGENT)
     parser.add_argument("--workspace", type=Path)
@@ -147,36 +189,111 @@ def default_task_limit(mode: str) -> int | None:
     return 4 if mode == "pilot" else None
 
 
-def load_task_pairs(task_dir: Path) -> list[TaskPair]:
+def load_suite(path: Path) -> SuiteSpec:
+    suite_path = path.expanduser()
+    if not suite_path.is_absolute():
+        suite_path = (REPO_ROOT / suite_path).resolve()
+    data = read_json(suite_path)
+    suite_id = require_string(data, "id", suite_path)
+    raw_task_dir = require_string(data, "task_dir", suite_path)
+    task_dir = Path(raw_task_dir).expanduser()
+    if not task_dir.is_absolute():
+        task_dir = (suite_path.parent / task_dir).resolve()
+    arms = tuple(string_list(data, "arms", suite_path))
+    split = optional_string(data, "split", suite_path)
+    prompt_variant = optional_string(data, "prompt_variant", suite_path)
+    return SuiteSpec(
+        suite_id=suite_id,
+        task_dir=task_dir,
+        arms=arms,
+        split=split,
+        prompt_variant=prompt_variant,
+    )
+
+
+def parse_arms(value: str | None) -> tuple[str, ...] | None:
+    if value is None:
+        return None
+    arms = tuple(arm.strip() for arm in value.split(",") if arm.strip())
+    if not arms:
+        raise BenchmarkPlanError("--arms must name at least one arm")
+    for arm in arms:
+        if arm not in KNOWN_ARM_SUFFIXES:
+            allowed = ", ".join(KNOWN_ARM_SUFFIXES)
+            raise BenchmarkPlanError(f"unknown arm {arm!r}; allowed arms: {allowed}")
+    if len(set(arms)) != len(arms):
+        raise BenchmarkPlanError("--arms must not repeat an arm")
+    return arms
+
+
+def load_task_groups(task_dir: Path, required_arms: tuple[str, ...] | None = None) -> list[TaskGroup]:
     if not task_dir.exists():
         raise BenchmarkPlanError(f"task directory does not exist: {task_dir}")
 
     grouped: dict[str, dict[str, Path]] = {}
     for path in sorted(task_dir.glob("*.json")):
+        arm = arm_suffix(path)
+        if arm is None:
+            continue
         data = read_json(path)
         task_id = require_string(data, "id", path)
-        if path.name.endswith("-no-harness.json"):
-            side = "no_harness"
-        elif path.name.endswith("-yes-harness.json"):
-            side = "yes_harness"
-        else:
-            continue
         grouped.setdefault(task_id, {})
-        if side in grouped[task_id]:
-            raise BenchmarkPlanError(f"duplicate {side} task for {task_id}")
-        grouped[task_id][side] = path
+        if arm in grouped[task_id]:
+            raise BenchmarkPlanError(f"duplicate {arm} task for {task_id}")
+        grouped[task_id][arm] = path
 
-    pairs = []
-    for task_id, sides in sorted(grouped.items()):
-        if "no_harness" not in sides or "yes_harness" not in sides:
-            raise BenchmarkPlanError(f"incomplete A/B pair for task id: {task_id}")
-        pairs.append(TaskPair(task_id, sides["no_harness"], sides["yes_harness"]))
-    if not pairs:
-        raise BenchmarkPlanError(f"no hidden Flask task pairs found in {task_dir}")
-    return pairs
+    if not grouped:
+        raise BenchmarkPlanError(f"no hidden Flask task groups found in {task_dir}")
+
+    arms = required_arms or infer_required_arms(grouped)
+    groups = []
+    for task_id, arm_paths in sorted(grouped.items()):
+        missing = [arm for arm in arms if arm not in arm_paths]
+        if missing:
+            raise BenchmarkPlanError(f"incomplete task group for {task_id}; missing: {', '.join(missing)}")
+        groups.append(TaskGroup(task_id=task_id, arms={arm: arm_paths[arm] for arm in arms}))
+    if not groups:
+        raise BenchmarkPlanError(f"no complete hidden Flask task groups found in {task_dir}")
+    return groups
+
+
+def arm_suffix(path: Path) -> str | None:
+    for suffix in sorted(KNOWN_ARM_SUFFIXES, key=len, reverse=True):
+        if path.name.endswith(f"-{suffix}.json"):
+            return suffix
+    return None
+
+
+def infer_required_arms(grouped: dict[str, dict[str, Path]]) -> tuple[str, ...]:
+    observed = set().union(*(set(arms) for arms in grouped.values()))
+    if set(THREE_ARMS).issubset(observed):
+        return THREE_ARMS
+    if set(LEGACY_ARMS).issubset(observed):
+        return LEGACY_ARMS
+    raise BenchmarkPlanError(
+        "could not infer arms; pass --arms or use complete "
+        "bare/workflow-only/memory-harness or no-harness/yes-harness task files"
+    )
+
+
+def load_task_pairs(task_dir: Path) -> list[TaskPair]:
+    groups = load_task_groups(task_dir, required_arms=LEGACY_ARMS)
+    return [
+        TaskPair(task_id=group.task_id, no_harness=group.arms["no-harness"], yes_harness=group.arms["yes-harness"])
+        for group in groups
+    ]
 
 
 def validate_pairs(pairs: list[TaskPair]) -> None:
+    validate_task_groups(
+        [
+            TaskGroup(pair.task_id, {"no-harness": pair.no_harness, "yes-harness": pair.yes_harness})
+            for pair in pairs
+        ]
+    )
+
+
+def validate_task_groups(groups: list[TaskGroup]) -> None:
     comparable_keys = (
         "id",
         "description",
@@ -187,18 +304,19 @@ def validate_pairs(pairs: list[TaskPair]) -> None:
         "expected_files",
         "forbidden_files",
     )
-    for pair in pairs:
-        no_data = read_json(pair.no_harness)
-        yes_data = read_json(pair.yes_harness)
-        for key in comparable_keys:
-            if no_data.get(key) != yes_data.get(key):
-                raise BenchmarkPlanError(f"{pair.task_id} differs on {key}; A/B prompts must match")
-        if not has_hidden_oracle_command(no_data, pair.task_id):
-            raise BenchmarkPlanError(f"{pair.no_harness} does not run the hidden oracle")
-        if not has_hidden_oracle_command(yes_data, pair.task_id):
-            raise BenchmarkPlanError(f"{pair.yes_harness} does not run the hidden oracle")
-        validate_docs_boundary_prompt(no_data, pair.no_harness)
-        validate_docs_boundary_prompt(yes_data, pair.yes_harness)
+    for group in groups:
+        arm_data = [(arm, path, read_json(path)) for arm, path in group.arms.items()]
+        reference_arm, _, reference = arm_data[0]
+        for arm, path, data in arm_data:
+            for key in comparable_keys:
+                if data.get(key) != reference.get(key):
+                    raise BenchmarkPlanError(
+                        f"{group.task_id} differs on {key}; prompts and scoring boundaries "
+                        f"must match across arms ({reference_arm} vs {arm})"
+                    )
+            if not has_hidden_oracle_command(data, group.task_id):
+                raise BenchmarkPlanError(f"{path} does not run the hidden oracle")
+            validate_docs_boundary_prompt(data, path)
 
 
 def has_hidden_oracle_command(data: dict[str, Any], task_id: str) -> bool:
@@ -224,12 +342,12 @@ def validate_docs_boundary_prompt(data: dict[str, Any], path: Path) -> None:
         )
 
 
-def validate_run_shape(args: argparse.Namespace, pairs: list[TaskPair]) -> None:
-    if not pairs:
-        raise BenchmarkPlanError("no task pairs selected")
-    if args.mode == "large" and len(pairs) < args.large_min_task_pairs and not args.allow_small_large:
+def validate_run_shape(args: argparse.Namespace, groups: list[TaskGroup] | list[TaskPair]) -> None:
+    if not groups:
+        raise BenchmarkPlanError("no task groups selected")
+    if args.mode == "large" and len(groups) < args.large_min_task_pairs and not args.allow_small_large:
         raise BenchmarkPlanError(
-            f"large mode selected {len(pairs)} task pairs; add more hidden tasks or pass "
+            f"large mode selected {len(groups)} task groups; add more hidden tasks or pass "
             "--allow-small-large for a repeat-heavy run over the current set"
         )
 
@@ -250,6 +368,22 @@ def build_schedule(pairs: list[TaskPair], repeats: int, pair_order: str) -> list
     return schedule
 
 
+def build_group_schedule(groups: list[TaskGroup], repeats: int, arm_order: str) -> list[ScheduledRun]:
+    schedule: list[ScheduledRun] = []
+    for round_number in range(1, repeats + 1):
+        for group in groups:
+            for label, task_path in ordered_group_arms(group, round_number, arm_order):
+                schedule.append(
+                    ScheduledRun(
+                        round_number=round_number,
+                        task_id=group.task_id,
+                        group=label,
+                        task_path=task_path,
+                    )
+                )
+    return schedule
+
+
 def group_order(pair: TaskPair, round_number: int, pair_order: str) -> list[tuple[str, Path]]:
     ab = [("A:no-harness", pair.no_harness), ("B:yes-harness", pair.yes_harness)]
     if pair_order == "ab":
@@ -261,22 +395,52 @@ def group_order(pair: TaskPair, round_number: int, pair_order: str) -> list[tupl
     return ab
 
 
-def print_plan(args: argparse.Namespace, pairs: list[TaskPair], schedule: list[ScheduledRun]) -> None:
-    print("Hidden Flask Harness A/B Benchmark Plan")
+def ordered_group_arms(group: TaskGroup, round_number: int, arm_order: str) -> list[tuple[str, Path]]:
+    items = list(group.arms.items())
+    if arm_order == "reverse":
+        items = list(reversed(items))
+    elif arm_order == "rotate" and items:
+        offset = (round_number - 1) % len(items)
+        items = items[offset:] + items[:offset]
+    return [(f"{chr(ord('A') + index)}:{arm}", path) for index, (arm, path) in enumerate(items)]
+
+
+def arm_order_from_pair_order(pair_order: str) -> str:
+    if pair_order == "ab":
+        return "listed"
+    if pair_order == "ba":
+        return "reverse"
+    return "rotate"
+
+
+def print_plan(
+    args: argparse.Namespace,
+    groups: list[TaskGroup],
+    schedule: list[ScheduledRun],
+    suite: SuiteSpec | None = None,
+) -> None:
+    print("Hidden Flask Harness Benchmark Plan")
     print(f"Mode: {args.mode}")
     print(f"Execute: {args.execute}")
-    print(f"Task pairs: {len(pairs)}")
+    if suite is not None:
+        print(f"Suite: {suite.suite_id}")
+        if suite.split:
+            print(f"Split: {suite.split}")
+        if suite.prompt_variant:
+            print(f"Prompt variant: {suite.prompt_variant}")
+    print(f"Task groups: {len(groups)}")
+    print(f"Arms: {', '.join(groups[0].arms) if groups else '-'}")
     print(f"Repeats: {args.repeats}")
     print(f"Planned runs: {len(schedule)}")
     print(f"Jobs: {args.jobs}")
-    print(f"Pair order: {args.pair_order} (A=no-harness, B=yes-harness)")
+    print(f"Arm order: {args.arm_order or arm_order_from_pair_order(args.pair_order)}")
     print(f"Model: {args.model}")
     print(f"Codex exec args: {codex_exec_args(args)}")
     print(f"Workspace: {args.workspace}")
     print(f"Results: {args.results}")
     print("Tasks:")
-    for pair in pairs:
-        print(f"- {pair.task_id}")
+    for group in groups:
+        print(f"- {group.task_id}")
 
     commands = [build_runner_command(args, item) for item in schedule]
     if args.show_all_commands or len(commands) <= 40:
@@ -290,11 +454,11 @@ def print_plan(args: argparse.Namespace, pairs: list[TaskPair], schedule: list[S
         print("...")
 
 
-def validate_live_execution(args: argparse.Namespace, pairs: list[TaskPair]) -> None:
+def validate_live_execution(args: argparse.Namespace, groups: list[TaskGroup]) -> None:
     if not args.allow_head_ref:
         head_refs = []
-        for pair in pairs:
-            for path in (pair.no_harness, pair.yes_harness):
+        for group in groups:
+            for path in group.arms.values():
                 data = read_json(path)
                 if data.get("repo", {}).get("ref", "HEAD") == "HEAD":
                     head_refs.append(str(path))
@@ -304,17 +468,17 @@ def validate_live_execution(args: argparse.Namespace, pairs: list[TaskPair]) -> 
             )
 
     if not args.allow_dirty_targets:
-        dirty = dirty_target_repositories(pairs)
+        dirty = dirty_target_repositories(groups)
         if dirty:
             formatted = ", ".join(f"{path} ({status})" for path, status in dirty)
             raise BenchmarkPlanError(f"dirty target repositories are not allowed: {formatted}")
 
 
-def dirty_target_repositories(pairs: list[TaskPair]) -> list[tuple[Path, str]]:
+def dirty_target_repositories(groups: list[TaskGroup]) -> list[tuple[Path, str]]:
     dirty: list[tuple[Path, str]] = []
     seen: set[Path] = set()
-    for pair in pairs:
-        for task_path in (pair.no_harness, pair.yes_harness):
+    for group in groups:
+        for task_path in group.arms.values():
             data = read_json(task_path)
             source = require_string(require_dict(data, "repo", task_path), "source", task_path)
             resolved = resolve_repo_source(source, task_path)
@@ -536,6 +700,22 @@ def require_string(data: dict[str, Any], key: str, path: Path) -> str:
     value = data.get(key)
     if not isinstance(value, str):
         raise BenchmarkPlanError(f"{path}: {key} must be a string")
+    return value
+
+
+def optional_string(data: dict[str, Any], key: str, path: Path) -> str | None:
+    value = data.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise BenchmarkPlanError(f"{path}: {key} must be a string when provided")
+    return value
+
+
+def string_list(data: dict[str, Any], key: str, path: Path) -> list[str]:
+    value = data.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise BenchmarkPlanError(f"{path}: {key} must be a list of strings")
     return value
 
 

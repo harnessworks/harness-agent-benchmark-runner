@@ -221,6 +221,26 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertNotIn("Treat this prompt as the task's source of truth", prompt)
             self.assertNotIn("Endpoint and method:", prompt)
 
+    def test_answer_free_task_sets_have_metadata_dimensions_and_leakage_audits(self) -> None:
+        for task_dir, prompt_variant in (
+            (HELDOUT_10_TASK_DIR, "partial-realistic"),
+            (WORKFLOW_SMOKE_TASK_DIR, "full-contract"),
+        ):
+            pairs = hidden_ab.load_task_pairs(task_dir)
+            for pair in pairs:
+                for target_arm, task_path in (
+                    ("bare", pair.no_harness),
+                    ("workflow-only", pair.yes_harness),
+                ):
+                    data = hidden_ab.read_json(task_path)
+                    benchmark = data.get("benchmark", {})
+                    self.assertEqual(benchmark.get("target_arm"), target_arm)
+                    self.assertEqual(benchmark.get("prompt_variant"), prompt_variant)
+                    self.assertIn("forbidden_text", data.get("leakage_audit", {}))
+                    self.assertIn("catalog-metrics-v1", data["leakage_audit"]["forbidden_text"])
+                    command = data["verification"]["commands"][0]
+                    self.assertEqual(command.get("dimensions"), ["functional", "schema"])
+
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task_dir = Path(tmp)
@@ -236,6 +256,63 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 [item.group for item in schedule],
                 ["A:no-harness", "B:yes-harness", "B:yes-harness", "A:no-harness"],
             )
+
+    def test_loads_three_arm_groups_and_rotates_schedule(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task_dir = Path(tmp)
+            write_hidden_task(task_dir / "alpha-bare.json", "alpha", "../flask-bare")
+            write_hidden_task(task_dir / "alpha-workflow-only.json", "alpha", "../flask-workflow-only")
+            write_hidden_task(task_dir / "alpha-memory-harness.json", "alpha", "../flask-memory-harness")
+
+            groups = hidden_ab.load_task_groups(task_dir)
+            hidden_ab.validate_task_groups(groups)
+            schedule = hidden_ab.build_group_schedule(groups, repeats=2, arm_order="rotate")
+
+            self.assertEqual([group.task_id for group in groups], ["alpha"])
+            self.assertEqual(list(groups[0].arms), ["bare", "workflow-only", "memory-harness"])
+            self.assertEqual(
+                [item.group for item in schedule],
+                [
+                    "A:bare",
+                    "B:workflow-only",
+                    "C:memory-harness",
+                    "A:workflow-only",
+                    "B:memory-harness",
+                    "C:bare",
+                ],
+            )
+
+    def test_loads_suite_manifest_with_relative_task_dir_and_arms(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            suite_dir = root / "suites"
+            task_dir.mkdir()
+            suite_dir.mkdir()
+            write_hidden_task(task_dir / "alpha-bare.json", "alpha", "../flask-bare")
+            write_hidden_task(task_dir / "alpha-workflow-only.json", "alpha", "../flask-workflow-only")
+            write_hidden_task(task_dir / "alpha-memory-harness.json", "alpha", "../flask-memory-harness")
+            suite_path = suite_dir / "fixture.json"
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "id": "fixture-suite",
+                        "task_dir": "../tasks",
+                        "arms": ["bare", "workflow-only", "memory-harness"],
+                        "split": "heldout",
+                        "prompt_variant": "partial-realistic",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            suite = hidden_ab.load_suite(suite_path)
+            groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+
+            self.assertEqual(suite.suite_id, "fixture-suite")
+            self.assertEqual(suite.split, "heldout")
+            self.assertEqual(suite.prompt_variant, "partial-realistic")
+            self.assertEqual([group.task_id for group in groups], ["alpha"])
 
     def test_large_mode_requires_enough_task_pairs_by_default(self) -> None:
         pair = hidden_ab.TaskPair(

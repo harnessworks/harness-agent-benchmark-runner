@@ -32,7 +32,11 @@
           "python3",
           "scripts/check_harness.py"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimensions": [
+          "functional",
+          "schema"
+        ]
       },
       {
         "name": "pytest and heldout-10 hidden-effect-catalog-segments oracle",
@@ -41,8 +45,41 @@
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
           "hidden-effect-catalog-segments"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimensions": [
+          "functional",
+          "schema"
+        ]
       }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-heldout-10-answer-free",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "workflow-only"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1"
     ]
   }
 }
