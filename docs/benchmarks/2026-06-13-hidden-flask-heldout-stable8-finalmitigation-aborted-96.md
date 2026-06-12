@@ -203,6 +203,10 @@ Before the next full heldout promotion attempt:
 - Treat a clean one-repeat pilot as insufficient promotion evidence; require at
   least a two-round reduced pilot or another stronger stability check before a
   near-100 run.
+- Use the runner's promotion guard for future near-100 attempts:
+  `--promotion-run --require-clean-results <results-dir> --min-clean-rounds 2`.
+  The one-repeat stable-8 pilot fails this guard because each selected task/arm
+  pair appears only once.
 - Keep `CODEX_PROMPT_GUARD=1`, target-clean checks, hidden access scanning, and
   `--stop-on-abnormal`.
 - Keep `--agent-idle-timeout 300` and `--agent-timeout-override 900`.

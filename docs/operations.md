@@ -62,6 +62,7 @@ Dry-run the reduced heldout promotion pilot plan:
 python3 scripts/run_hidden_flask_ab.py \
   --suite benchmarks/suites/flask-hidden-heldout-stable-8.json \
   --mode pilot \
+  --repeats 2 \
   --agent-timeout-override 900 \
   --agent-idle-timeout 300 \
   --stop-on-abnormal
@@ -69,10 +70,11 @@ python3 scripts/run_hidden_flask_ab.py \
 
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` deliberately excludes
 `hidden-effect-bundle-quote` after repeated tail-latency stops. One repeat is
-4 tasks x 2 arms, so the fresh pilot is 8 records rather than the older
-10-record full-heldout shape. For a near-100 promotion over this reduced suite,
-use 12 repeats for 96 balanced records or 13 repeats for 104 balanced records;
-do not cut a schedule mid-repeat just to force exactly 100 records.
+4 tasks x 2 arms, so a one-repeat smoke is 8 records rather than the older
+10-record full-heldout shape. Use at least 2 repeats, or 16 records, as the
+reduced promotion-readiness pilot. For a near-100 promotion over this reduced
+suite, use 12 repeats for 96 balanced records or 13 repeats for 104 balanced
+records; do not cut a schedule mid-repeat just to force exactly 100 records.
 
 Do not rerun the same 96-record reduced promotion shape until the
 workflow-only `hidden-effect-cart-validation` no-edit idle stall from the
@@ -82,6 +84,26 @@ quarantine cart-validation based only on the stopped promotion record. The
 one-repeat stable-8 pilot completed cleanly, but the 96-record attempt still
 stopped at record 11. Treat one clean reduced pilot as insufficient promotion
 readiness evidence.
+
+The A/B script now has an explicit promotion guard. Near-100 reduced runs
+should use `--promotion-run` and point at a prior clean pilot with at least two
+clean records for every selected task/arm pair:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --suite benchmarks/suites/flask-hidden-heldout-stable-8.json \
+  --repeats 12 \
+  --promotion-run \
+  --require-clean-results results/<stable8-two-round-pilot> \
+  --min-clean-rounds 2 \
+  --agent-timeout-override 900 \
+  --agent-idle-timeout 300 \
+  --stop-on-abnormal \
+  --execute
+```
+
+Using the one-repeat stable-8 pilot as promotion evidence fails this guard
+because it covers each task/arm pair only once.
 
 For focused triage, prefer a quarantine suite when one exists:
 
@@ -101,6 +123,7 @@ Run the pilot only after approving live Codex usage:
 python3 scripts/run_hidden_flask_ab.py \
   --suite benchmarks/suites/flask-hidden-heldout-stable-8.json \
   --mode pilot \
+  --repeats 2 \
   --agent-timeout-override 900 \
   --agent-idle-timeout 300 \
   --stop-on-abnormal \

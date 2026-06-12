@@ -405,6 +405,131 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         hidden_ab.validate_run_shape(args, [pair])
 
+    def test_promotion_run_requires_clean_results_and_watchdogs(self) -> None:
+        pair = hidden_ab.TaskPair(
+            task_id="alpha",
+            no_harness=Path("alpha-no-harness.json"),
+            yes_harness=Path("alpha-yes-harness.json"),
+        )
+        args = Namespace(
+            mode="pilot",
+            large_min_task_pairs=8,
+            allow_small_large=False,
+            promotion_run=True,
+            stop_on_abnormal=True,
+            jobs=1,
+            agent_idle_timeout=300,
+            agent_timeout_override=900,
+            require_clean_results=None,
+            min_clean_rounds=2,
+        )
+
+        with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "--require-clean-results"):
+            hidden_ab.validate_run_shape(args, [pair])
+
+    def test_promotion_run_requires_at_least_two_clean_rounds(self) -> None:
+        pair = hidden_ab.TaskPair(
+            task_id="alpha",
+            no_harness=Path("alpha-no-harness.json"),
+            yes_harness=Path("alpha-yes-harness.json"),
+        )
+        args = Namespace(
+            mode="pilot",
+            large_min_task_pairs=8,
+            allow_small_large=False,
+            promotion_run=True,
+            stop_on_abnormal=True,
+            jobs=1,
+            agent_idle_timeout=300,
+            agent_timeout_override=900,
+            require_clean_results=Path("results"),
+            min_clean_rounds=1,
+        )
+
+        with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "min-clean-rounds"):
+            hidden_ab.validate_run_shape(args, [pair])
+
+    def test_clean_readiness_requires_each_selected_task_arm_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            results_dir = root / "results"
+            task_dir.mkdir()
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                benchmark_arm="bare",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                benchmark_arm="workflow-only",
+            )
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=hidden_ab.LEGACY_ARMS)
+            for _ in range(2):
+                write_jsonl_record(results_dir, clean_record("alpha", "bare"))
+                write_jsonl_record(results_dir, clean_record("alpha", "workflow-only"))
+
+            summary = hidden_ab.validate_clean_readiness_results(results_dir, groups, min_clean_rounds=2)
+
+            self.assertEqual(summary.records, 4)
+            self.assertEqual(summary.expected_pairs, 2)
+            self.assertEqual(summary.min_clean_rounds, 2)
+
+    def test_clean_readiness_rejects_missing_clean_rounds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            results_dir = root / "results"
+            task_dir.mkdir()
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                benchmark_arm="bare",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                benchmark_arm="workflow-only",
+            )
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=hidden_ab.LEGACY_ARMS)
+            write_jsonl_record(results_dir, clean_record("alpha", "bare"))
+            write_jsonl_record(results_dir, clean_record("alpha", "workflow-only"))
+
+            with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "at least 2"):
+                hidden_ab.validate_clean_readiness_results(results_dir, groups, min_clean_rounds=2)
+
+    def test_clean_readiness_rejects_abnormal_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            results_dir = root / "results"
+            task_dir.mkdir()
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                benchmark_arm="bare",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                benchmark_arm="workflow-only",
+            )
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=hidden_ab.LEGACY_ARMS)
+            record = clean_record("alpha", "bare")
+            record["scoring"]["agent_stalled"] = True
+            record["agent"] = {"termination_reason": "idle_watchdog"}
+            write_jsonl_record(results_dir, record)
+
+            with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "abnormal signals"):
+                hidden_ab.validate_clean_readiness_results(results_dir, groups, min_clean_rounds=1)
+
     def test_rejects_ambiguous_docs_prompt_when_root_readme_is_outside_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task_dir = Path(tmp)
@@ -598,6 +723,7 @@ def write_hidden_task(
     task_id: str,
     repo_source: str,
     prompt: str | None = None,
+    benchmark_arm: str | None = None,
 ) -> None:
     if prompt is None:
         prompt = (
@@ -605,31 +731,47 @@ def write_hidden_task(
             "repository's documented docs location. Do not update the root README "
             "unless the task explicitly asks for README changes."
         )
-    path.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "id": task_id,
-                "description": "fixture hidden task",
-                "repo": {"source": repo_source, "ref": "abc123"},
-                "prompt": prompt,
-                "timeout_seconds": 600,
-                "max_attempts": 1,
-                "max_cost_usd": 1.0,
-                "expected_files": ["app/**", "tests/**", "docs/**"],
-                "forbidden_files": ["benchmarks/**"],
-                "verification": {
-                    "commands": [
-                        {
-                            "name": "hidden oracle",
-                            "command": ["bash", "run_flask_hidden_checks.sh", task_id],
-                        }
-                    ]
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
+    data = {
+        "schema_version": 1,
+        "id": task_id,
+        "description": "fixture hidden task",
+        "repo": {"source": repo_source, "ref": "abc123"},
+        "prompt": prompt,
+        "timeout_seconds": 600,
+        "max_attempts": 1,
+        "max_cost_usd": 1.0,
+        "expected_files": ["app/**", "tests/**", "docs/**"],
+        "forbidden_files": ["benchmarks/**"],
+        "verification": {
+            "commands": [
+                {
+                    "name": "hidden oracle",
+                    "command": ["bash", "run_flask_hidden_checks.sh", task_id],
+                }
+            ]
+        },
+    }
+    if benchmark_arm:
+        data["benchmark"] = {"target_arm": benchmark_arm}
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def clean_record(task_id: str, target_arm: str) -> dict[str, object]:
+    return {
+        "run_id": f"{task_id}-{target_arm}",
+        "task": {
+            "id": task_id,
+            "benchmark": {"target_arm": target_arm},
+        },
+        "scoring": {
+            "success": False,
+            "preflight_passed": True,
+            "agent_timed_out": False,
+            "agent_stalled": False,
+            "wrong_file_edits": 0,
+            "forbidden_file_edits": 0,
+        },
+    }
 
 
 def write_jsonl_record(results_dir: Path, record: dict[str, object]) -> None:

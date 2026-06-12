@@ -189,7 +189,10 @@ strict successes remained 0. `bundle-quote` should stay quarantined, but the
 remaining blocker is now workflow-only no-edit idle tail under partial prompts,
 not just bundle-quote task latency. Focused workflow-only cart-validation
 triage completed cleanly, so do not quarantine cart-validation based only on
-the stopped promotion record.
+the stopped promotion record. The runner now has a promotion guard:
+`--promotion-run --require-clean-results <results-dir> --min-clean-rounds 2`
+fails before execution if a prior clean pilot does not cover every selected
+task/arm pair enough times.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

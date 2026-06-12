@@ -64,6 +64,14 @@ class ScheduledRunResult:
     stderr: str
 
 
+@dataclass(frozen=True)
+class CleanReadinessSummary:
+    results_dir: Path
+    records: int
+    expected_pairs: int
+    min_clean_rounds: int
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     suite = load_suite(args.suite) if args.suite else None
@@ -89,12 +97,13 @@ def main(argv: list[str] | None = None) -> int:
         groups = filter_task_groups(groups, args.task_id, "--task-id")
         selected_groups = groups[: args.task_limit] if args.task_limit else groups
         validate_run_shape(args, selected_groups)
+        clean_readiness = validate_clean_readiness_requirement(args, selected_groups)
         schedule = build_group_schedule(
             selected_groups,
             args.repeats,
             args.arm_order or arm_order_from_pair_order(args.pair_order),
         )
-        print_plan(args, selected_groups, schedule, suite)
+        print_plan(args, selected_groups, schedule, suite, clean_readiness)
         if not args.execute:
             print("\nDry run only. Re-run with --execute to start live agent benchmark runs.")
             return 0
@@ -159,6 +168,22 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--stop-on-abnormal",
         action="store_true",
         help="stop a sequential live run after timeout, stall, boundary, preflight, or hidden-access signals",
+    )
+    parser.add_argument(
+        "--promotion-run",
+        action="store_true",
+        help="require production promotion safeguards before live execution",
+    )
+    parser.add_argument(
+        "--require-clean-results",
+        type=Path,
+        help="JSONL results directory from a prior clean pilot that must cover the selected task/arm pairs",
+    )
+    parser.add_argument(
+        "--min-clean-rounds",
+        type=positive_int,
+        default=1,
+        help="minimum prior clean records required for each selected task/arm pair",
     )
     parser.add_argument("--max-agent-timeout", type=positive_int, default=900)
     parser.add_argument(
@@ -397,11 +422,126 @@ def validate_run_shape(args: argparse.Namespace, groups: list[TaskGroup] | list[
         raise BenchmarkPlanError("no task groups selected")
     if getattr(args, "stop_on_abnormal", False) and args.jobs != 1:
         raise BenchmarkPlanError("--stop-on-abnormal requires --jobs 1")
+    validate_promotion_controls(args)
     if args.mode == "large" and len(groups) < args.large_min_task_pairs and not args.allow_small_large:
         raise BenchmarkPlanError(
             f"large mode selected {len(groups)} task groups; add more hidden tasks or pass "
             "--allow-small-large for a repeat-heavy run over the current set"
         )
+
+
+def validate_promotion_controls(args: argparse.Namespace) -> None:
+    if not getattr(args, "promotion_run", False):
+        return
+    missing = []
+    if not args.stop_on_abnormal:
+        missing.append("--stop-on-abnormal")
+    if not args.agent_idle_timeout:
+        missing.append("--agent-idle-timeout")
+    if not args.agent_timeout_override:
+        missing.append("--agent-timeout-override")
+    if not args.require_clean_results:
+        missing.append("--require-clean-results")
+    if missing:
+        raise BenchmarkPlanError("--promotion-run requires " + ", ".join(missing))
+    if args.min_clean_rounds < 2:
+        raise BenchmarkPlanError("--promotion-run requires --min-clean-rounds 2 or higher")
+
+
+def validate_clean_readiness_requirement(
+    args: argparse.Namespace,
+    groups: list[TaskGroup],
+) -> CleanReadinessSummary | None:
+    if not args.require_clean_results:
+        return None
+    results_dir = args.require_clean_results.expanduser()
+    if not results_dir.is_absolute():
+        results_dir = (REPO_ROOT / results_dir).resolve()
+    return validate_clean_readiness_results(results_dir, groups, args.min_clean_rounds)
+
+
+def validate_clean_readiness_results(
+    results_dir: Path,
+    groups: list[TaskGroup],
+    min_clean_rounds: int,
+) -> CleanReadinessSummary:
+    records = load_result_records(results_dir)
+    if not records:
+        raise BenchmarkPlanError(f"clean readiness results are empty: {results_dir}")
+
+    abnormal = []
+    for record in records:
+        reasons = abnormal_reasons(record)
+        if reasons:
+            run_id = record.get("run_id", "<unknown>")
+            abnormal.append(f"{run_id}: {', '.join(reasons)}")
+    if abnormal:
+        raise BenchmarkPlanError(
+            "clean readiness results contain abnormal signals: " + "; ".join(abnormal[:5])
+        )
+
+    expected = expected_clean_coverage_keys(groups)
+    counts = {key: 0 for key in expected}
+    for record in records:
+        key = result_clean_coverage_key(record)
+        if key in counts:
+            counts[key] += 1
+
+    missing = [key for key, count in counts.items() if count < min_clean_rounds]
+    if missing:
+        formatted = ", ".join(
+            f"{task_id}/{target_arm}={counts[(task_id, target_arm)]}"
+            for task_id, target_arm in missing
+        )
+        raise BenchmarkPlanError(
+            f"clean readiness results do not cover each selected task/arm at least "
+            f"{min_clean_rounds} time(s): {formatted}"
+        )
+
+    return CleanReadinessSummary(
+        results_dir=results_dir,
+        records=len(records),
+        expected_pairs=len(expected),
+        min_clean_rounds=min_clean_rounds,
+    )
+
+
+def load_result_records(results_dir: Path) -> list[dict[str, Any]]:
+    if not results_dir.exists():
+        raise BenchmarkPlanError(f"clean readiness results directory does not exist: {results_dir}")
+    records: list[dict[str, Any]] = []
+    for path in sorted(results_dir.glob("*.jsonl")):
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                if isinstance(record, dict):
+                    records.append(record)
+    return records
+
+
+def expected_clean_coverage_keys(groups: list[TaskGroup]) -> set[tuple[str, str]]:
+    expected: set[tuple[str, str]] = set()
+    for group in groups:
+        for arm, path in group.arms.items():
+            data = read_json(path)
+            benchmark = data.get("benchmark", {})
+            target_arm = benchmark.get("target_arm") if isinstance(benchmark, dict) else None
+            expected.add((group.task_id, target_arm if isinstance(target_arm, str) else arm))
+    return expected
+
+
+def result_clean_coverage_key(record: dict[str, Any]) -> tuple[str, str] | None:
+    task = record.get("task", {})
+    if not isinstance(task, dict):
+        return None
+    task_id = task.get("id")
+    benchmark = task.get("benchmark", {})
+    target_arm = benchmark.get("target_arm") if isinstance(benchmark, dict) else None
+    if not isinstance(task_id, str) or not isinstance(target_arm, str):
+        return None
+    return task_id, target_arm
 
 
 def build_schedule(pairs: list[TaskPair], repeats: int, pair_order: str) -> list[ScheduledRun]:
@@ -470,6 +610,7 @@ def print_plan(
     groups: list[TaskGroup],
     schedule: list[ScheduledRun],
     suite: SuiteSpec | None = None,
+    clean_readiness: CleanReadinessSummary | None = None,
 ) -> None:
     print("Hidden Flask Harness Benchmark Plan")
     print(f"Mode: {args.mode}")
@@ -486,6 +627,7 @@ def print_plan(
     print(f"Planned runs: {len(schedule)}")
     print(f"Jobs: {args.jobs}")
     print(f"Stop on abnormal: {args.stop_on_abnormal}")
+    print(f"Promotion run: {args.promotion_run}")
     print(f"Arm order: {args.arm_order or arm_order_from_pair_order(args.pair_order)}")
     print(f"Model: {args.model}")
     print(f"Codex exec args: {codex_exec_args(args)}")
@@ -495,6 +637,14 @@ def print_plan(
         print(f"Agent stall timeout: {args.agent_stall_timeout}s")
     if args.agent_idle_timeout:
         print(f"Agent idle timeout: {args.agent_idle_timeout}s")
+    if clean_readiness is not None:
+        print(f"Clean readiness results: {clean_readiness.results_dir}")
+        print(
+            "Clean readiness coverage: "
+            f"{clean_readiness.expected_pairs} task/arm pair(s) x "
+            f"{clean_readiness.min_clean_rounds} clean round(s); "
+            f"{clean_readiness.records} prior record(s)"
+        )
     print(f"Workspace: {args.workspace}")
     print(f"Results: {args.results}")
     print("Tasks:")

@@ -182,7 +182,10 @@ not quarantine `cart-validation` based only on the stopped promotion record.
 The next mitigation should reduce the workflow-only search burden or add a
 stronger long-run stability gate before rerunning promotion. A clean one-repeat
 reduced pilot is not enough; require at least a two-round reduced pilot or
-another stronger stability check before a near-100 run.
+another stronger stability check before a near-100 run. The runner now exposes
+that guard as `--promotion-run --require-clean-results <results-dir>
+--min-clean-rounds 2`, which fails before execution if the prior clean pilot
+does not cover every selected task/arm pair enough times.
 
 After that, build a three-arm held-out suite with `bare`, `workflow-only`, and
 `memory-harness`, then run `partial-realistic` prompts as the main product
