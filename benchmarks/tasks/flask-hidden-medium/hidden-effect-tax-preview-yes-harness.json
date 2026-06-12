@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-tax-preview",
+  "description": "Medium-realistic hidden-oracle Flask A/B: add the API from a realistic user prompt that states product intent without enumerating the full response contract.",
+  "repo": {
+    "source": "../flask-yes-harness",
+    "ref": "c3eaf9a0105d7b99db414467b5df0edb833697ad"
+  },
+  "prompt": "Add an order tax preview endpoint.\n\nAdd POST /orders/tax-preview for previewing subtotal, tax, and total for requested catalog items. Use the existing catalog prices, USD currency, and the catalog tax rate already defined in the app. This is a preview-only calculation and must not mutate catalog data. Handle unknown SKUs and invalid quantities consistently with nearby item-list APIs.\n\nFollow the repository's existing public API response style for payload shape, metadata, money formatting, naming, and status codes. Add focused pytest coverage for a normal tax preview and basic validation failures. Update companion documentation in the repository's documented docs location so future maintainers can find the preview-only tax behavior. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-medium/hidden-effect-tax-preview-yes-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180
+      },
+      {
+        "name": "pytest and hidden medium hidden-effect-tax-preview oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-tax-preview"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}

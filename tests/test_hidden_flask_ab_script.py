@@ -17,6 +17,7 @@ from unittest import mock
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_hidden_flask_ab.py"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BALANCED_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-balanced"
+MEDIUM_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-medium"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -105,6 +106,56 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             if "POST " in prompt:
                 for phrase in ("Request JSON schema:", "unknown_sku", "invalid_quantity"):
                     self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+
+    def test_medium_hidden_flask_task_set_plans_exactly_twenty_runs(self) -> None:
+        pairs = hidden_ab.load_task_pairs(MEDIUM_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+        schedule = hidden_ab.build_schedule(pairs, repeats=1, pair_order="alternate")
+
+        self.assertEqual(len(pairs), 10)
+        self.assertEqual(len(schedule), 20)
+        for pair in pairs:
+            for task_path in (pair.no_harness, pair.yes_harness):
+                data = hidden_ab.read_json(task_path)
+                self.assertNotEqual(data["repo"]["ref"], "HEAD")
+
+    def test_medium_hidden_flask_prompts_match_without_exact_contracts(self) -> None:
+        pairs = hidden_ab.load_task_pairs(MEDIUM_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+
+        exact_contract_markers = (
+            "Endpoint and method:",
+            "Request JSON schema:",
+            "Success status:",
+            "Error statuses:",
+            "Top-level",
+            "Core business rule:",
+            "Verification payloads include",
+            "Expected current-catalog",
+            "Response keys:",
+            "Treat this prompt as the task's source of truth",
+        )
+        required_medium_markers = (
+            "Follow the repository's existing public API response style",
+            "documented docs location",
+            "Do not update the root README",
+            "focused pytest coverage",
+        )
+
+        for pair in pairs:
+            no_harness = hidden_ab.read_json(pair.no_harness)
+            yes_harness = hidden_ab.read_json(pair.yes_harness)
+            prompt = no_harness["prompt"]
+
+            self.assertEqual(
+                prompt,
+                yes_harness["prompt"],
+                msg=f"{pair.task_id} medium prompt differs between A/B targets",
+            )
+            for phrase in required_medium_markers:
+                self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+            for phrase in exact_contract_markers:
+                self.assertNotIn(phrase, prompt, msg=f"{pair.task_id} still has exact marker {phrase!r}")
 
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
