@@ -201,6 +201,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         type=positive_int,
         help="optional idle-output watchdog timeout passed to the runner",
     )
+    parser.add_argument(
+        "--agent-no-edit-timeout",
+        type=positive_int,
+        help="optional no-repository-change watchdog timeout passed to the runner",
+    )
     parser.add_argument("--max-cost-usd", type=non_negative_float, default=1.0)
     parser.add_argument(
         "--large-min-task-pairs",
@@ -438,6 +443,8 @@ def validate_promotion_controls(args: argparse.Namespace) -> None:
         missing.append("--stop-on-abnormal")
     if not args.agent_idle_timeout:
         missing.append("--agent-idle-timeout")
+    if not args.agent_no_edit_timeout:
+        missing.append("--agent-no-edit-timeout")
     if not args.agent_timeout_override:
         missing.append("--agent-timeout-override")
     if not args.require_clean_results:
@@ -637,6 +644,8 @@ def print_plan(
         print(f"Agent stall timeout: {args.agent_stall_timeout}s")
     if args.agent_idle_timeout:
         print(f"Agent idle timeout: {args.agent_idle_timeout}s")
+    if args.agent_no_edit_timeout:
+        print(f"Agent no-edit timeout: {args.agent_no_edit_timeout}s")
     if clean_readiness is not None:
         print(f"Clean readiness results: {clean_readiness.results_dir}")
         print(
@@ -897,6 +906,8 @@ def abnormal_reasons(record: dict[str, Any]) -> list[str]:
             reasons.append("agent idle watchdog fired")
         elif termination_reason == "stall_watchdog":
             reasons.append("agent stall watchdog fired")
+        elif termination_reason == "no_edit_watchdog":
+            reasons.append("agent no-edit watchdog fired")
         else:
             reasons.append("agent stall watchdog fired")
     elif scoring.get("agent_timed_out") is True:
@@ -958,6 +969,8 @@ def build_runner_command(args: argparse.Namespace, item: ScheduledRun) -> list[s
         command.extend(["--agent-stall-timeout", str(args.agent_stall_timeout)])
     if args.agent_idle_timeout is not None:
         command.extend(["--agent-idle-timeout", str(args.agent_idle_timeout)])
+    if args.agent_no_edit_timeout is not None:
+        command.extend(["--agent-no-edit-timeout", str(args.agent_no_edit_timeout)])
     return command
 
 

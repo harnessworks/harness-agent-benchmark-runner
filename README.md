@@ -30,7 +30,9 @@ or boundary issue. The guarded 96-record command then failed before execution
 because the pilot results contained that abnormal signal. It is still not
 official product evidence. The current blocker is broader than `bundle-quote`
 or workflow-only: partial-realistic stable-8 still has intermittent no-edit
-idle tails across arms.
+idle tails across arms. The runner now includes a no-edit watchdog for the next
+readiness pass, so active-output attempts that make no visible repository
+changes are separated from useful long-running work.
 
 Operational follow-up remains split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
@@ -39,7 +41,10 @@ promotion pilots with `bundle-quote` excluded, and
 focused bundle-quote tail-latency triage. The first reduced promotion attempt
 found a workflow-only `cart-validation` idle stall, and the stronger 2-round
 pilot found a bare `cart-validation` idle stall, so this split is a diagnostic
-control, not a solved promotion path.
+control, not a solved promotion path. The next reduced heldout step is a fresh
+16-record readiness pilot with `--agent-idle-timeout 300` and
+`--agent-no-edit-timeout 240`; do not run the 96-record promotion until that
+pilot is clean and accepted by `--promotion-run --require-clean-results`.
 
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so
@@ -163,10 +168,11 @@ xychart-beta
   claim that README edits are bad; it is a strict boundary miss.
 - `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
-- `Stalls`: agent process was stopped by either the shorter pilot watchdog
-  (`--agent-stall-timeout`) or the idle-output watchdog
-  (`--agent-idle-timeout`). Count this separately from product-quality oracle
-  failures.
+- `Stalls`: agent process was stopped by the shorter pilot watchdog
+  (`--agent-stall-timeout`), the idle-output watchdog
+  (`--agent-idle-timeout`), or the no-edit watchdog
+  (`--agent-no-edit-timeout`). Count this separately from product-quality
+  oracle failures.
 - `Preflight failures`: leakage audit failures before agent execution. These
   should fail the run without spending model budget.
 
@@ -180,7 +186,8 @@ not quarantine `cart-validation` as a harness-only problem. The next mitigation
 should reduce no-edit idle tails before rerunning promotion. The runner now
 exposes a promotion guard as `--promotion-run --require-clean-results
 <results-dir> --min-clean-rounds 2`; the latest 2-round pilot failed that guard
-because it contained an idle-watchdog stop.
+because it contained an idle-watchdog stop. New promotion attempts should also
+pass `--agent-no-edit-timeout`; the guard requires it.
 
 After that, build a three-arm held-out suite with `bare`, `workflow-only`, and
 `memory-harness`, then run `partial-realistic` prompts as the main product
@@ -189,9 +196,10 @@ schema-contract, workflow, boundary, strict success, and timeout counts
 separate in the report. For held-out pilots, use either a short
 `--agent-stall-timeout` when deliberately testing pilot-stop behavior or
 `--agent-idle-timeout` when long active runs should continue. For promotion,
-prefer `--agent-idle-timeout` plus the task timeout so long-but-active runs are
-not stopped by a short wall-clock pilot cap. If a promotion run needs more than
-600 seconds, pass an explicit `--agent-timeout-override` and keep
+prefer `--agent-idle-timeout` and `--agent-no-edit-timeout` plus the task
+timeout so long-but-active runs with real edits can continue while active
+no-edit tails are stopped. If a promotion run needs more than 600 seconds, pass
+an explicit `--agent-timeout-override` and keep
 `--max-agent-timeout` at or above that value; `--max-agent-timeout` only caps
 task timeouts and does not extend a task whose `timeout_seconds` is already
 lower.

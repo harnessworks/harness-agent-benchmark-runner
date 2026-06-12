@@ -27,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
             max_agent_timeout_seconds=args.max_agent_timeout,
             agent_stall_timeout_seconds=args.agent_stall_timeout,
             agent_idle_timeout_seconds=args.agent_idle_timeout,
+            agent_no_edit_timeout_seconds=args.agent_no_edit_timeout,
             max_cost_usd_override=args.max_cost_usd,
             repo_source_override=args.repo_source,
             repo_ref_override=args.repo_ref,
@@ -112,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--agent-idle-timeout",
         type=positive_int_arg,
         help="idle-output watchdog timeout for agent processes; records agent_stalled when it fires",
+    )
+    run_parser.add_argument(
+        "--agent-no-edit-timeout",
+        type=positive_int_arg,
+        help="no-repository-change watchdog timeout for agent processes; records agent_stalled when it fires",
     )
     run_parser.add_argument(
         "--max-cost-usd",

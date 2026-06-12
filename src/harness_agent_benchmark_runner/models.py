@@ -270,6 +270,7 @@ class RunnerConfig:
     max_agent_timeout_seconds: int | None = None
     agent_stall_timeout_seconds: int | None = None
     agent_idle_timeout_seconds: int | None = None
+    agent_no_edit_timeout_seconds: int | None = None
     max_cost_usd_override: float | None = None
     output_tail_chars: int = 4000
     repo_source_override: str | None = None

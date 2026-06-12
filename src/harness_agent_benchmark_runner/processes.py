@@ -6,7 +6,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 
 from .models import ProcessResult
 
@@ -20,6 +20,9 @@ def run_process(
     timeout_reason: str = "timeout",
     idle_timeout_seconds: int | None = None,
     idle_timeout_reason: str = "idle_watchdog",
+    no_edit_timeout_seconds: int | None = None,
+    no_edit_timeout_reason: str = "no_edit_watchdog",
+    no_edit_has_changes: Callable[[], bool] | None = None,
     env: Mapping[str, str] | None = None,
     log_path: Path,
     tail_chars: int = 4000,
@@ -29,7 +32,10 @@ def run_process(
     if env:
         merged_env.update(env)
 
-    if idle_timeout_seconds is not None:
+    if no_edit_timeout_seconds is not None and no_edit_has_changes is None:
+        raise ValueError("no_edit_has_changes is required with no_edit_timeout_seconds")
+
+    if idle_timeout_seconds is not None or no_edit_timeout_seconds is not None:
         result = run_process_with_idle_watchdog(
             command,
             cwd=cwd,
@@ -38,6 +44,9 @@ def run_process(
             timeout_reason=timeout_reason,
             idle_timeout_seconds=idle_timeout_seconds,
             idle_timeout_reason=idle_timeout_reason,
+            no_edit_timeout_seconds=no_edit_timeout_seconds,
+            no_edit_timeout_reason=no_edit_timeout_reason,
+            no_edit_has_changes=no_edit_has_changes,
             env=merged_env,
             log_path=log_path,
             tail_chars=tail_chars,
@@ -106,8 +115,11 @@ def run_process_with_idle_watchdog(
     label: str,
     timeout_seconds: int,
     timeout_reason: str,
-    idle_timeout_seconds: int,
+    idle_timeout_seconds: int | None,
     idle_timeout_reason: str,
+    no_edit_timeout_seconds: int | None,
+    no_edit_timeout_reason: str,
+    no_edit_has_changes: Callable[[], bool] | None,
     env: Mapping[str, str],
     log_path: Path,
     tail_chars: int,
@@ -140,6 +152,8 @@ def run_process_with_idle_watchdog(
     termination_reason: str | None = None
     exit_code: int | None = None
     last_activity = started
+    no_edit_observed = False
+    next_no_edit_check = started
     timeout_message = ""
 
     try:
@@ -152,7 +166,6 @@ def run_process_with_idle_watchdog(
 
             elapsed = now - started
             wall_remaining = timeout_seconds - elapsed
-            idle_remaining = idle_timeout_seconds - (now - last_activity)
             if wall_remaining <= 0:
                 timed_out = True
                 termination_reason = timeout_reason
@@ -161,18 +174,46 @@ def run_process_with_idle_watchdog(
                 terminate_process_group(process)
                 drain_ready_streams(selector, streams, timeout_seconds=1.0)
                 break
-            if idle_remaining <= 0:
-                timed_out = True
-                termination_reason = idle_timeout_reason
-                exit_code = 124
-                timeout_message = (
-                    f"\nStopped by idle watchdog after {idle_timeout_seconds} seconds without output.\n"
-                )
-                terminate_process_group(process)
-                drain_ready_streams(selector, streams, timeout_seconds=1.0)
-                break
 
-            wait_time = min(0.25, max(0.01, wall_remaining), max(0.01, idle_remaining))
+            watchdog_deadlines = [wall_remaining]
+            if idle_timeout_seconds is not None:
+                idle_remaining = idle_timeout_seconds - (now - last_activity)
+                if idle_remaining <= 0:
+                    timed_out = True
+                    termination_reason = idle_timeout_reason
+                    exit_code = 124
+                    timeout_message = (
+                        f"\nStopped by idle watchdog after {idle_timeout_seconds} seconds without output.\n"
+                    )
+                    terminate_process_group(process)
+                    drain_ready_streams(selector, streams, timeout_seconds=1.0)
+                    break
+                watchdog_deadlines.append(idle_remaining)
+
+            if no_edit_timeout_seconds is not None and not no_edit_observed:
+                if now >= next_no_edit_check:
+                    no_edit_observed = bool(no_edit_has_changes and no_edit_has_changes())
+                    next_no_edit_check = now + 1.0
+                if not no_edit_observed:
+                    no_edit_remaining = no_edit_timeout_seconds - elapsed
+                    if no_edit_remaining <= 0:
+                        no_edit_observed = bool(no_edit_has_changes and no_edit_has_changes())
+                    if not no_edit_observed and no_edit_remaining <= 0:
+                        timed_out = True
+                        termination_reason = no_edit_timeout_reason
+                        exit_code = 124
+                        timeout_message = (
+                            f"\nStopped by no-edit watchdog after {no_edit_timeout_seconds} "
+                            "seconds without repository changes.\n"
+                        )
+                        terminate_process_group(process)
+                        drain_ready_streams(selector, streams, timeout_seconds=1.0)
+                        break
+                    if not no_edit_observed:
+                        watchdog_deadlines.append(no_edit_remaining)
+                        watchdog_deadlines.append(next_no_edit_check - now)
+
+            wait_time = min(0.25, *(max(0.01, remaining) for remaining in watchdog_deadlines))
             events = selector.select(wait_time)
             if not events:
                 continue

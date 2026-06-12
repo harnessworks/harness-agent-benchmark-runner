@@ -22,6 +22,10 @@ JSONL result. A separate job can summarize results every hour or at the end of a
 - For pilots, set runner `--agent-stall-timeout` below the task timeout so
   stalled agent attempts are recorded as JSONL evidence instead of being
   terminated manually.
+- For promotion-readiness pilots, prefer `--agent-idle-timeout` plus
+  `--agent-no-edit-timeout` over a short wall-clock stall timeout. The idle
+  watchdog catches no-output hangs; the no-edit watchdog catches active-output
+  attempts that still make no repository changes.
 - Keep task `max_attempts` at `1` for first-pass measurements; increase it only
   when intentionally measuring retry recovery.
 - Store raw run directories as short-retention artifacts.
@@ -65,6 +69,7 @@ python3 scripts/run_hidden_flask_ab.py \
   --repeats 2 \
   --agent-timeout-override 900 \
   --agent-idle-timeout 300 \
+  --agent-no-edit-timeout 240 \
   --stop-on-abnormal
 ```
 
@@ -87,7 +92,8 @@ across arms, not as a single task/arm failure.
 
 The A/B script now has an explicit promotion guard. Near-100 reduced runs
 should use `--promotion-run` and point at a prior clean pilot with at least two
-clean records for every selected task/arm pair:
+clean records for every selected task/arm pair. The promotion guard requires
+both the idle-output watchdog and the no-edit watchdog:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
@@ -98,6 +104,7 @@ python3 scripts/run_hidden_flask_ab.py \
   --min-clean-rounds 2 \
   --agent-timeout-override 900 \
   --agent-idle-timeout 300 \
+  --agent-no-edit-timeout 240 \
   --stop-on-abnormal \
   --execute
 ```
@@ -107,6 +114,23 @@ because it covers each task/arm pair only once. Using the latest two-round
 stable-8 pilot also fails this guard because the pilot contains an idle
 watchdog stop. This is intended: do not run near-100 promotion until the prior
 pilot results are both sufficiently covered and clean.
+
+After the no-edit watchdog is available, rerun the reduced heldout readiness
+pilot from fresh workspaces before any near-100 attempt. Because the stable-8
+suite has eight task/arm pairs per repeat, the clean readiness pilot is 16
+records rather than an exact 10-record pilot:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --suite benchmarks/suites/flask-hidden-heldout-stable-8.json \
+  --mode pilot \
+  --repeats 2 \
+  --agent-timeout-override 900 \
+  --agent-idle-timeout 300 \
+  --agent-no-edit-timeout 240 \
+  --stop-on-abnormal \
+  --execute
+```
 
 For focused triage, prefer a quarantine suite when one exists:
 
@@ -129,6 +153,7 @@ python3 scripts/run_hidden_flask_ab.py \
   --repeats 2 \
   --agent-timeout-override 900 \
   --agent-idle-timeout 300 \
+  --agent-no-edit-timeout 240 \
   --stop-on-abnormal \
   --execute
 ```
@@ -199,11 +224,13 @@ least a two-round reduced pilot or another stronger stability check before
 promoting this shape again. In the
 2026-06-12 prompt-guard heldout attempt, a 330-second wall-clock watchdog
 stopped a record that had active edits. For promotion, either rely on the task
-timeout or use `--agent-idle-timeout`, which stops the agent only after no
-stdout/stderr output has been observed for the configured interval. Both
-watchdogs record `scoring.agent_stalled=true`; use
-`agent.termination_reason` to distinguish `stall_watchdog` from
-`idle_watchdog`.
+timeout or use `--agent-idle-timeout` plus `--agent-no-edit-timeout`. The idle
+watchdog stops the agent only after no stdout/stderr output has been observed
+for the configured interval. The no-edit watchdog stops active-output attempts
+only if no visible repository changes have appeared by the configured interval.
+All three watchdogs record `scoring.agent_stalled=true`; use
+`agent.termination_reason` to distinguish `stall_watchdog`, `idle_watchdog`,
+and `no_edit_watchdog`.
 
 Use `--agent-timeout-override` when a promotion run intentionally needs a
 different effective task timeout than the task JSON. The runner applies that

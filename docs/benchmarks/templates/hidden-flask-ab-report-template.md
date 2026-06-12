@@ -58,7 +58,7 @@ names.
 | `boundary_success` | No wrong-file or forbidden-file edits. |
 | `execution_success` | Agent exited successfully without timeout. |
 | `strict_success` | Final score: preflight, execution, diff check, all verification commands, and boundaries passed. |
-| `agent_stalled` | A shorter pilot watchdog stopped the agent before the effective task timeout. |
+| `agent_stalled` | A stall, idle-output, or no-edit watchdog stopped the agent before clean completion. |
 | `hidden_access` | Agent log contained a direct attempt to inspect hidden benchmark/oracle paths. |
 
 Legacy untagged verification commands are treated as combined verification for
@@ -76,6 +76,8 @@ backward compatibility. New task specs should tag verification commands with
 - Task attempts: `max_attempts=1`
 - Effective agent timeout: `<seconds>`
 - Agent stall watchdog: `<seconds|none>`
+- Agent idle watchdog: `<seconds|none>`
+- Agent no-edit watchdog: `<seconds|none>`
 - Budget hint: `<amount>`
 - Codex model: `gpt-5.5`
 - Codex config override:
@@ -119,6 +121,8 @@ Design notes:
 | Forbidden-file edit |  |  |  |  |
 | Leakage preflight failure |  |  |  |  |
 | Stall watchdog |  |  |  |  |
+| Idle watchdog |  |  |  |  |
+| No-edit watchdog |  |  |  |  |
 | Timeout |  |  |  |  |
 | Brittle oracle |  |  |  | Mark separately from genuine task failure. |
 

@@ -419,6 +419,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             stop_on_abnormal=True,
             jobs=1,
             agent_idle_timeout=300,
+            agent_no_edit_timeout=240,
             agent_timeout_override=900,
             require_clean_results=None,
             min_clean_rounds=2,
@@ -441,12 +442,36 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             stop_on_abnormal=True,
             jobs=1,
             agent_idle_timeout=300,
+            agent_no_edit_timeout=240,
             agent_timeout_override=900,
             require_clean_results=Path("results"),
             min_clean_rounds=1,
         )
 
         with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "min-clean-rounds"):
+            hidden_ab.validate_run_shape(args, [pair])
+
+    def test_promotion_run_requires_no_edit_watchdog(self) -> None:
+        pair = hidden_ab.TaskPair(
+            task_id="alpha",
+            no_harness=Path("alpha-no-harness.json"),
+            yes_harness=Path("alpha-yes-harness.json"),
+        )
+        args = Namespace(
+            mode="pilot",
+            large_min_task_pairs=8,
+            allow_small_large=False,
+            promotion_run=True,
+            stop_on_abnormal=True,
+            jobs=1,
+            agent_idle_timeout=300,
+            agent_no_edit_timeout=None,
+            agent_timeout_override=900,
+            require_clean_results=Path("results"),
+            min_clean_rounds=2,
+        )
+
+        with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "--agent-no-edit-timeout"):
             hidden_ab.validate_run_shape(args, [pair])
 
     def test_clean_readiness_requires_each_selected_task_arm_pair(self) -> None:
@@ -566,6 +591,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 agent_timeout_override=None,
                 agent_stall_timeout=None,
                 agent_idle_timeout=None,
+                agent_no_edit_timeout=None,
                 max_cost_usd=1.0,
             )
             schedule = [
@@ -614,6 +640,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 agent_timeout_override=None,
                 agent_stall_timeout=5,
                 agent_idle_timeout=None,
+                agent_no_edit_timeout=None,
                 max_cost_usd=1.0,
             )
             schedule = [
@@ -693,6 +720,21 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent idle watchdog fired"])
 
+    def test_abnormal_reasons_distinguish_no_edit_watchdog(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "agent": {"termination_reason": "no_edit_watchdog"},
+            "scoring": {
+                "preflight_passed": True,
+                "agent_timed_out": True,
+                "agent_stalled": True,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent no-edit watchdog fired"])
+
     def test_build_runner_command_forwards_agent_stall_timeout(self) -> None:
         args = Namespace(
             workspace=Path("runs"),
@@ -702,6 +744,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             agent_timeout_override=90,
             agent_stall_timeout=5,
             agent_idle_timeout=7,
+            agent_no_edit_timeout=11,
             max_cost_usd=1.0,
         )
         item = hidden_ab.ScheduledRun(1, "alpha", "A:bare", Path("alpha-bare.json"))
@@ -716,6 +759,9 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         self.assertIn("--agent-idle-timeout", command)
         idle_index = command.index("--agent-idle-timeout")
         self.assertEqual(command[idle_index + 1], "7")
+        self.assertIn("--agent-no-edit-timeout", command)
+        no_edit_index = command.index("--agent-no-edit-timeout")
+        self.assertEqual(command[no_edit_index + 1], "11")
 
 
 def write_hidden_task(

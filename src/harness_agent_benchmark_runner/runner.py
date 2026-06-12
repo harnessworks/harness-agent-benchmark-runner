@@ -71,6 +71,7 @@ def run_task(
                     "agent_timeout_override_seconds": config.agent_timeout_override_seconds,
                     "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                     "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
+                    "agent_no_edit_timeout_seconds": config.agent_no_edit_timeout_seconds,
                     "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                     "max_cost_usd": max_cost_usd,
                 },
@@ -117,6 +118,8 @@ def run_task(
                 timeout_seconds=agent_process_timeout_seconds,
                 timeout_reason=agent_timeout_reason,
                 idle_timeout_seconds=config.agent_idle_timeout_seconds,
+                no_edit_timeout_seconds=config.agent_no_edit_timeout_seconds,
+                no_edit_has_changes=lambda: repository_has_changes(repo_dir),
                 env=agent_env,
                 log_path=logs_dir / "agent.log",
                 tail_chars=config.output_tail_chars,
@@ -180,6 +183,7 @@ def run_task(
                 "agent_timeout_override_seconds": config.agent_timeout_override_seconds,
                 "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                 "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
+                "agent_no_edit_timeout_seconds": config.agent_no_edit_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
@@ -242,6 +246,7 @@ def run_task(
                 "agent_timeout_override_seconds": config.agent_timeout_override_seconds,
                 "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                 "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
+                "agent_no_edit_timeout_seconds": config.agent_no_edit_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
@@ -683,6 +688,7 @@ def agent_stalled(agent_result: ProcessResult) -> bool:
     return agent_result.timed_out and agent_result.termination_reason in {
         "stall_watchdog",
         "idle_watchdog",
+        "no_edit_watchdog",
     }
 
 
@@ -820,6 +826,24 @@ def collect_changed_files(repo_dir: Path) -> list[str]:
         else:
             files.add(path)
     return sorted(files)
+
+
+def repository_has_changes(repo_dir: Path) -> bool:
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=str(repo_dir),
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    if completed.returncode != 0:
+        return True
+    return bool(completed.stdout.strip())
 
 
 def classify_wrong_files(changed_files: list[str], expected_patterns: tuple[str, ...]) -> list[str]:
