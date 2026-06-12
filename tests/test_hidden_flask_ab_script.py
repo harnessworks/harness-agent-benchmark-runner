@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
+import contextlib
 import sys
+import threading
+import time
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_hidden_flask_ab.py"
@@ -157,6 +162,50 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             pairs = hidden_ab.load_task_pairs(task_dir)
             with self.assertRaises(hidden_ab.BenchmarkPlanError):
                 hidden_ab.validate_pairs(pairs)
+
+    def test_execute_schedule_honors_jobs_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=2,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                max_cost_usd=1.0,
+            )
+            schedule = [
+                hidden_ab.ScheduledRun(1, f"task-{index}", "A:no-harness", Path(f"task-{index}.json"))
+                for index in range(4)
+            ]
+            lock = threading.Lock()
+            active = 0
+            max_active = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal active, max_active
+                with lock:
+                    active += 1
+                    max_active = max(max_active, active)
+                time.sleep(0.05)
+                with lock:
+                    active -= 1
+                return hidden_ab.subprocess.CompletedProcess(command, 0, stdout="ok\n", stderr="")
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(max_active, 2)
 
 
 def write_hidden_task(

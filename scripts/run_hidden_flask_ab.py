@@ -7,6 +7,7 @@ import os
 import shlex
 import subprocess
 import sys
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,6 +32,16 @@ class ScheduledRun:
     task_id: str
     group: str
     task_path: Path
+
+
+@dataclass(frozen=True)
+class ScheduledRunResult:
+    index: int
+    total: int
+    item: ScheduledRun
+    returncode: int
+    stdout: str
+    stderr: str
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -86,6 +97,12 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--model", default="gpt-5.5")
     parser.add_argument("--reasoning-effort", default="medium")
     parser.add_argument("--service-tier", default="priority")
+    parser.add_argument(
+        "--jobs",
+        type=positive_int,
+        default=1,
+        help="maximum runner commands to execute concurrently",
+    )
     parser.add_argument("--max-agent-timeout", type=positive_int, default=900)
     parser.add_argument("--max-cost-usd", type=non_negative_float, default=1.0)
     parser.add_argument(
@@ -251,6 +268,7 @@ def print_plan(args: argparse.Namespace, pairs: list[TaskPair], schedule: list[S
     print(f"Task pairs: {len(pairs)}")
     print(f"Repeats: {args.repeats}")
     print(f"Planned runs: {len(schedule)}")
+    print(f"Jobs: {args.jobs}")
     print(f"Pair order: {args.pair_order} (A=no-harness, B=yes-harness)")
     print(f"Model: {args.model}")
     print(f"Codex exec args: {codex_exec_args(args)}")
@@ -328,23 +346,128 @@ def execute_schedule(args: argparse.Namespace, schedule: list[ScheduledRun]) -> 
     env["CODEX_EXEC_ARGS"] = codex_exec_args(args)
     nonzero_commands = 0
 
+    if args.jobs > 1:
+        return execute_schedule_parallel(args, schedule, env)
+
     for index, item in enumerate(schedule, start=1):
-        print(
-            f"\n[{index}/{len(schedule)}] round={item.round_number} "
-            f"task={item.task_id} group={item.group}"
-        )
-        completed = subprocess.run(build_runner_command(args, item), cwd=REPO_ROOT, env=env, check=False)
-        if completed.returncode != 0:
+        print_start(index, len(schedule), item)
+        result = run_scheduled_command(args, item, index, len(schedule), env)
+        print_run_output(result)
+        if result.returncode != 0:
             nonzero_commands += 1
-            print(
-                f"runner command exited {completed.returncode}; continuing because failed "
-                "benchmark attempts are expected data"
-            )
+            print_nonzero_exit(result.returncode)
     if nonzero_commands:
         print(f"\nCompleted schedule with {nonzero_commands} non-zero runner exits.")
     else:
         print("\nCompleted schedule with all runner commands exiting zero.")
     return 0
+
+
+def execute_schedule_parallel(
+    args: argparse.Namespace,
+    schedule: list[ScheduledRun],
+    env: dict[str, str],
+) -> int:
+    nonzero_commands = 0
+    next_index = 0
+    futures: dict[Future[ScheduledRunResult], int] = {}
+    total = len(schedule)
+
+    def submit_next(executor: ThreadPoolExecutor) -> None:
+        nonlocal next_index
+        if next_index >= total:
+            return
+        item = schedule[next_index]
+        index = next_index + 1
+        next_index += 1
+        print_start(index, total, item)
+        future = executor.submit(run_scheduled_command, args, item, index, total, env)
+        futures[future] = index
+
+    with ThreadPoolExecutor(max_workers=args.jobs) as executor:
+        for _ in range(min(args.jobs, total)):
+            submit_next(executor)
+
+        while futures:
+            done, _ = wait(futures, return_when=FIRST_COMPLETED)
+            for future in sorted(done, key=lambda item: futures[item]):
+                futures.pop(future)
+                result = future.result()
+                print_completion(result)
+                print_run_output(result)
+                if result.returncode != 0:
+                    nonzero_commands += 1
+                    print_nonzero_exit(result.returncode)
+                submit_next(executor)
+
+    if nonzero_commands:
+        print(f"\nCompleted schedule with {nonzero_commands} non-zero runner exits.")
+    else:
+        print("\nCompleted schedule with all runner commands exiting zero.")
+    return 0
+
+
+def run_scheduled_command(
+    args: argparse.Namespace,
+    item: ScheduledRun,
+    index: int,
+    total: int,
+    env: dict[str, str],
+) -> ScheduledRunResult:
+    completed = subprocess.run(
+        build_runner_command(args, item),
+        cwd=REPO_ROOT,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return ScheduledRunResult(
+        index=index,
+        total=total,
+        item=item,
+        returncode=completed.returncode,
+        stdout=completed.stdout or "",
+        stderr=completed.stderr or "",
+    )
+
+
+def print_start(index: int, total: int, item: ScheduledRun) -> None:
+    print(
+        f"\n[{index}/{total}] start round={item.round_number} "
+        f"task={item.task_id} group={item.group}",
+        flush=True,
+    )
+
+
+def print_completion(result: ScheduledRunResult) -> None:
+    print(
+        f"\n[{result.index}/{result.total}] finish round={result.item.round_number} "
+        f"task={result.item.task_id} group={result.item.group} "
+        f"exit={result.returncode}",
+        flush=True,
+    )
+
+
+def print_run_output(result: ScheduledRunResult) -> None:
+    if result.stdout:
+        sys.stdout.write(result.stdout)
+        if not result.stdout.endswith("\n"):
+            sys.stdout.write("\n")
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+        if not result.stderr.endswith("\n"):
+            sys.stderr.write("\n")
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+
+def print_nonzero_exit(returncode: int) -> None:
+    print(
+        f"runner command exited {returncode}; continuing because failed "
+        "benchmark attempts are expected data"
+    )
 
 
 def build_runner_command(args: argparse.Namespace, item: ScheduledRun) -> list[str]:

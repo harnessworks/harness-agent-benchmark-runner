@@ -25,6 +25,11 @@ the fairest current Flask harness-effect signal because the previous
 hidden-contract calibration gave the harnessed repository much more
 task-specific contract information.
 
+A later `jobs=2` throughput calibration under the revised concept-docs oracle
+completed 20/20 records with 0 timeouts and 0 boundary issues, scoring 9/10 for
+`flask-no-harness` and 10/10 for `flask-yes-harness`. Treat that as scheduler
+calibration, not a replacement for sequential representative evidence.
+
 ## Current Evidence
 
 | Target | Harness | Runs | Run-time strict successes | Current concept-docs rescore | Functional failures after rescore | Original docs phrase failures | Boundary/infra issues |
@@ -136,10 +141,14 @@ xychart-beta
 
 The docs oracle policy has been settled toward concept-based checks: companion
 docs should mention the relevant route and domain terms, not one exact English
-phrase. After rerunning the balanced pilot with that revised oracle, a 100-run
-balanced run with 10 task pairs and `repeats=5` is the right next evidence
-step. The current pilot already showed clean execution: 20/20 completed, 0
-wrong-file edits, 0 forbidden-file edits, and 0 timeouts.
+phrase. A follow-up `jobs=2` 20-run calibration completed cleanly under that
+revised oracle: 20/20 records, 0 wrong-file edits, 0 forbidden-file edits, and
+0 timeouts.
+
+A 100-run balanced run with 10 task pairs and `repeats=5` is still the right
+next evidence step if the goal is a representative estimate. Use sequential
+execution for the cleanest claim, or use `--jobs 2` only if wall-clock cost is
+part of the tradeoff and the report explicitly records the parallelism.
 
 After this oracle update lands, verify the 100-run plan and then execute it:
 
@@ -159,8 +168,12 @@ python3 scripts/run_hidden_flask_ab.py \
   --execute
 ```
 
+For a `jobs=2` run shape, add `--jobs 2` to both commands and keep timeout
+behavior as a separate reported metric.
+
 ## Reports
 
+- [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-ab-partial-calibration-35.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-partial-calibration-35.md)
