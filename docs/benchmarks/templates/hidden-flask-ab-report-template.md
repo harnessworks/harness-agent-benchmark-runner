@@ -7,13 +7,14 @@ Adapter: `examples/agents/codex_exec_agent.py`
 
 ## Headline
 
-| Target | Harness | Runs | Successes | Success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
+| Target | Harness | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-no-harness` | No |  |  |  |  |  |  |  |  |  |
 | `flask-yes-harness` | Yes |  |  |  |  |  |  |  |  |  |
 
 One-sentence headline:
-`flask-yes-harness` reached `<x>/<n>` successes versus `<y>/<n>` for
+`flask-yes-harness` improved hidden contract discovery and strict boundary
+adherence, reaching `<x>/<n>` strict scored successes versus `<y>/<n>` for
 `flask-no-harness` under the same hidden-oracle tasks and Codex settings.
 
 ## Scope
@@ -23,6 +24,12 @@ One-sentence headline:
   conventions and durable project guidance
 - Not measured: cross-framework harness effectiveness, generic Flask coding
   ability, retry recovery, or multi-model performance
+- Boundary note: wrong-file edits are task-boundary misses relative to
+  `expected_files`; root `README.md` edits should be described as outside the
+  allowed companion-document path, not as generally bad README changes.
+- Metric note: verification passed measures functional correctness; strict
+  scored success also includes agent exit, diff checks, file boundaries, and
+  forbidden-file rules.
 
 ## Targets
 
@@ -63,14 +70,19 @@ One-sentence headline:
 Design notes:
 
 - A/B prompts are identical.
+- Prompts must ask for companion documentation in the repository's documented
+  docs location and must explicitly exclude root `README.md` unless the task
+  asks for README changes.
 - The exact scoring contract is outside the target clone.
 - The yes-harness target may expose repository conventions through harness
   guidance; the no-harness target must infer them from the bare codebase.
 - The task is invalid if the prompt states the full hidden oracle contract.
+- Interrupted or partial live runs are diagnostic only. Do not promote them to
+  `latest.md` or README evidence tables.
 
 ## No-Op Control
 
-| Target | Runs | Successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Target | Runs | Strict scored successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-no-harness` |  |  |  |  |  |  |
 | `flask-yes-harness` |  |  |  |  |  |  |
@@ -79,7 +91,7 @@ Expected result: both targets reject empty work for every hidden task.
 
 ## Per-Task Results
 
-| Target | Task | Runs | Successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
+| Target | Task | Runs | Strict scored successes | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-no-harness` | `hidden-effect-availability-badge` |  |  |  |  |  |  |  |  |
 | `flask-no-harness` | `hidden-effect-cart-validation` |  |  |  |  |  |  |  |  |

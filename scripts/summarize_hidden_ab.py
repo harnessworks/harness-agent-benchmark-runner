@@ -67,7 +67,7 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
     lines = [
         "## Headline",
         "",
-        "| Target | Runs | Successes | Success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |",
+        "| Target | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for target, values in sorted(by_target.items()):
@@ -78,7 +78,7 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
             "",
             "## Per-Task Results",
             "",
-            "| Target | Task | Runs | Successes | Success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |",
+            "| Target | Task | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |",
             "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )

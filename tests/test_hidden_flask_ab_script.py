@@ -29,6 +29,35 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 data = hidden_ab.read_json(task_path)
                 self.assertNotEqual(data["repo"]["ref"], "HEAD")
 
+    def test_current_hidden_flask_ab_prompts_match_within_pairs(self) -> None:
+        pairs = hidden_ab.load_task_pairs(hidden_ab.DEFAULT_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+
+        for pair in pairs:
+            no_harness = hidden_ab.read_json(pair.no_harness)
+            yes_harness = hidden_ab.read_json(pair.yes_harness)
+
+            self.assertEqual(
+                no_harness["prompt"],
+                yes_harness["prompt"],
+                msg=f"{pair.task_id} prompt differs between A/B targets",
+            )
+
+    def test_hidden_flask_docs_boundary_excludes_root_readme_explicitly(self) -> None:
+        pairs = hidden_ab.load_task_pairs(hidden_ab.DEFAULT_TASK_DIR)
+        hidden_ab.validate_pairs(pairs)
+
+        for pair in pairs:
+            for task_path in (pair.no_harness, pair.yes_harness):
+                data = hidden_ab.read_json(task_path)
+                expected_files = set(data["expected_files"])
+                prompt = data["prompt"]
+
+                self.assertIn("docs/**", expected_files)
+                self.assertNotIn("README.md", expected_files)
+                self.assertIn("documented docs location", prompt)
+                self.assertIn("Do not update the root README", prompt)
+
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task_dir = Path(tmp)
@@ -66,8 +95,39 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         hidden_ab.validate_run_shape(args, [pair])
 
+    def test_rejects_ambiguous_docs_prompt_when_root_readme_is_outside_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task_dir = Path(tmp)
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                prompt="Update the application, tests, and related project docs.",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                prompt="Update the application, tests, and related project docs.",
+            )
 
-def write_hidden_task(path: Path, task_id: str, repo_source: str) -> None:
+            pairs = hidden_ab.load_task_pairs(task_dir)
+            with self.assertRaises(hidden_ab.BenchmarkPlanError):
+                hidden_ab.validate_pairs(pairs)
+
+
+def write_hidden_task(
+    path: Path,
+    task_id: str,
+    repo_source: str,
+    prompt: str | None = None,
+) -> None:
+    if prompt is None:
+        prompt = (
+            "Update the application, tests, and companion documentation in the "
+            "repository's documented docs location. Do not update the root README "
+            "unless the task explicitly asks for README changes."
+        )
     path.write_text(
         json.dumps(
             {
@@ -75,7 +135,7 @@ def write_hidden_task(path: Path, task_id: str, repo_source: str) -> None:
                 "id": task_id,
                 "description": "fixture hidden task",
                 "repo": {"source": repo_source, "ref": "abc123"},
-                "prompt": "Use repository conventions.",
+                "prompt": prompt,
                 "timeout_seconds": 600,
                 "max_attempts": 1,
                 "max_cost_usd": 1.0,

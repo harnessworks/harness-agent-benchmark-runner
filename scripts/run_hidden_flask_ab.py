@@ -180,12 +180,31 @@ def validate_pairs(pairs: list[TaskPair]) -> None:
             raise BenchmarkPlanError(f"{pair.no_harness} does not run the hidden oracle")
         if not has_hidden_oracle_command(yes_data, pair.task_id):
             raise BenchmarkPlanError(f"{pair.yes_harness} does not run the hidden oracle")
+        validate_docs_boundary_prompt(no_data, pair.no_harness)
+        validate_docs_boundary_prompt(yes_data, pair.yes_harness)
 
 
 def has_hidden_oracle_command(data: dict[str, Any], task_id: str) -> bool:
     commands = data.get("verification", {}).get("commands", [])
     encoded = json.dumps(commands, sort_keys=True)
     return "run_flask_hidden_checks.sh" in encoded and task_id in encoded
+
+
+def validate_docs_boundary_prompt(data: dict[str, Any], path: Path) -> None:
+    expected_files = data.get("expected_files", [])
+    if "docs/**" not in expected_files or "README.md" in expected_files:
+        return
+
+    prompt = require_string(data, "prompt", path)
+    required_phrases = (
+        "documented docs location",
+        "Do not update the root README",
+    )
+    if not all(phrase in prompt for phrase in required_phrases):
+        raise BenchmarkPlanError(
+            f"{path} allows docs/** but not README.md; prompt must explicitly direct "
+            "companion docs to the documented docs location and exclude root README"
+        )
 
 
 def validate_run_shape(args: argparse.Namespace, pairs: list[TaskPair]) -> None:

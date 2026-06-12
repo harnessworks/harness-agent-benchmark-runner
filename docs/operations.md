@@ -77,6 +77,22 @@ Keep `max_attempts=1` for A/B measurements. A failed task is benchmark data, so
 the A/B script continues after non-zero runner exits and writes every result it
 can collect.
 
+Treat interrupted large runs as diagnostic only. Do not promote partial JSONL
+records to `docs/benchmarks/latest.md` or README evidence tables. When reporting
+wrong-file edits, describe them as task-boundary misses relative to
+`expected_files`; for this Flask suite, root `README.md` edits are outside the
+allowed companion-document path (`docs/**`), not inherently bad documentation
+changes.
+
+Before a representative hidden Flask A/B run, verify that each no-harness and
+yes-harness task prompt is identical within its pair and says to update
+companion documentation in the repository's documented docs location. If
+`expected_files` includes `docs/**` but not `README.md`, the prompt must
+explicitly exclude root `README.md` unless the task asks for README changes.
+Keep reporting strict scored success separately from verification passed:
+verification passed is the functional signal, while wrong-file edits are the
+strict boundary signal.
+
 Use
 `docs/benchmarks/templates/hidden-flask-ab-report-template.md` for the public
 summary. To generate the headline and per-task Markdown tables from local JSONL

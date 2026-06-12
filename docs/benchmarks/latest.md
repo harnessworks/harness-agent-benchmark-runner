@@ -4,7 +4,7 @@ Updated: 2026-06-11
 
 ## Current Summary
 
-| Target | Agent | Mode | Runs | Successes | Rate | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Target | Agent | Mode | Runs | Strict scored successes | Strict success rate | Wrong-file edits | Forbidden-file edits | Timeouts |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `harness-starter-kit` | No-op | Harness validation | 8 | 0 | 0% | 0 | 0 | 0 |
 | `harness-starter-kit` | Codex CLI | Live adapter (1×) | 8 | 8 | 100% | 0 | 0 | 0 |
@@ -29,8 +29,12 @@ Updated: 2026-06-11
 Latest run:
 [`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md) —
 Codex CLI A/B on four hidden-oracle Flask harness-effect tasks. The harnessed
-target reached 11/12 successes with 0 wrong-file edits and 0 timeouts, while
-the bare target reached 0/12 with 11 wrong-file edits and 3 timeouts. Codex was
+target reached 11/12 strict scored successes and 11/12 verification passes with
+0 wrong-file edits and 0 timeouts, while the bare target reached 0/12
+verification passes and 0/12 strict scored successes with 11 task-boundary
+misses and 3 timeouts. Those wrong-file edits were root `README.md` edits
+outside the task's allowed `docs/**` companion-document path, not functional
+failures by themselves and not a general claim that README edits are bad. Codex was
 run with `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 The latest broader repeated snapshot remains
 [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
@@ -95,7 +99,8 @@ deterministic oracle in this runner repository. Under the same four-task shape
 and 3x repetition, `flask-no-harness` fell to 0/12 while `flask-yes-harness`
 reached 11/12. This is the clearest current evidence that the harness is
 meaningful for convention-dependent work: it improved contract discovery,
-boundary discipline, and timeout behavior.
+strict task-boundary adherence, and timeout behavior. Verification passed is
+the functional signal; wrong-file edits are the strict boundary signal.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
