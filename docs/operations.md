@@ -74,6 +74,13 @@ python3 scripts/run_hidden_flask_ab.py \
 use 12 repeats for 96 balanced records or 13 repeats for 104 balanced records;
 do not cut a schedule mid-repeat just to force exactly 100 records.
 
+Do not rerun the same 96-record reduced promotion shape until the
+workflow-only `hidden-effect-cart-validation` no-edit idle stall from the
+2026-06-13 stable-8 final-mitigation diagnostic is triaged. The one-repeat
+stable-8 pilot completed cleanly, but the 96-record attempt still stopped at
+record 11. Treat one clean reduced pilot as insufficient promotion readiness
+evidence.
+
 For focused triage, prefer a quarantine suite when one exists:
 
 ```bash
@@ -159,7 +166,9 @@ functional or schema success rates.
 
 Do not use a short pilot watchdog as the automatic cutoff for promotion runs.
 In the current reduced heldout suite, a balanced promotion is 96 or 104
-records, not exactly 100, because `bundle-quote` is quarantined. In the
+records, not exactly 100, because `bundle-quote` is quarantined. Require at
+least a two-round reduced pilot or another stronger stability check before
+promoting this shape again. In the
 2026-06-12 prompt-guard heldout attempt, a 330-second wall-clock watchdog
 stopped a record that had active edits. For promotion, either rely on the task
 timeout or use `--agent-idle-timeout`, which stops the agent only after no

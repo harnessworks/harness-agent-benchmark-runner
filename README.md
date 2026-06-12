@@ -22,23 +22,24 @@ Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
 
 Latest heldout mitigation diagnostic:
-[`docs/benchmarks/2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md).
-After adding both `--agent-idle-timeout 300` and
-`--agent-timeout-override 900`, a prompt-guarded fresh 10-record pilot
+[`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md).
+After quarantining `bundle-quote`, a prompt-guarded reduced 8-record pilot
 completed with zero stalls, timeouts, hidden access, or boundary issues. The
-follow-up 100-record attempt stopped at record 4 on workflow-only
-`bundle-quote` when the idle watchdog fired after 719.3 seconds. That stopped
-record made no edits, passed the local harness gate because the repo was
+follow-up balanced 96-record attempt stopped at record 11 on workflow-only
+`cart-validation` when the idle watchdog fired after 500.8 seconds. That
+stopped record made no edits, passed the local harness gate because the repo was
 unchanged, and had no hidden access or boundary issue. It is still not official
-product evidence. A focused bundle-quote triage then stopped on the first bare
-record with a 900-second task timeout after active edits, so bundle-quote tail
-latency remains unresolved across arms.
+product evidence. The current blocker is broader than `bundle-quote`: the
+workflow-only arm can still idle out while inspecting generic harness checks
+under partial-realistic prompts.
 
 Operational follow-up has been split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
 promotion pilots with `bundle-quote` excluded, and
 `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json` for
-focused bundle-quote tail-latency triage.
+focused bundle-quote tail-latency triage. The first reduced promotion attempt
+still found a workflow-only `cart-validation` idle stall, so this split is a
+diagnostic control, not a solved promotion path.
 
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so
@@ -171,15 +172,14 @@ xychart-beta
 
 ## What Comes Next
 
-The next useful follow-up is not another identical `jobs=2` run or another
-full-heldout 100-record attempt that includes `bundle-quote`. First run the
-reduced heldout suite, `benchmarks/suites/flask-hidden-heldout-stable-8.json`,
-as a fresh pilot under the final mitigation settings. Because `bundle-quote`
-is quarantined, one repeat is 8 records; use 12 repeats for a balanced
-96-record promotion or 13 repeats for a balanced 104-record promotion. Keep
-`bundle-quote` in `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`
-until its tail latency is reduced or explicitly accepted as a separate stress
-case.
+The next useful follow-up is not another identical `jobs=2` run, another
+full-heldout 100-record attempt that includes `bundle-quote`, or another
+unchanged reduced 96-record promotion. Keep `bundle-quote` in
+`benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`, then
+triage the workflow-only `cart-validation` no-edit idle stall or reduce the
+workflow-only search burden before rerunning promotion. A clean one-repeat
+reduced pilot is not enough; require at least a two-round reduced pilot or
+another stronger stability check before a near-100 run.
 
 After that, build a three-arm held-out suite with `bare`, `workflow-only`, and
 `memory-harness`, then run `partial-realistic` prompts as the main product
@@ -205,6 +205,7 @@ parallel scheduler pressure.
 
 ## Reports
 
+- [`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md)
