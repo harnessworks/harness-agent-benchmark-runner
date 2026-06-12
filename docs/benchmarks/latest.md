@@ -1,6 +1,6 @@
 # Latest Benchmark Status
 
-Updated: 2026-06-11
+Updated: 2026-06-12
 
 ## Current Summary
 
@@ -25,23 +25,28 @@ Updated: 2026-06-11
 | `flask-yes-harness` | No-op | Hidden-oracle validation | 4 | 0 | 0% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Hidden-oracle A/B (3×) | 12 | 0 | 0% | 11 | 0 | 3 |
 | `flask-yes-harness` | Codex CLI | Hidden-oracle A/B (3×) | 12 | 11 | 91.7% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Hidden-oracle calibration (1×, 10 tasks) | 10 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Hidden-oracle calibration (1×, 10 tasks) | 10 | 10 | 100% | 0 | 0 | 0 |
 
 Latest run:
-[`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md) —
-Codex CLI A/B on four hidden-oracle Flask harness-effect tasks. The harnessed
-target reached 11/12 strict scored successes and 11/12 verification passes with
-0 wrong-file edits and 0 timeouts, while the bare target reached 0/12
-verification passes and 0/12 strict scored successes with 11 task-boundary
-misses and 3 timeouts. Those wrong-file edits were root `README.md` edits
-outside the task's allowed `docs/**` companion-document path, not functional
-failures by themselves and not a general claim that README edits are bad. Codex was
-run with `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
-The latest broader repeated snapshot remains
+[`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md) —
+Codex CLI calibration on all ten hidden-oracle Flask A/B task pairs after the
+prompt wording was tightened. The harnessed target reached 10/10 strict scored
+successes and 10/10 verification passes. The bare target reached 0/10
+verification passes and 0/10 strict scored successes. Both targets had 0
+wrong-file edits, 0 forbidden-file edits, and 0 timeouts; root `README.md` was
+not changed in any record. This is calibration evidence for the next 200-run
+large A/B, not the representative large evidence run itself. Codex was run with
+`CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
+The latest repeated hidden-oracle evidence remains
+[`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md),
+and the latest broader repeated snapshot remains
 [`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
 Detailed reports:
 
-- [`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md) ← latest
+- [`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md) ← latest calibration
+- [`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md)
 - [`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md)
 - [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md)
 - [`2026-06-11-flask-yes-harness-codex-pilot.md`](2026-06-11-flask-yes-harness-codex-pilot.md)
@@ -101,6 +106,13 @@ reached 11/12. This is the clearest current evidence that the harness is
 meaningful for convention-dependent work: it improved contract discovery,
 strict task-boundary adherence, and timeout behavior. Verification passed is
 the functional signal; wrong-file edits are the strict boundary signal.
+
+The 2026-06-12 calibration then expanded the hidden-oracle shape to all ten
+task pairs with one repetition per side. It confirmed that the tightened prompt
+removed the root `README.md` ambiguity: both targets had 0 wrong-file edits,
+while the functional split remained large (`flask-no-harness` 0/10 verification
+passes, `flask-yes-harness` 10/10). This supports proceeding to the planned
+200-run large A/B.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

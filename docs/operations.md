@@ -60,7 +60,21 @@ python3 scripts/run_hidden_flask_ab.py \
 ```
 
 The current committed hidden Flask set has ten task pairs. A representative
-large run uses all hidden task pairs and 10 repeats:
+large run uses all hidden task pairs and 10 repeats. Before running it, use one
+full-pass calibration over all task pairs:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --mode large \
+  --repeats 1 \
+  --execute
+```
+
+The 2026-06-12 calibration produced 20 records: `flask-no-harness` reached
+0/10 strict scored successes and 0/10 verification passes, while
+`flask-yes-harness` reached 10/10 on both measures. Both targets had 0
+wrong-file edits, 0 forbidden-file edits, 0 timeouts, and 0 root `README.md`
+edits. That calibration supports proceeding to the representative large run:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \

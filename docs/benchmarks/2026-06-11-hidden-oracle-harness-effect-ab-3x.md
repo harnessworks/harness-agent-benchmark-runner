@@ -34,9 +34,12 @@ vague and refer to repository conventions; the exact scoring oracle is
 The historical 2026-06-11 run used prompt wording that asked for "related
 project docs." That wording can reasonably be read as inviting root `README.md`
 edits, so the README signal below is interpreted only as strict task-boundary
-adherence. Current task specs tighten this before the large rerun by asking for
-companion documentation in the repository's documented docs location and by
-explicitly excluding root `README.md` unless a task asks for README changes.
+adherence. Current task specs tighten this by asking for companion
+documentation in the repository's documented docs location and by explicitly
+excluding root `README.md` unless a task asks for README changes. A later
+20-record calibration confirmed that the tightened prompt produced 0
+wrong-file edits and 0 root `README.md` edits:
+[`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md).
 
 | Task | Prompt-level instruction | Hidden oracle checks |
 | --- | --- | --- |
