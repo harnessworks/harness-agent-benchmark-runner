@@ -74,10 +74,12 @@ repositories. A targeted rerun of the previous memory-harness
 into a shorter feature fast path, but this is still only a one-record
 mitigation check. The full 12-record pilot then completed cleanly, so the next
 step is a second clean 12-record round because the promotion guard requires at
-least two clean rounds. If that second round is also clean, the promotion
-candidate is a balanced 96-record run (`repeats=8`) rather than exactly 100
-records. It should stay on `jobs=1` with `--stop-on-abnormal` and the
-360-second no-edit watchdog.
+least two clean rounds. A second clean round did pass and the 96-record
+promotion guard accepted the combined 24 readiness records, but the live
+promotion aborted at record 2/96 on a `workflow-only` `availability-badge`
+360-second no-edit watchdog stop. The next mitigation is to apply the same
+short benchmark-feature fast path to `workflow-only` before rebuilding the
+two-clean-round gate.
 `full-contract` prompts remain useful controls; small gaps there are expected
 because the prompt already supplies much of the answer.
 

@@ -85,6 +85,15 @@ partial-realistic stable-4 matrix, but the product signal is still small. The
 promotion guard requires at least two clean rounds, so this is not yet enough
 to execute the 96-record promotion run.
 
+Latest promotion attempt:
+[`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) —
+a second clean 12-record round was collected and the promotion guard accepted
+24 readiness records, but the live 96-record promotion aborted at record 2.
+The abnormal record was `workflow-only` `availability-badge`, which hit the
+360-second no-edit watchdog with no repository changes. Promotion remains
+blocked until the workflow-only first-edit tail is mitigated and the two-clean
+round readiness gate is rebuilt for the updated target refs.
+
 Latest targeted mitigation check:
 [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) —
 after trimming the memory target guidance into a shorter benchmark feature fast
@@ -105,6 +114,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) ← latest promotion attempt
 - [`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md) ← latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) ← latest targeted mitigation check
 - [`2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md)

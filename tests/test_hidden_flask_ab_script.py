@@ -30,7 +30,7 @@ BUNDLEQUOTE_QUARANTINE_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
 )
 CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
-THREE_ARM_WORKFLOW_REF = "8227136359b6c2807c3fa6630f2ce840b59e7281"
+THREE_ARM_WORKFLOW_REF = "3933a09a74cfefbd8455eb3aecd1ff225d7a7457"
 MEMORY_HARNESS_REF = "87c12fb5e276e40272ceee86d497823e93def4e9"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
