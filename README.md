@@ -27,9 +27,9 @@ task-specific contract information.
 
 ## Current Evidence
 
-| Target | Harness | Runs | Strict scored successes | Verification passed | Functional oracle failures | Docs oracle failures | Boundary/infra issues |
+| Target | Harness | Runs | Run-time strict successes | Current concept-docs rescore | Functional failures after rescore | Original docs phrase failures | Boundary/infra issues |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` | No | 10 | 6 | 6 | 1 | 3 | 0 |
+| `flask-no-harness` | No | 10 | 6 | 9 | 1 | 3 | 0 |
 | `flask-yes-harness` | Yes | 10 | 10 | 10 | 0 | 0 | 0 |
 
 Boundary/infra issues combine wrong-file edits, forbidden-file edits, and
@@ -44,9 +44,12 @@ Guardrail detail:
 
 The no-harness target passed 6/10 once endpoint, method, request shape,
 response keys, constants, status codes, and business rules were moved into the
-prompt. The yes-harness target stayed at 10/10. The remaining gap was mostly
-documentation exactness: three no-harness failures were glossary phrase misses,
-and one was a cart validation summary mismatch.
+prompt. The yes-harness target stayed at 10/10. Under the original pilot oracle,
+three no-harness failures were glossary phrase misses and one was a cart
+validation summary mismatch. After the docs oracle was relaxed to route and
+domain-term checks, the same saved run directories rescore to 9/10 for
+`flask-no-harness` and 10/10 for `flask-yes-harness`; the remaining no-harness
+miss is the cart validation summary.
 
 ## What This Shows
 
@@ -56,8 +59,8 @@ improves completion after the basic contract is shared:
 
 | Dimension | Observed signal |
 | --- | --- |
-| Functional implementation | no-harness had 1 functional hidden-oracle miss; yes-harness had 0. |
-| Companion documentation | no-harness had 3 docs-oracle misses; yes-harness had 0. |
+| Functional implementation | Under the current oracle, no-harness has 1 functional hidden-oracle miss; yes-harness has 0. |
+| Companion documentation | The original phrase-based docs oracle produced 3 no-harness misses; the current route/domain-term docs oracle accepts those saved outputs. |
 | File-boundary discipline | both targets had 0 wrong-file edits and 0 forbidden-file edits. |
 | Timeout stability | both targets had 0 timeouts. |
 | Local workflow use | yes-harness also ran its local harness gate before the hidden oracle. |
@@ -75,8 +78,8 @@ enforce local expectations without putting every convention into every prompt.
 
 | Harness advantage | Practical effect | Evidence in current pilot |
 | --- | --- | --- |
-| Repository-local guidance | Agents can find project conventions, docs locations, and completion gates inside the target repository. | yes-harness completed 10/10 while no-harness completed 6/10 under the same task-critical prompt contracts. |
-| Better companion docs discipline | Agents are steered toward the documented docs location and expected terminology. | no-harness had 3 docs-oracle misses; yes-harness had 0. |
+| Repository-local guidance | Agents can find project conventions, docs locations, and completion gates inside the target repository. | yes-harness completed 10/10; no-harness completed 6/10 at run time and 9/10 under the current concept-docs rescore. |
+| Better companion docs discipline | Agents are steered toward the documented docs location and expected terminology. | The original phrase-based docs oracle produced 3 no-harness docs misses, but the revised concept-docs oracle accepts those saved outputs; rerun evidence is needed for a stable docs-discipline claim. |
 | Local gate before hidden scoring | The harnessed target can run repository-specific checks before the external hidden oracle. | yes-harness ran `scripts/check_harness.py` before hidden oracle checks. |
 | Boundary reinforcement | The target can state what files are in scope and what files are off-limits. | Both targets had 0 wrong-file edits here; earlier hidden-oracle runs showed boundary drift when prompt wording was weaker. |
 | Less prompt burden over time | Stable conventions live in the repo instead of being repeated in every benchmark prompt. | The balanced prompt exposed the API contract; harness guidance still carried workflow, docs, and gate behavior. |
@@ -88,10 +91,10 @@ successful agent work more repeatable.
 
 ## Evidence Trail
 
-| Scope | Agent | Mode | Runs | Strict scored successes | Verification passed | Functional failures | Docs failures | Boundary/infra issues |
+| Scope | Agent | Mode | Runs | Run-time strict successes | Current concept-docs rescore | Functional failures after rescore | Original docs phrase failures | Boundary/infra issues |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `flask-yes-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot | 10 | 10 | 10 | 0 | 0 | 0 |
-| `flask-no-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot | 10 | 6 | 6 | 1 | 3 | 0 |
+| `flask-no-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot | 10 | 6 | 9 | 1 | 3 | 0 |
 | `flask-yes-harness` hidden-contract calibration | Codex CLI | 1x, 10 tasks | 10 | 10 | 10 | 0 | 0 | 0 |
 | `flask-no-harness` hidden-contract calibration | Codex CLI | 1x, 10 tasks | 10 | 0 | 0 | 10 | 0 | 0 |
 | `flask-yes-harness` hidden-oracle A/B | Codex CLI | 3x, 4 tasks | 12 | 11 | 11 | 1 | 0 | 0 |
@@ -105,9 +108,9 @@ Flask A/B rows are the relevant harness-effect evidence.
 ```mermaid
 xychart-beta
     title "Flask A/B Strict Success Rates"
-    x-axis ["Balanced no", "Balanced yes", "Hidden-contract no", "Hidden-contract yes"]
+    x-axis ["Balanced no runtime", "Balanced no rescore", "Balanced yes", "Hidden-contract no", "Hidden-contract yes"]
     y-axis "Success %" 0 --> 100
-    bar [60, 100, 0, 100]
+    bar [60, 90, 100, 0, 100]
 ```
 
 ## Metric Definitions
@@ -131,18 +134,30 @@ xychart-beta
 
 ## What Comes Next
 
-Do not scale this exact balanced task shape to 100 runs until the docs oracle
-policy is settled:
+The docs oracle policy has been settled toward concept-based checks: companion
+docs should mention the relevant route and domain terms, not one exact English
+phrase. After rerunning the balanced pilot with that revised oracle, a 100-run
+balanced run with 10 task pairs and `repeats=5` is the right next evidence
+step. The current pilot already showed clean execution: 20/20 completed, 0
+wrong-file edits, 0 forbidden-file edits, and 0 timeouts.
 
-- If exact phrases are intentional, add those literal phrase requirements to
-  the balanced prompts.
-- If docs sufficiency should be conceptual, relax the hidden oracle away from
-  exact phrase substrings.
+After this oracle update lands, verify the 100-run plan and then execute it:
 
-After that clarification, a 100-run balanced run with 10 task pairs and
-`repeats=5` is the right next evidence step. The current pilot already showed
-clean execution: 20/20 completed, 0 wrong-file edits, 0 forbidden-file edits,
-and 0 timeouts.
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --mode large \
+  --task-dir benchmarks/tasks/flask-hidden-balanced \
+  --repeats 5
+
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+python3 scripts/run_hidden_flask_ab.py \
+  --mode large \
+  --task-dir benchmarks/tasks/flask-hidden-balanced \
+  --repeats 5 \
+  --workspace "runs/hidden-flask-ab-balanced-100-${stamp}" \
+  --results "results/hidden-flask-ab-balanced-100-${stamp}" \
+  --execute
+```
 
 ## Reports
 

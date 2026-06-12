@@ -27,16 +27,23 @@ Updated: 2026-06-12
 | `flask-yes-harness` | Codex CLI | Hidden-oracle A/B (3×) | 12 | 11 | 91.7% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Hidden-oracle calibration (1×, 10 tasks) | 10 | 0 | 0% | 0 | 0 | 0 |
 | `flask-yes-harness` | Codex CLI | Hidden-oracle calibration (1×, 10 tasks) | 10 | 10 | 100% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (20-run, run-time oracle) | 10 | 6 | 60% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (20-run, run-time oracle) | 10 | 10 | 100% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (post-hoc concept-docs rescore) | 10 | 9 | 90% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (post-hoc concept-docs rescore) | 10 | 10 | 100% | 0 | 0 | 0 |
 
 Latest run:
-[`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md) —
-Codex CLI calibration on all ten hidden-oracle Flask A/B task pairs after the
-prompt wording was tightened. The harnessed target reached 10/10 strict scored
-successes and 10/10 verification passes. The bare target reached 0/10
-verification passes and 0/10 strict scored successes. Both targets had 0
-wrong-file edits, 0 forbidden-file edits, and 0 timeouts; root `README.md` was
-not changed in any record. This is calibration evidence for the next 200-run
-large A/B, not the representative large evidence run itself. Codex was run with
+[`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) —
+Codex CLI balanced pilot on all ten hidden-oracle Flask A/B task pairs after the
+task-critical API contracts were moved into the shared prompt. The harnessed
+target reached 10/10 strict scored successes and 10/10 verification passes at
+run time. The bare target reached 6/10 at run time under the original
+phrase-based docs oracle. Both targets had 0 wrong-file edits, 0 forbidden-file
+edits, and 0 timeouts. After reviewing the pilot, the docs oracle was relaxed
+from exact phrase substrings to concept-based route and domain-term checks; a
+post-hoc rescore of the saved run directories is 9/10 for `flask-no-harness`
+and 10/10 for `flask-yes-harness`. This is official pilot evidence, not
+representative large-run evidence. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 The latest repeated hidden-oracle evidence remains
 [`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md),
@@ -45,7 +52,9 @@ and the latest broader repeated snapshot remains
 
 Detailed reports:
 
-- [`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md) ← latest calibration
+- [`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) ← latest pilot
+- [`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md)
+- [`2026-06-12-hidden-flask-ab-partial-calibration-35.md`](2026-06-12-hidden-flask-ab-partial-calibration-35.md)
 - [`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md)
 - [`2026-06-11-complex-harness-effect-ab-3x.md`](2026-06-11-complex-harness-effect-ab-3x.md)
 - [`2026-06-11-harness-effect-ab-3x.md`](2026-06-11-harness-effect-ab-3x.md)
@@ -111,8 +120,18 @@ The 2026-06-12 calibration then expanded the hidden-oracle shape to all ten
 task pairs with one repetition per side. It confirmed that the tightened prompt
 removed the root `README.md` ambiguity: both targets had 0 wrong-file edits,
 while the functional split remained large (`flask-no-harness` 0/10 verification
-passes, `flask-yes-harness` 10/10). This supports proceeding to the planned
-200-run large A/B.
+passes, `flask-yes-harness` 10/10). That run is best treated as upper-bound
+hidden-contract calibration because the harnessed target had much more
+task-specific contract guidance.
+
+The balanced 20-run pilot moved the task-critical API contract into both
+prompts. Under that fairer shape, `flask-no-harness` improved to 6/10 at run
+time while `flask-yes-harness` remained 10/10, with 0 wrong-file edits, 0
+forbidden-file edits, and 0 timeouts on both sides. Three of the four
+no-harness failures were docs phrase misses under the original pilot oracle, so
+the docs oracle has now been revised to check route and domain-term coverage
+rather than exact English phrases. The saved run directories rescore to 9/10 vs
+10/10 under that revised oracle; the remaining no-harness miss is functional.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

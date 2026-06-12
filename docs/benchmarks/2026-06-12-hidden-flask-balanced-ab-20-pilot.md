@@ -102,6 +102,20 @@ record, and pytest passed before the hidden oracle assertion failed.
 
 No completed record had a wrong-file edit, forbidden-file edit, or timeout.
 
+Post-pilot oracle update: after reviewing these failures, the docs checks were
+relaxed from exact phrase substrings to concept-based checks. The revised
+oracle expects the relevant route and domain terms in companion docs, rather
+than the literal phrases listed above. The 20 records in this report were scored
+before that change, so future balanced runs should not be compared as strict
+apples-to-apples evidence without noting the oracle revision.
+
+Post-hoc rescore with the revised docs oracle:
+
+| Target | Saved runs | Run-time strict successes | Current concept-docs rescore | Remaining failure |
+| --- | ---: | ---: | ---: | --- |
+| `flask-no-harness` | 10 | 6 | 9 | `hidden-effect-cart-validation` summary mismatch |
+| `flask-yes-harness` | 10 | 10 | 10 | none |
+
 ## Interpretation
 
 The balanced prompt removed the strongest contract-discovery asymmetry from the
@@ -109,14 +123,12 @@ earlier calibration. Under this fairer shape, the no-harness target improved
 from 0/10 in the previous 1x hidden-contract calibration to 6/10 here, while
 the yes-harness target remained 10/10.
 
-The remaining gap should be interpreted as a mix of implementation correctness
-and harness-driven discipline, especially around companion docs. Three of the
-four no-harness misses were docs-content exactness misses, not endpoint
-behavior misses. That is relevant to documentation discipline, but it is also a
-design choice: if exact documentation phrases are intended scoring criteria,
-the prompt should make those literal phrase requirements explicit before a
-larger run. If the intent is concept-level docs sufficiency, the oracle should
-be relaxed or made less phrase brittle before scaling.
+The run-time gap should be interpreted as a mix of implementation correctness
+and docs-oracle exactness. Three of the four no-harness misses were
+docs-content exactness misses, not endpoint behavior misses. That finding led
+to the post-pilot oracle update above. Under the revised oracle, the saved
+outputs narrow to a 9/10 vs 10/10 split, with the remaining no-harness miss
+being functional.
 
 Strict scored success and verification passed stayed aligned in this pilot.
 Wrong-file edits, forbidden-file edits, and timeouts were all zero, so this run
@@ -124,17 +136,11 @@ does not show a file-boundary or timeout difference between targets.
 
 ## 100-Run Recommendation
 
-Do not scale this exact task shape directly to 100 runs yet. First choose how
-to treat documentation exactness:
-
-- If exact phrases are intentional, update the balanced prompts to require the
-  literal docs phrases checked by the oracle.
-- If docs sufficiency should be conceptual, adjust the oracle to check broader
-  content rather than exact phrase substrings.
-
-After that clarification, a 100-run expansion with `repeats=5` is justified:
-the 20-run pilot completed cleanly, produced no boundary noise, and showed a
-large but less artificial gap than the earlier hidden-contract calibration.
+Do not scale the original phrase-based task shape directly to 100 runs. Rerun a
+balanced pilot with the concept-based docs oracle first. If that still completes
+cleanly, a 100-run expansion with `repeats=5` is justified: the first 20-run
+pilot completed cleanly, produced no boundary noise, and showed a large but less
+artificial gap than the earlier hidden-contract calibration.
 
 ## Raw Artifacts
 

@@ -10,8 +10,6 @@ from typing import Any
 ROOT = Path.cwd()
 sys.path.insert(0, str(ROOT))
 
-from app import create_app  # noqa: E402
-
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
@@ -39,6 +37,8 @@ def main(argv: list[str]) -> int:
 
 
 def client():
+    from app import create_app
+
     app = create_app()
     app.config.update(TESTING=True)
     return app.test_client()
@@ -73,8 +73,11 @@ def check_availability_badge() -> None:
     expect(missing_payload.get("sku") == "missing", "missing availability response must echo sku")
 
     glossary = glossary_text()
-    expect("availability badge endpoint" in glossary, "glossary must mention availability badge endpoint")
-    expect("in_stock" in glossary and "low_stock" in glossary, "glossary must document availability badges")
+    expect_terms(
+        glossary,
+        ("/products/<sku>/availability", "in_stock", "low_stock"),
+        "glossary must document availability route and badges",
+    )
 
 
 def check_stock_risk() -> None:
@@ -105,8 +108,11 @@ def check_stock_risk() -> None:
     expect(meta.get("rules") == "stock-risk-v1", "stock risk meta.rules is wrong")
 
     glossary = glossary_text()
-    expect("stock risk report endpoint" in glossary, "glossary must mention stock risk report endpoint")
-    expect("critical" in glossary and "watch" in glossary and "healthy" in glossary, "glossary must define risk bands")
+    expect_terms(
+        glossary,
+        ("/inventory/risk-report", "critical", "watch", "healthy"),
+        "glossary must document stock risk route and bands",
+    )
 
 
 def check_supplier_readiness() -> None:
@@ -239,9 +245,11 @@ def check_reservation_preview() -> None:
     expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid reservation quantity must return invalid_quantity")
 
     glossary = glossary_text()
-    expect("reservation preview endpoint" in glossary, "glossary must mention reservation preview endpoint")
-    expect("safety stock" in glossary, "glossary must mention safety stock")
-    expect("2" in glossary, "glossary must document safety stock value 2")
+    expect_terms(
+        glossary,
+        ("/inventory/reservations/preview", "safety stock", "2"),
+        "glossary must document reservation preview route and safety stock",
+    )
 
 
 def check_cart_validation() -> None:
@@ -321,9 +329,11 @@ def check_catalog_metrics() -> None:
     expect(meta.get("rules") == "catalog-metrics-v1", "catalog metrics rules marker is wrong")
 
     glossary = glossary_text()
-    expect("catalog metrics endpoint" in glossary, "glossary must mention catalog metrics endpoint")
-    expect("inventory value" in glossary, "glossary must mention inventory value")
-    expect("average price" in glossary, "glossary must mention average price")
+    expect_terms(
+        glossary,
+        ("/catalog/metrics", "inventory value", "average price"),
+        "glossary must document catalog metrics route and concepts",
+    )
 
 
 def check_catalog_segments() -> None:
@@ -360,9 +370,11 @@ def check_catalog_segments() -> None:
     expect(meta.get("rules") == "catalog-segments-v1", "catalog segments rules marker is wrong")
 
     glossary = glossary_text()
-    expect("catalog segments endpoint" in glossary, "glossary must mention catalog segments endpoint")
-    expect("budget" in glossary and "standard" in glossary and "premium" in glossary, "glossary must define price bands")
-    expect("scarce" in glossary and "steady" in glossary and "deep" in glossary, "glossary must define stock bands")
+    expect_terms(
+        glossary,
+        ("/catalog/segments", "budget", "standard", "premium", "scarce", "steady", "deep"),
+        "glossary must document catalog segments route and bands",
+    )
 
 
 def check_pick_list() -> None:
@@ -473,7 +485,16 @@ def docs_text(relative_dir: str) -> str:
 def glossary_text() -> str:
     glossary = ROOT / "docs" / "domain" / "glossary.md"
     expect(glossary.exists(), "domain glossary must exist")
-    return " ".join(glossary.read_text(encoding="utf-8").split()).lower()
+    return normalize_doc_text(glossary.read_text(encoding="utf-8"))
+
+
+def normalize_doc_text(text: str) -> str:
+    return " ".join(text.split()).lower()
+
+
+def expect_terms(text: str, terms: tuple[str, ...], label: str) -> None:
+    missing = [term for term in terms if term.lower() not in text]
+    expect(not missing, f"{label}; missing: {', '.join(missing)}")
 
 
 def money(value: Decimal) -> Decimal:
