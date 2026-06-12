@@ -31,7 +31,8 @@ class HiddenBenchmarkDocsTests(unittest.TestCase):
         text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         normalized = " ".join(text.split())
 
-        self.assertIn("Strict scored successes", text)
+        self.assertIn("Run-time strict successes", text)
+        self.assertIn("Current concept-docs rescore", text)
         self.assertIn("Verification passed", text)
         self.assertIn("strict boundary miss", text)
         self.assertIn("not a functional failure by itself", normalized)
