@@ -8,11 +8,11 @@ Suite: `benchmarks/suites/<suite>.json`
 
 ## Headline
 
-| Target arm | Target repo/ref | Prompt level | Runs | Functional success | Schema contract success | Workflow success | Strict success | Preflight failures | Wrong-file edits | Forbidden-file edits | Stalls | Timeouts | p50 duration | p95 duration |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `bare` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |
-| `workflow-only` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |
-| `memory-harness` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |
+| Target arm | Target repo/ref | Prompt level | Runs | Functional success | Schema contract success | Workflow success | Strict success | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `workflow-only` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `memory-harness` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |  |
 
 One-sentence headline:
 Under `<prompt-level>`, `<arm>` reached `<x>/<n>` functional successes and
@@ -59,6 +59,7 @@ names.
 | `execution_success` | Agent exited successfully without timeout. |
 | `strict_success` | Final score: preflight, execution, diff check, all verification commands, and boundaries passed. |
 | `agent_stalled` | A shorter pilot watchdog stopped the agent before the effective task timeout. |
+| `hidden_access` | Agent log contained a direct attempt to inspect hidden benchmark/oracle paths. |
 
 Legacy untagged verification commands are treated as combined verification for
 backward compatibility. New task specs should tag verification commands with
@@ -79,6 +80,9 @@ backward compatibility. New task specs should tag verification commands with
 - Codex model: `gpt-5.5`
 - Codex config override:
   `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`
+- Codex adapter hygiene: `CODEX_IGNORE_USER_CONFIG=1`,
+  `CODEX_IGNORE_RULES=1`, `CODEX_DISABLE_PLUGINS=1`, and
+  `CODEX_PROMPT_GUARD=0`, unless explicitly documented otherwise.
 
 ## Task Design
 

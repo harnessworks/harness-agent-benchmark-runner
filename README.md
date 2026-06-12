@@ -25,7 +25,11 @@ Latest heldout mitigation diagnostic:
 [`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md).
 That diagnostic found and fixed a hidden-path leakage issue, added a stall
 watchdog, then stopped the fresh 10-record pilot at record 4 with a recorded
-`agent_stalled=true` signal. It is not official product evidence and does not
+`agent_stalled=true` signal. After the Codex adapter was hardened to disable
+execpolicy `.rules` files and plugin loading by default, a canary no longer
+stalled, but the fresh pilot again stopped at record 4 because the
+workflow-only agent attempted to enumerate hidden `benchmarks/oracles` and
+`benchmarks/tasks` paths. It is not official product evidence and does not
 justify starting the 100-record heldout run yet.
 
 This is representative for the explicitly measured `jobs=2` run shape. It is
@@ -165,6 +169,9 @@ then run `partial-realistic` prompts as the main product experiment and
 workflow, boundary, strict success, and timeout counts separate in the report.
 For held-out pilots, use `--agent-stall-timeout` so stalled records are written
 to JSONL instead of requiring manual process termination.
+Keep adapter hygiene enabled during promotion checks:
+`CODEX_IGNORE_USER_CONFIG=1`, `CODEX_IGNORE_RULES=1`, and
+`CODEX_DISABLE_PLUGINS=1`.
 
 To separate task quality from scheduler pressure, either rerun representative
 shapes sequentially or rerun `jobs=2` with an explicitly higher timeout cap.

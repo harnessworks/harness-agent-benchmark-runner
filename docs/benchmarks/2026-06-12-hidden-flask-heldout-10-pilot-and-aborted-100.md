@@ -82,6 +82,9 @@ large held-out run:
 - It passes `--ignore-user-config` to `codex exec` by default unless
   `CODEX_PROFILE` is set, reducing local plugin/MCP/config effects in evidence
   runs.
+- It passes `--ignore-rules --disable plugins` to `codex exec` by default,
+  disabling user/project execpolicy `.rules` files and Codex plugin loading
+  without disabling repository `AGENTS.md` guidance.
 - Held-out task specs set `agent_excluded_paths: ["benchmarks"]`, so target
   benchmark specs and target-local oracle files are hidden while the agent runs
   and restored before verification. The runner now uses a temporary
@@ -95,7 +98,8 @@ large held-out run:
   (`CODEX_PROMPT_GUARD=0`) because changing the prompt would weaken
   comparability between arms and with prior runs.
 - Runtime controls remain env-configurable for deliberate compatibility checks:
-  `CODEX_IGNORE_USER_CONFIG=0` or `CODEX_PROMPT_GUARD=1`.
+  `CODEX_IGNORE_USER_CONFIG=0`, `CODEX_IGNORE_RULES=0`,
+  `CODEX_DISABLE_PLUGINS=0`, or `CODEX_PROMPT_GUARD=1`.
 
 ## Post-Mitigation Checks
 

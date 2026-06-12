@@ -134,8 +134,14 @@ functional or schema success rates.
 The Codex adapter also applies runtime hygiene by default:
 
 - `CODEX_IGNORE_USER_CONFIG=1` unless `CODEX_PROFILE` is set, reducing local
-  Codex profile/config effects in evidence runs. If Codex still emits plugin
-  manifest warnings during startup, record them as runtime noise in the report.
+  Codex profile/config effects in evidence runs.
+- `CODEX_IGNORE_RULES=1`, disabling user/project execpolicy `.rules` files.
+  This does not disable repository `AGENTS.md` guidance used by workflow arms.
+- `CODEX_DISABLE_PLUGINS=1`, disabling Codex plugin loading so local plugin
+  manifests and plugin-contributed skills do not shape benchmark behavior.
+  Setting `CODEX_PROFILE` does not re-enable `.rules` files or plugins; use
+  `CODEX_IGNORE_RULES=0` or `CODEX_DISABLE_PLUGINS=0` only for an explicit
+  compatibility control.
 - `CODEX_PROMPT_GUARD=0`; representative evidence runs leave the task prompt
   unchanged. Turn this on only for deliberate adapter debugging, and report it.
 
@@ -144,6 +150,14 @@ Hidden held-out tasks can also set `agent_excluded_paths`, typically
 while the agent runs and restored before verification. This is the preferred way
 to prevent answer-adjacent benchmark files from shaping agent behavior without
 adding prompt guidance.
+
+When `agent_excluded_paths` hides `benchmarks/`, the agent-visible target docs
+and `AGENTS.md` should not instruct agents to inspect `benchmarks/tasks`,
+`benchmarks/oracles`, or parent-directory benchmark paths. Keep answer-free
+local gates visible through `scripts/check_harness.py` or similar generic
+commands instead. The A/B script's `--stop-on-abnormal` mode treats direct
+agent attempts to enumerate hidden benchmark/oracle paths as a promotion
+blocker even if the hidden files are not actually readable.
 
 Hidden Flask held-out tasks also use `agent_setup.commands` to create `.venv`
 and install `requirements.txt` before the agent starts. The runner prepends

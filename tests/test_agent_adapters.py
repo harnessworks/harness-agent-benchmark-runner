@@ -102,6 +102,9 @@ class CodexExecAgentTests(unittest.TestCase):
                 "--ignore-user-config",
                 "-c",
                 "model_reasoning_effort=medium",
+                "--ignore-rules",
+                "--disable",
+                "plugins",
                 "-",
             ],
         )
@@ -118,6 +121,25 @@ class CodexExecAgentTests(unittest.TestCase):
 
         self.assertIn("--profile", command)
         self.assertNotIn("--ignore-user-config", command)
+        self.assertIn("--ignore-rules", command)
+        self.assertIn("--disable", command)
+        self.assertIn("plugins", command)
+
+    def test_build_command_can_disable_rules_isolation(self) -> None:
+        with patch.dict(os.environ, {"CODEX_IGNORE_RULES": "0"}, clear=True):
+            command = codex_exec_agent.build_command(Path("/tmp/repo"))
+
+        self.assertNotIn("--ignore-rules", command)
+        self.assertIn("--disable", command)
+        self.assertIn("plugins", command)
+
+    def test_build_command_can_disable_plugin_isolation(self) -> None:
+        with patch.dict(os.environ, {"CODEX_DISABLE_PLUGINS": "0"}, clear=True):
+            command = codex_exec_agent.build_command(Path("/tmp/repo"))
+
+        self.assertIn("--ignore-rules", command)
+        self.assertNotIn("--disable", command)
+        self.assertNotIn("plugins", command)
 
     def test_build_command_rejects_invalid_extra_args(self) -> None:
         with patch.dict(os.environ, {"CODEX_EXEC_ARGS": "'unterminated"}, clear=True):

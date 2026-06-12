@@ -55,9 +55,16 @@ rule. A first attempt found real hidden-content leakage through
 `../_agent_excluded/benchmarks/...`; after the runner was changed to hide
 excluded paths via in-memory snapshots, a temporary git baseline, and a pilot
 stall watchdog, a fresh pilot completed three clean records and then stopped
-record 4 with `agent_stalled=true`. This diagnostic should not be promoted to
-official product evidence and does not justify starting the 100-record heldout
-run.
+record 4 with `agent_stalled=true`. The Codex adapter was then hardened to add
+`--ignore-rules --disable plugins` by default, which disables execpolicy
+`.rules` files and plugin loading without disabling repository `AGENTS.md`
+guidance. A canary no longer stalled, but the next fresh pilot again stopped at
+record 4 after the workflow-only agent ran `rg --files` against
+`benchmarks/oracles` and `benchmarks/tasks`. The hidden directories were not
+visible, but this is still a valid abnormal signal because agent-visible
+workflow docs point at paths the heldout runner intentionally hides. This
+diagnostic should not be promoted to official product evidence and does not
+justify starting the 100-record heldout run.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —

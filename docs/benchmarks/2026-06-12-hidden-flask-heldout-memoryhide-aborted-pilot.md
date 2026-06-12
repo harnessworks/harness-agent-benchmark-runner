@@ -15,6 +15,10 @@ The pilot was stopped early under the stated mid-run abnormal-signal rule:
 - The next fresh 10-record pilot was stopped during record 3 because the bare
   `hidden-effect-bundle-quote` run exceeded 5 minutes without producing an
   agent result or agent log.
+- After adding adapter isolation for Codex plugins and execpolicy `.rules`, a
+  narrow canary completed without a stall, but the fresh 10-record pilot was
+  stopped during record 4 because the workflow-only agent attempted to enumerate
+  hidden `benchmarks/oracles` and `benchmarks/tasks` paths.
 
 Do not start the 100-record heldout run from this state.
 
@@ -161,8 +165,63 @@ edits, no excluded-path conflicts, no git-history exploration, and no hidden
 benchmark access pattern. The agent attempted broad local discovery, saw
 `benchmarks` was absent, read app/tests/docs/harness files, and then stalled
 before making edits. Codex startup logs still contained local plugin manifest
-warnings despite the adapter's default `--ignore-user-config`; treat that as
-runtime noise to investigate before another promotion attempt.
+warnings despite the adapter's default `--ignore-user-config`.
+
+Follow-up adapter mitigation: the Codex exec adapter now also defaults to
+`CODEX_IGNORE_RULES=1` and `CODEX_DISABLE_PLUGINS=1`, which add
+`--ignore-rules --disable plugins` to evidence-run commands. `--ignore-rules`
+disables execpolicy `.rules` files, not repository `AGENTS.md`, so workflow-arm
+guidance remains part of the measured target repository.
+
+## Adapter-Isolation Canary
+
+- Workspace: `runs/hidden-flask-bundle-workflow-adapteriso-canary-20260612T1315Z`
+- Results: `results/hidden-flask-bundle-workflow-adapteriso-canary-20260612T1315Z`
+- Task: `hidden-effect-bundle-quote`
+- Target arm: `workflow-only`
+- Agent stall watchdog: 330 seconds
+- Agent duration: 141.895 seconds
+- Stall/timeout: no
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+- Excluded-path conflicts: 0
+- Hidden benchmark access patterns: 0
+- Codex plugin manifest warnings: 0
+
+The canary failed hidden functional/schema checks, which is expected evidence
+under a partial-realistic heldout prompt rather than an infrastructure abnormal:
+
+- Functional: missing expected field matching one of `item_count`.
+- Schema: `$.bundle_quote.discount_applied` was not decimal-compatible.
+
+## Fresh Pilot With Adapter Isolation
+
+- Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
+- Planned shape: 5 tasks x 2 arms x 1 repeat = 10 records
+- Completed records before stop: 4
+- Workspace: `runs/hidden-flask-heldout-10-adapteriso-20260612T1319Z`
+- Results: `results/hidden-flask-heldout-10-adapteriso-20260612T1319Z`
+- Command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-limit 5 --repeats 1 --agent-stall-timeout 330 --stop-on-abnormal --workspace runs/hidden-flask-heldout-10-adapteriso-20260612T1319Z --results results/hidden-flask-heldout-10-adapteriso-20260612T1319Z --execute`
+- Stop reason: record 4, `workflow-only` `hidden-effect-bundle-quote`, because
+  the agent log contained a direct hidden benchmark access pattern.
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | Wrong-file edits | Forbidden-file edits |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 2 | 0 | 0 | 0 | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
+| `workflow-only` | 2 | 0 | 0 | 0 | 2 | 2 | 1 | 0 | 0 | 0 | 0 |
+
+| Record | Target | Task | Agent duration | Hidden access | Result |
+| --- | --- | --- | ---: | --- | --- |
+| `20260612T131925Z-hidden-effect-availability-badge-318eae72` | `bare` | `hidden-effect-availability-badge` | 65.829s | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T132109Z-hidden-effect-availability-badge-76c908a5` | `workflow-only` | `hidden-effect-availability-badge` | 82.893s | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T132241Z-hidden-effect-bundle-quote-0bf17d73` | `bare` | `hidden-effect-bundle-quote` | 115.029s | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T132444Z-hidden-effect-bundle-quote-b1e1e279` | `workflow-only` | `hidden-effect-bundle-quote` | 141.229s | yes | Functional/schema failed; workflow and boundary passed, but the schedule stopped because the agent ran `rg --files benchmarks/oracles benchmarks/tasks`. |
+
+The stopped record did not read hidden oracle content because `benchmarks/` was
+absent from the agent-visible checkout. The abnormal signal is still valid:
+agent-visible workflow docs and `AGENTS.md` mention local benchmark/oracle
+paths, so the workflow-only agent naturally tried to inspect paths that the
+heldout runner intentionally hides.
 
 ## Recommendation
 
@@ -171,14 +230,20 @@ Do not proceed to the 100-record heldout run yet.
 Before the next promotion attempt:
 
 - Keep the in-memory `agent_excluded_paths` handling and temporary git baseline.
+- Keep Codex adapter isolation enabled: `CODEX_IGNORE_USER_CONFIG=1`,
+  `CODEX_IGNORE_RULES=1`, and `CODEX_DISABLE_PLUGINS=1`, unless running a
+  deliberate compatibility control.
 - Use the runner's `--agent-stall-timeout` pilot watchdog so "no result after N
   seconds" is captured as a first-class `agent_stalled` record rather than
   requiring manual termination.
-- Investigate why the `workflow-only` `hidden-effect-bundle-quote` record
-  stalled after local discovery and no edits. Pay particular attention to Codex
-  startup/plugin manifest warnings and adapter isolation behavior.
+- Fix the target workflow-harness refs before rerunning: heldout workflow and
+  memory harnesses should not instruct agents to inspect `benchmarks/tasks` or
+  `benchmarks/oracles` when those paths are hidden. Keep the generic local gate
+  visible through `scripts/check_harness.py` or equivalent answer-free docs,
+  then update the pinned task refs.
 - Only rerun the fresh 10-record pilot after the stall is explained or made
-  consistently non-recurring. Promote to 100 records only if the 10-record pilot
-  has zero stalls, zero agent timeouts, zero excluded-path conflicts, zero
-  preflight failures, zero wrong/forbidden edits, and no hidden
+  consistently non-recurring and the agent-visible docs no longer point at
+  hidden benchmark/oracle directories. Promote to 100 records only if the
+  10-record pilot has zero stalls, zero agent timeouts, zero excluded-path
+  conflicts, zero preflight failures, zero wrong/forbidden edits, and no hidden
   benchmark-content access.

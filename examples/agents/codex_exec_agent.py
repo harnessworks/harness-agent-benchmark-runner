@@ -12,6 +12,8 @@ Optional environment knobs:
 - CODEX_MODEL: optional model passed as --model
 - CODEX_PROFILE: optional profile passed as --profile
 - CODEX_IGNORE_USER_CONFIG: default enabled unless CODEX_PROFILE is set
+- CODEX_IGNORE_RULES: default enabled; disables user/project execpolicy .rules
+- CODEX_DISABLE_PLUGINS: default enabled; disables Codex plugin loading
 - CODEX_PROMPT_GUARD: default disabled; prepends generic benchmark guardrails
 - CODEX_PROMPT_PREFIX: override the default benchmark guardrail prefix
 - CODEX_PROMPT_SUFFIX: optional prompt text appended after the task prompt
@@ -118,6 +120,12 @@ def build_command(repo: Path) -> list[str]:
             command.extend(shlex.split(extra_args))
         except ValueError as exc:
             raise ValueError(f"invalid CODEX_EXEC_ARGS: {exc}") from exc
+
+    if env_enabled("CODEX_IGNORE_RULES", default=True):
+        command.append("--ignore-rules")
+
+    if env_enabled("CODEX_DISABLE_PLUGINS", default=True):
+        command.extend(["--disable", "plugins"])
 
     command.append("-")
     return command
