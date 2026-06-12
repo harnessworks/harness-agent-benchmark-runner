@@ -22,26 +22,24 @@ Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
 
 Latest heldout mitigation diagnostic:
-[`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md).
-After quarantining `bundle-quote`, a prompt-guarded reduced 8-record pilot
-completed with zero stalls, timeouts, hidden access, or boundary issues. The
-follow-up balanced 96-record attempt stopped at record 11 on workflow-only
-`cart-validation` when the idle watchdog fired after 500.8 seconds. That
-stopped record made no edits, passed the local harness gate because the repo was
-unchanged, and had no hidden access or boundary issue. It is still not official
-product evidence. The current blocker is broader than `bundle-quote`: the
-workflow-only arm can still idle out while inspecting generic harness checks
-under partial-realistic prompts. A focused workflow-only cart-validation triage
-then completed 3/3 clean records, so the stall looks intermittent in longer
-promotion schedules rather than a deterministic cart-validation task failure.
+[`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md).
+After adding the promotion-readiness guard, the stronger 2-round stable-8 pilot
+stopped at record 12 on bare `cart-validation` when the idle watchdog fired
+after 314.5 seconds. The stopped record made no edits and had no hidden access
+or boundary issue. The guarded 96-record command then failed before execution
+because the pilot results contained that abnormal signal. It is still not
+official product evidence. The current blocker is broader than `bundle-quote`
+or workflow-only: partial-realistic stable-8 still has intermittent no-edit
+idle tails across arms.
 
-Operational follow-up has been split into two suite manifests:
+Operational follow-up remains split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
 promotion pilots with `bundle-quote` excluded, and
 `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json` for
 focused bundle-quote tail-latency triage. The first reduced promotion attempt
-still found a workflow-only `cart-validation` idle stall, so this split is a
-diagnostic control, not a solved promotion path.
+found a workflow-only `cart-validation` idle stall, and the stronger 2-round
+pilot found a bare `cart-validation` idle stall, so this split is a diagnostic
+control, not a solved promotion path.
 
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so
@@ -178,14 +176,11 @@ The next useful follow-up is not another identical `jobs=2` run, another
 full-heldout 100-record attempt that includes `bundle-quote`, or another
 unchanged reduced 96-record promotion. Keep `bundle-quote` in
 `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`, but do
-not quarantine `cart-validation` based only on the stopped promotion record.
-The next mitigation should reduce the workflow-only search burden or add a
-stronger long-run stability gate before rerunning promotion. A clean one-repeat
-reduced pilot is not enough; require at least a two-round reduced pilot or
-another stronger stability check before a near-100 run. The runner now exposes
-that guard as `--promotion-run --require-clean-results <results-dir>
---min-clean-rounds 2`, which fails before execution if the prior clean pilot
-does not cover every selected task/arm pair enough times.
+not quarantine `cart-validation` as a harness-only problem. The next mitigation
+should reduce no-edit idle tails before rerunning promotion. The runner now
+exposes a promotion guard as `--promotion-run --require-clean-results
+<results-dir> --min-clean-rounds 2`; the latest 2-round pilot failed that guard
+because it contained an idle-watchdog stop.
 
 After that, build a three-arm held-out suite with `bare`, `workflow-only`, and
 `memory-harness`, then run `partial-realistic` prompts as the main product
@@ -211,6 +206,7 @@ parallel scheduler pressure.
 
 ## Reports
 
+- [`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md)

@@ -76,14 +76,14 @@ reduced promotion-readiness pilot. For a near-100 promotion over this reduced
 suite, use 12 repeats for 96 balanced records or 13 repeats for 104 balanced
 records; do not cut a schedule mid-repeat just to force exactly 100 records.
 
-Do not rerun the same 96-record reduced promotion shape until the
-workflow-only `hidden-effect-cart-validation` no-edit idle stall from the
-2026-06-13 stable-8 final-mitigation diagnostic is mitigated. A focused
-workflow-only cart-validation triage completed 3/3 clean records, so do not
-quarantine cart-validation based only on the stopped promotion record. The
-one-repeat stable-8 pilot completed cleanly, but the 96-record attempt still
-stopped at record 11. Treat one clean reduced pilot as insufficient promotion
-readiness evidence.
+Do not rerun the same 96-record reduced promotion shape until the no-edit idle
+tail is mitigated. The one-repeat stable-8 pilot completed cleanly, but the
+96-record attempt stopped at record 11 on workflow-only cart-validation. A
+focused workflow-only cart-validation triage completed 3/3 clean records, so
+do not quarantine cart-validation based only on that stopped promotion record.
+The stronger two-round stable-8 pilot then stopped at record 12 on bare
+cart-validation. Treat the current blocker as intermittent no-edit idle tail
+across arms, not as a single task/arm failure.
 
 The A/B script now has an explicit promotion guard. Near-100 reduced runs
 should use `--promotion-run` and point at a prior clean pilot with at least two
@@ -103,7 +103,10 @@ python3 scripts/run_hidden_flask_ab.py \
 ```
 
 Using the one-repeat stable-8 pilot as promotion evidence fails this guard
-because it covers each task/arm pair only once.
+because it covers each task/arm pair only once. Using the latest two-round
+stable-8 pilot also fails this guard because the pilot contains an idle
+watchdog stop. This is intended: do not run near-100 promotion until the prior
+pilot results are both sufficiently covered and clean.
 
 For focused triage, prefer a quarantine suite when one exists:
 

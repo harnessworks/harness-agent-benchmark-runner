@@ -49,20 +49,16 @@ condition, not a pure sequential claim. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
 Latest heldout diagnostic:
-[`2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md) —
-after quarantining `hidden-effect-bundle-quote`, `CODEX_PROMPT_GUARD=1`
-completed a reduced 8-record heldout pilot with zero stalls, timeouts, hidden
-access, wrong-file edits, forbidden edits, or excluded-path conflicts. The
-follow-up balanced 96-record sequential attempt stopped at record 11 on
-workflow-only `hidden-effect-cart-validation` when the idle watchdog fired
-after 500.8 seconds. The stopped record had no file edits, passed the local
-harness gate because the repo was unchanged, and had no hidden access or
-boundary issue. This is still not official product evidence. The current
-blocker is broader than `bundle-quote`: workflow-only can still idle out while
-inspecting generic harness checks under partial-realistic prompts. A focused
-workflow-only cart-validation triage then completed 3/3 clean records, so the
-stall looks intermittent in longer promotion schedules rather than a
-deterministic cart-validation task failure.
+[`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md) —
+after adding the promotion-readiness guard, `CODEX_PROMPT_GUARD=1` started a
+stronger 2-round stable-8 pilot. It stopped at record 12 on bare
+`hidden-effect-cart-validation` when the idle watchdog fired after 314.5
+seconds. The stopped record had no file edits, no hidden access, and no
+boundary issue. The guarded 96-record command then failed before execution
+because the pilot results contained that abnormal signal. This is still not
+official product evidence. The current blocker is broader than `bundle-quote`
+or workflow-only: partial-realistic stable-8 still has intermittent no-edit
+idle tails across arms.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -75,7 +71,8 @@ sequential evidence.
 
 Detailed reports:
 
-- [`2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md) ← latest heldout diagnostic
+- [`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md) ← latest heldout diagnostic
+- [`2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md)
 - [`2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md)
 - [`2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md)
 - [`2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md)
@@ -178,21 +175,15 @@ not file-boundary discipline. `jobs=2` introduced timeout noise: 1 no-harness
 timeout and 2 yes-harness timeouts. A sequential follow-up or a jobs=2 run with
 a higher timeout cap is needed before making a timeout-stability claim.
 
-The latest 2026-06-13 stable-8 final-mitigation diagnostic is the current
+The latest 2026-06-13 stable-8 2-round pilot diagnostic is the current
 promotion-readiness evidence for answer-free partial-realistic prompts. It
-completed a reduced 8-record pilot cleanly with `--agent-idle-timeout 300` and
-`--agent-timeout-override 900`, then stopped the 96-record attempt at record 11
-on a workflow-only cart-validation idle-watchdog stop. The run had 0 hidden
-access, 0 wrong-file edits, 0 forbidden-file edits, and 0 excluded-path
-conflicts. It is not product evidence because the 96 did not complete and
-strict successes remained 0. `bundle-quote` should stay quarantined, but the
-remaining blocker is now workflow-only no-edit idle tail under partial prompts,
-not just bundle-quote task latency. Focused workflow-only cart-validation
-triage completed cleanly, so do not quarantine cart-validation based only on
-the stopped promotion record. The runner now has a promotion guard:
-`--promotion-run --require-clean-results <results-dir> --min-clean-rounds 2`
-fails before execution if a prior clean pilot does not cover every selected
-task/arm pair enough times.
+stopped at record 12 on a bare cart-validation idle-watchdog stop. The run had
+0 hidden access, 0 wrong-file edits, 0 forbidden-file edits, and 0
+excluded-path conflicts. The runner's new promotion guard then blocked the
+96-record command before execution because the pilot results contained that
+abnormal signal. `bundle-quote` should stay quarantined, but the remaining
+blocker is now intermittent no-edit idle tail across arms under partial
+prompts, not just bundle-quote task latency or workflow-only behavior.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
