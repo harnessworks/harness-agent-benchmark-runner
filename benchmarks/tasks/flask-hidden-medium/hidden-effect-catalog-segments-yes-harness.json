@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-catalog-segments",
+  "description": "Medium-realistic hidden-oracle Flask A/B: add the API from a realistic user prompt that states product intent without enumerating the full response contract.",
+  "repo": {
+    "source": "../flask-yes-harness",
+    "ref": "c3eaf9a0105d7b99db414467b5df0edb833697ad"
+  },
+  "prompt": "Add a catalog segments endpoint.\n\nAdd GET /catalog/segments. It should segment each catalog product by price and stock bands. Use price bands budget for prices below 10, standard for prices from 10 up to but not including 40, and premium for prices 40 or higher. Use stock bands scarce below 5, steady from 5 up to but not including 25, and deep at 25 or higher. Include a compact summary of the band counts.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog segment rows. Update companion documentation in the repository's documented docs location so future maintainers can find the price and stock band definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-medium/hidden-effect-catalog-segments-yes-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180
+      },
+      {
+        "name": "pytest and hidden medium hidden-effect-catalog-segments oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-segments"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-supplier-readiness",
+  "description": "Medium-realistic hidden-oracle Flask A/B: add the API from a realistic user prompt that states product intent without enumerating the full response contract.",
+  "repo": {
+    "source": "../flask-no-harness",
+    "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
+  },
+  "prompt": "Add a supplier readiness endpoint for catalog operations.\n\nAdd GET /suppliers/readiness. It should report readiness for each current catalog SKU using this local supplier data: desk-lamp uses bright-co with a 6-day lead time, notebook uses paperhouse with a 2-day lead time, and standing-mat uses ergo-supply with a 9-day lead time. A SKU is ready only when stock is at least 10 and lead time is at most 7 days; otherwise it is at risk. Include a useful readiness summary.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog readiness rows. Update companion documentation in the repository's documented docs location so future maintainers can find the supplier readiness behavior. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-medium/hidden-effect-supplier-readiness-no-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "pytest and hidden medium hidden-effect-supplier-readiness oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-supplier-readiness"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}
