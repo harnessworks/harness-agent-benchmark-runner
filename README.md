@@ -22,18 +22,20 @@ Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
 
 Latest heldout mitigation diagnostic:
-[`docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md).
-After hidden-path, adapter-isolation, target-clean, and `_band`/`_bands`
-API-style fixes, a prompt-guarded fresh 10-record pilot completed with zero
-stalls, timeouts, hidden access, or boundary issues. The follow-up 100-record
-attempt still stopped at record 14 on bare `bundle-quote` when the 330-second
-pilot watchdog fired. That stopped record had active edits, so the current
-watchdog is too strict for 100-record promotion as a wall-clock cap. It is not
-official product evidence.
+[`docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md).
+After adding the idle-output watchdog, a prompt-guarded fresh 10-record pilot
+completed with zero stalls, timeouts, hidden access, or boundary issues. The
+follow-up 100-record attempt used `--agent-idle-timeout 300`, progressed past
+the earlier record-14 wall-clock stop, and stopped at record 62 on workflow-only
+`availability-badge` when the task's 600-second timeout fired. That stopped
+record had active edits, passed the local harness gate, and had no hidden
+access or boundary issue. It is still not official product evidence, but it
+shows the short wall-clock watchdog has been replaced by a better idle policy;
+tail timeouts remain unresolved.
 
-This is representative for the explicitly measured `jobs=2` run shape. It is
-not a pure sequential claim: the run produced timeout noise, so strict scored
-success and verification passed should be read separately.
+The balanced 100-run is representative for the explicitly measured `jobs=2` run
+shape. It is not a pure sequential claim: the run produced timeout noise, so
+strict scored success and verification passed should be read separately.
 
 The next product-value experiment should use a fixed three-arm structure:
 `bare`, `workflow-only`, and `memory-harness`. The main product experiment is
@@ -167,10 +169,14 @@ three-arm held-out suite with `bare`, `workflow-only`, and `memory-harness`,
 then run `partial-realistic` prompts as the main product experiment and
 `full-contract` prompts as controls. Keep functional, schema-contract,
 workflow, boundary, strict success, and timeout counts separate in the report.
-For held-out pilots, use `--agent-stall-timeout` so stalled records are written
-to JSONL instead of requiring manual process termination. For 100-record
-promotion, prefer `--agent-idle-timeout` or the task timeout so long-but-active
-runs are not stopped by a short wall-clock pilot cap.
+For held-out pilots, use either a short `--agent-stall-timeout` when deliberately
+testing pilot-stop behavior or `--agent-idle-timeout` when long active runs
+should continue. For 100-record promotion, prefer `--agent-idle-timeout` plus
+the task timeout so long-but-active runs are not stopped by a short wall-clock
+pilot cap. If a promotion run needs more than 600 seconds, update the heldout
+task specs or use an explicit promotion suite; `--max-agent-timeout` only caps
+task timeouts and does not extend a task whose `timeout_seconds` is already
+lower.
 Keep adapter hygiene enabled during promotion checks:
 `CODEX_IGNORE_USER_CONFIG=1`, `CODEX_IGNORE_RULES=1`, and
 `CODEX_DISABLE_PLUGINS=1`.
@@ -182,6 +188,7 @@ parallel scheduler pressure.
 
 ## Reports
 
+- [`docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md)
