@@ -32,14 +32,14 @@ but it is still not product evidence: strict success was 0/16 and
 schema-contract success was 0/16.
 
 Latest three-arm product diagnostic:
-[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md).
-The first `bare` / `workflow-only` / `memory-harness` stable-4 pilot stopped at
-5/12 records because `workflow-only` `cart-validation` hit the 240-second
-no-edit watchdog before any repository change. This blocks promotion to a
-100-run product experiment. The completed records also had 0/5 strict,
-functional, and schema-contract successes, so the current partial-realistic
-shape still needs stronger generalized, non-task-specific API convention
-guidance before scaling.
+[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md).
+After strengthening the generic API style gate and adding generalized response
+metadata memory to the memory arm, the fresh three-arm stable-4 pilot produced
+all 12 planned records. It is still not promotion-ready: strict success was
+`bare` 0/4, `workflow-only` 1/4, `memory-harness` 0/4, and the final
+`memory-harness` `catalog-segments` record hit the 360-second no-edit watchdog.
+The mitigation improved schema-contract signal (`workflow-only` 3/4,
+`memory-harness` 2/4), but did not show memory-harness product lift.
 
 Operational follow-up remains split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
@@ -70,8 +70,11 @@ The next product-value experiment should still use a fixed three-arm structure:
 `bare`, `workflow-only`, and `memory-harness`, but the first pilot shows that a
 larger run is premature. The main product experiment is `partial-realistic`
 held-out work where task-specific answer strings are absent from the target
-repositories. `full-contract` prompts remain useful controls; small gaps there
-are expected because the prompt already supplies much of the answer.
+repositories. Before another promotion attempt, the memory-harness arm needs
+lower first-edit latency and stronger generalized behavior guidance without
+adding held-out route names, oracle payloads, or exact task answers.
+`full-contract` prompts remain useful controls; small gaps there are expected
+because the prompt already supplies much of the answer.
 
 ## Current Evidence
 
