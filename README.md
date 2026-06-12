@@ -32,14 +32,13 @@ but it is still not product evidence: strict success was 0/16 and
 schema-contract success was 0/16.
 
 Latest three-arm product diagnostic:
-[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md).
-After strengthening the generic API style gate and adding generalized response
-metadata memory to the memory arm, the fresh three-arm stable-4 pilot produced
-all 12 planned records. It is still not promotion-ready: strict success was
-`bare` 0/4, `workflow-only` 1/4, `memory-harness` 0/4, and the final
-`memory-harness` `catalog-segments` record hit the 360-second no-edit watchdog.
-The mitigation improved schema-contract signal (`workflow-only` 3/4,
-`memory-harness` 2/4), but did not show memory-harness product lift.
+[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md).
+After trimming the memory target guidance into a shorter feature fast path, the
+fresh three-arm stable-4 pilot completed all 12 planned records with 0 stalls,
+0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file
+edits. Strict success was `bare` 0/4, `workflow-only` 0/4, and
+`memory-harness` 1/4. Schema-contract success was `bare` 0/4,
+`workflow-only` 3/4, and `memory-harness` 3/4.
 
 Operational follow-up remains split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
@@ -73,9 +72,12 @@ held-out work where task-specific answer strings are absent from the target
 repositories. A targeted rerun of the previous memory-harness
 `catalog-segments` no-edit failure passed after trimming the memory guidance
 into a shorter feature fast path, but this is still only a one-record
-mitigation check. Before another promotion attempt, rerun the full 12-record
-three-arm pilot with the trimmed memory target and require 0 no-edit watchdog
-stops.
+mitigation check. The full 12-record pilot then completed cleanly, so the next
+step is a second clean 12-record round because the promotion guard requires at
+least two clean rounds. If that second round is also clean, the promotion
+candidate is a balanced 96-record run (`repeats=8`) rather than exactly 100
+records. It should stay on `jobs=1` with `--stop-on-abnormal` and the
+360-second no-edit watchdog.
 `full-contract` prompts remain useful controls; small gaps there are expected
 because the prompt already supplies much of the answer.
 

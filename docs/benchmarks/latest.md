@@ -35,9 +35,9 @@ Updated: 2026-06-13
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B `jobs=2` calibration | 10 | 10 | 100% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B 100-run `jobs=2` | 50 | 46 | 92% | 0 | 0 | 1 |
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B 100-run `jobs=2` | 50 | 48 | 96% | 0 | 0 | 2 |
-| `flask-no-harness` | Codex CLI | Three-arm stable-4 gate/memory pilot | 4 | 0 | 0% | 0 | 0 | 0 |
-| `flask-yes-harness` | Codex CLI | Three-arm stable-4 gate/memory pilot | 4 | 1 | 25% | 0 | 0 | 0 |
-| `flask-memory-harness` | Codex CLI | Three-arm stable-4 gate/memory pilot | 4 | 0 | 0% | 0 | 0 | 1 |
+| `flask-no-harness` | Codex CLI | Three-arm stable-4 doc-slim pilot | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Three-arm stable-4 doc-slim pilot | 4 | 0 | 0% | 0 | 0 | 0 |
+| `flask-memory-harness` | Codex CLI | Three-arm stable-4 doc-slim pilot | 4 | 1 | 25% | 0 | 0 | 0 |
 
 Latest run:
 [`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) —
@@ -74,14 +74,16 @@ hidden-access findings. This indicates the hidden oracle and agent path can
 pass these tasks when the exact contract is explicit.
 
 Latest three-arm product diagnostic:
-[`2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md) —
-after strengthening the generic API style gate and adding generalized response
-metadata memory to the memory arm, the fresh three-arm stable-4 pilot produced
-all 12 planned records. It is still not promotion-ready: `bare` scored 0/4
-strict, `workflow-only` scored 1/4 strict, and `memory-harness` scored 0/4
-strict with the only no-edit watchdog stop. Schema-contract signal improved
-from the prior aborted pilot (`workflow-only` 3/4, `memory-harness` 2/4), but
-memory-harness did not show product lift over workflow-only.
+[`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md) —
+after trimming the memory target guidance into a shorter benchmark feature fast
+path, the fresh three-arm stable-4 pilot completed all 12 planned records with
+0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0
+forbidden-file edits. `bare` scored 0/4 strict, `workflow-only` scored 0/4
+strict, and `memory-harness` scored 1/4 strict. Schema-contract success was
+0/4, 3/4, and 3/4 respectively. This is the first clean three-arm
+partial-realistic stable-4 matrix, but the product signal is still small. The
+promotion guard requires at least two clean rounds, so this is not yet enough
+to execute the 96-record promotion run.
 
 Latest targeted mitigation check:
 [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) —
@@ -89,8 +91,8 @@ after trimming the memory target guidance into a shorter benchmark feature fast
 path, the previous `memory-harness` `catalog-segments` no-edit case completed
 in 76 seconds and passed strict scoring. This clears the immediate one-record
 reproduction, but it does not unblock a 100-run promotion by itself. The next
-step remains a fresh full 12-record three-arm pilot with 0 no-edit watchdog
-stops required.
+step became a fresh full 12-record three-arm pilot with 0 no-edit watchdog
+stops required; that pilot is now recorded above.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -103,8 +105,9 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md) ← latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) ← latest targeted mitigation check
-- [`2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md) ← latest three-arm product diagnostic
+- [`2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md)
 - [`2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md)
 - [`2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md) ← latest full-contract control
 - [`2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md) ← latest heldout diagnostic
