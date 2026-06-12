@@ -2,136 +2,158 @@
 
 # Harness Agent Benchmark Runner
 
-Benchmark evidence for measuring coding-agent performance on deterministic
-repository tasks. This README is intentionally performance-focused; operational
-usage details live in code, task specs, and benchmark reports.
+Benchmark infrastructure for measuring coding-agent behavior against
+deterministic repository tasks. The runner isolates each attempt under `runs/`,
+records append-only JSONL evidence under `results/`, and publishes only
+credential-safe summaries in `docs/benchmarks/`.
 
-## Latest Performance
+This README is the short evidence front page. Operational details live in task
+specs, runner code, and detailed benchmark reports.
 
-The latest Flask harness-effect A/B calibration uses all ten hidden-oracle
-tasks where the prompt names a repository-specific API but does not restate the
-full response contract. The deterministic oracle lives in this runner, outside
-the agent-visible target clone. Codex was run with medium reasoning and
-priority service tier:
-`CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
+## Benchmark Status
 
-| Target | Harness | Agent | Runs | Strict scored successes | Strict success rate | Verification passed | Wrong-file edits | Forbidden-file edits | Timeouts |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` | No | Codex CLI | 10 | 0 | 0% | 0 | 0 | 0 | 0 |
-| `flask-yes-harness` | Yes | Codex CLI | 10 | 10 | 100% | 10 | 0 | 0 | 0 |
-
-Interpretation: when the exact scoring contract is hidden from the target
-repository, the harnessed target improved hidden contract discovery. The
-tightened prompt kept strict boundary adherence clean on both sides.
-Verification success measures functional correctness; wrong-file edits measure
-whether the agent kept changes inside the task boundary. The bare target
-repeatedly guessed route names and response shapes, while the harnessed target
-discovered the repository-local contracts from its agent instructions and
-conventions.
-
-This latest run is a 20-record pre-large calibration, not the representative
-200-run evidence run. It confirms that the tightened prompt no longer produces
-root `README.md` boundary noise before the larger run.
+Current official evidence is the balanced hidden-oracle Flask A/B 20-run pilot.
+Both targets received the task-critical API contract in the prompt, while only
+the harnessed target retained repository-local workflow, documentation,
+boundary, and local-gate guidance.
 
 Detailed report:
-[`docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md).
+[`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md).
 
-## What Yes-Harness Improved
+This is official pilot evidence, not representative large-run evidence. It is
+the fairest current Flask harness-effect signal because the previous
+hidden-contract calibration gave the harnessed repository much more
+task-specific contract information.
 
-The harnessed Flask target did not make the underlying app easier. It made the
-repository's expectations easier for the agent to discover and follow.
+## Current Evidence
 
-| Dimension | `flask-no-harness` | `flask-yes-harness` | Observed effect |
-| --- | --- | --- | --- |
-| Strict scored success | 0/10 | 10/10 | Harnessed tasks completed the hidden contracts while staying inside strict scoring rules. |
-| Verification passed | 0/10 | 10/10 | Functional correctness remained the main separator once the oracle was hidden. |
-| File boundaries | 0 task-boundary misses | 0 task-boundary misses | The tightened prompt removed root `README.md` ambiguity in calibration. |
-| Timeouts | 0 timeouts | 0 timeouts | Calibration completed without timeout noise. |
-| Contract discovery | Guessed routes and response shapes | Used documented conventions | Repository-local knowledge translated into concrete API behavior. |
+| Target | Harness | Runs | Strict scored successes | Verification passed | Functional oracle failures | Docs oracle failures | Boundary/infra issues |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `flask-no-harness` | No | 10 | 6 | 6 | 1 | 3 | 0 |
+| `flask-yes-harness` | Yes | 10 | 10 | 10 | 0 | 0 | 0 |
 
-The most important difference is not raw Flask coding ability. The hidden run
-shows the harness is useful when success depends on repository-local knowledge:
-route names, response shapes, thresholds, companion-document placement, and
-allowed edit boundaries.
+Boundary/infra issues combine wrong-file edits, forbidden-file edits, and
+agent timeouts. All three were 0 on both sides in the balanced pilot.
 
-## Benchmark Evidence
+Guardrail detail:
 
-| Scope | Agent | Mode | Runs | Strict scored successes | Strict success rate | Wrong-file edits | Forbidden-file edits | Timeouts |
+| Target | Wrong-file edits | Forbidden-file edits | Timeouts |
+| --- | ---: | ---: | ---: |
+| `flask-no-harness` | 0 | 0 | 0 |
+| `flask-yes-harness` | 0 | 0 | 0 |
+
+The no-harness target passed 6/10 once endpoint, method, request shape,
+response keys, constants, status codes, and business rules were moved into the
+prompt. The yes-harness target stayed at 10/10. The remaining gap was mostly
+documentation exactness: three no-harness failures were glossary phrase misses,
+and one was a cart validation summary mismatch.
+
+## What This Shows
+
+The balanced pilot no longer measures whether the agent can guess a hidden API
+contract from repository conventions. It measures whether repository harnessing
+improves completion after the basic contract is shared:
+
+| Dimension | Observed signal |
+| --- | --- |
+| Functional implementation | no-harness had 1 functional hidden-oracle miss; yes-harness had 0. |
+| Companion documentation | no-harness had 3 docs-oracle misses; yes-harness had 0. |
+| File-boundary discipline | both targets had 0 wrong-file edits and 0 forbidden-file edits. |
+| Timeout stability | both targets had 0 timeouts. |
+| Local workflow use | yes-harness also ran its local harness gate before the hidden oracle. |
+
+This is a narrower and more defensible claim than the earlier hidden-contract
+calibration: the harness appears to improve implementation completeness and
+docs discipline under the measured Flask API task shape. It is not a generic
+claim about all coding tasks or all repositories.
+
+## Why Use The Harness
+
+The harness is useful when agent success depends on more than writing code that
+passes obvious local tests. It gives the repository a durable way to teach and
+enforce local expectations without putting every convention into every prompt.
+
+| Harness advantage | Practical effect | Evidence in current pilot |
+| --- | --- | --- |
+| Repository-local guidance | Agents can find project conventions, docs locations, and completion gates inside the target repository. | yes-harness completed 10/10 while no-harness completed 6/10 under the same task-critical prompt contracts. |
+| Better companion docs discipline | Agents are steered toward the documented docs location and expected terminology. | no-harness had 3 docs-oracle misses; yes-harness had 0. |
+| Local gate before hidden scoring | The harnessed target can run repository-specific checks before the external hidden oracle. | yes-harness ran `scripts/check_harness.py` before hidden oracle checks. |
+| Boundary reinforcement | The target can state what files are in scope and what files are off-limits. | Both targets had 0 wrong-file edits here; earlier hidden-oracle runs showed boundary drift when prompt wording was weaker. |
+| Less prompt burden over time | Stable conventions live in the repo instead of being repeated in every benchmark prompt. | The balanced prompt exposed the API contract; harness guidance still carried workflow, docs, and gate behavior. |
+
+The current evidence does not prove that a harness always improves raw coding
+ability. It shows a more specific and useful thing: under convention-heavy
+repository tasks, the harness can reduce missed local expectations and make
+successful agent work more repeatable.
+
+## Evidence Trail
+
+| Scope | Agent | Mode | Runs | Strict scored successes | Verification passed | Functional failures | Docs failures | Boundary/infra issues |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-yes-harness` hidden-oracle calibration | Codex CLI | Live adapter (1x, 10 tasks) | 10 | 10 | 100% | 0 | 0 | 0 |
-| `flask-no-harness` hidden-oracle calibration | Codex CLI | Live adapter (1x, 10 tasks) | 10 | 0 | 0% | 0 | 0 | 0 |
-| `flask-yes-harness` hidden-oracle A/B | Codex CLI | Live adapter (3x) | 12 | 11 | 91.7% | 0 | 0 | 0 |
-| `flask-no-harness` hidden-oracle A/B | Codex CLI | Live adapter (3x) | 12 | 0 | 0% | 11 | 0 | 3 |
-| `flask-yes-harness` complex harness-effect A/B | Codex CLI | Live adapter (3x) | 12 | 11 | 91.7% | 0 | 0 | 1 |
-| `flask-no-harness` complex harness-effect A/B | Codex CLI | Live adapter (3x) | 12 | 10 | 83.3% | 2 | 0 | 0 |
-| `flask-yes-harness` harness-effect A/B | Codex CLI | Live adapter (3x) | 6 | 6 | 100% | 0 | 0 | 0 |
-| `flask-no-harness` harness-effect A/B | Codex CLI | Live adapter (3x) | 6 | 4 | 66.7% | 1 | 0 | 1 |
-| `flask-yes-harness` 4-task pilot | Codex CLI | Live adapter (1x) | 4 | 3 | 75% | 0 | 0 | 1 |
-| `flask-no-harness` 4-task pilot | Codex CLI | Live adapter (1x) | 4 | 3 | 75% | 0 | 0 | 1 |
-| `harness-starter-kit` 8-task dry run | Claude Code CLI | Live adapter (5x) | 40 | 37 | 92.5% | 0 | 0 | 0 |
-| `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter (5x) | 40 | 34 | 85% | 0 | 0 | 4 |
-| `harness-starter-kit` 8-task dry run | Codex CLI | Live adapter (1x) | 8 | 8 | 100% | 0 | 0 | 0 |
-| `harness-starter-kit` 8-task dry run | Claude Opus | Patch replay | 8 | 8 | 100% | 0 | 0 | 0 |
+| `flask-yes-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot | 10 | 10 | 10 | 0 | 0 | 0 |
+| `flask-no-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot | 10 | 6 | 6 | 1 | 3 | 0 |
+| `flask-yes-harness` hidden-contract calibration | Codex CLI | 1x, 10 tasks | 10 | 10 | 10 | 0 | 0 | 0 |
+| `flask-no-harness` hidden-contract calibration | Codex CLI | 1x, 10 tasks | 10 | 0 | 0 | 10 | 0 | 0 |
+| `flask-yes-harness` hidden-oracle A/B | Codex CLI | 3x, 4 tasks | 12 | 11 | 11 | 1 | 0 | 0 |
+| `flask-no-harness` hidden-oracle A/B | Codex CLI | 3x, 4 tasks | 12 | 0 | 0 | 9 | 0 | 14 |
+| `flask-yes-harness` complex visible-oracle A/B | Codex CLI | 3x, 4 tasks | 12 | 11 | 11 | 0 | 0 | 1 |
+| `flask-no-harness` complex visible-oracle A/B | Codex CLI | 3x, 4 tasks | 12 | 10 | 12 | 0 | 0 | 2 |
 
-No-op validation runs are excluded from the performance table because they are
-negative controls, not agent scores. They are documented in the detailed
-benchmark reports.
+Older `harness-starter-kit` runs remain useful agent-adapter evidence, but the
+Flask A/B rows are the relevant harness-effect evidence.
 
 ```mermaid
 xychart-beta
-    title "Selected Success Rates"
-    x-axis ["Calibration no harness", "Calibration yes harness", "Hidden no harness", "Hidden yes harness"]
+    title "Flask A/B Strict Success Rates"
+    x-axis ["Balanced no", "Balanced yes", "Hidden-contract no", "Hidden-contract yes"]
     y-axis "Success %" 0 --> 100
-    bar [0, 100, 0, 91.7]
+    bar [60, 100, 0, 100]
 ```
 
-## What The Metrics Mean
+## Metric Definitions
 
 - `Strict scored success`: final scored success after agent exit, diff check,
-  verification, and file-boundary checks.
-- `Verification passed`: deterministic oracle success before file-boundary
-  penalties.
+  verification, and file-boundary checks. A passing test suite alone is not
+  counted as full success if file boundaries are violated.
+- `Verification passed`: deterministic pytest plus hidden-oracle success before
+  any file-boundary penalty.
+- `Functional oracle failures`: hidden-oracle failures in endpoint behavior,
+  response shape, calculations, status codes, mutation behavior, or edge cases.
+- `Docs oracle failures`: hidden-oracle failures in required companion
+  documentation content or placement.
 - `Wrong-file edits`: changed files outside the task's expected file boundary.
-  In the Flask hidden-oracle runs this primarily means root `README.md` edits
-  outside `expected_files` (`app/**`, `tests/**`, and `docs/**`); it is not a
-  functional failure by itself and not a general claim that README edits are
-  bad. It is a strict boundary miss.
+  In these Flask runs, root `README.md` is outside the allowed companion-docs
+  path (`docs/**`) unless the task explicitly asks for README changes. A
+  README edit here is not a functional failure by itself and is not a general
+  claim that README edits are bad; it is a strict boundary miss.
 - `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
 
-A passing test suite alone is not counted as full success when file boundaries
-are violated.
+## What Comes Next
 
-## Current Findings
+Do not scale this exact balanced task shape to 100 runs until the docs oracle
+policy is settled:
 
-- Hidden-oracle Flask A/B is the strongest harness-positive evidence so far:
-  the latest 10-task calibration reached 10/10 for `flask-yes-harness` and
-  0/10 for `flask-no-harness`, with 0 wrong-file edits on both sides.
-  The prior 3x hidden-oracle evidence remains the latest repeated
-  representative run until the planned 200-run large A/B completes.
-- The earlier complex run remains useful as a methodology lesson: when oracle
-  code is visible in both target clones, a capable no-harness agent can recover
-  much of the expected contract.
-- The first plain Flask pilot was too easy to show harness lift: both bare and
-  harnessed targets produced 4/4 verification passes and 3/4 scored successes.
-- The larger `harness-starter-kit` repeated runs show strong boundary
-  discipline across agents: 0 wrong-file edits and 0 forbidden-file edits in
-  the current Codex and Claude Code 5x snapshots.
-- Codex failures in repeated runs are mostly timeout or exact-oracle misses,
-  not broad file-boundary failures.
+- If exact phrases are intentional, add those literal phrase requirements to
+  the balanced prompts.
+- If docs sufficiency should be conceptual, relax the hidden oracle away from
+  exact phrase substrings.
 
-## Detailed Reports
+After that clarification, a 100-run balanced run with 10 task pairs and
+`repeats=5` is the right next evidence step. The current pilot already showed
+clean execution: 20/20 completed, 0 wrong-file edits, 0 forbidden-file edits,
+and 0 timeouts.
 
-- [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
+## Reports
+
+- [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md)
 - [`docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md)
+- [`docs/benchmarks/2026-06-12-hidden-flask-ab-partial-calibration-35.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-partial-calibration-35.md)
 - [`docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md)
 - [`docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md)
 - [`docs/benchmarks/2026-06-11-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-harness-effect-ab-3x.md)
-- [`docs/benchmarks/2026-06-11-flask-yes-harness-codex-pilot.md`](docs/benchmarks/2026-06-11-flask-yes-harness-codex-pilot.md)
-- [`docs/benchmarks/2026-06-11-flask-no-harness-codex-pilot.md`](docs/benchmarks/2026-06-11-flask-no-harness-codex-pilot.md)
-- [`docs/benchmarks/2026-06-11-codex-cli-5runs.md`](docs/benchmarks/2026-06-11-codex-cli-5runs.md)
-- [`docs/benchmarks/2026-06-11-claude-code-5runs.md`](docs/benchmarks/2026-06-11-claude-code-5runs.md)
-- [`docs/benchmarks/2026-06-11-benchmark-records-analysis.md`](docs/benchmarks/2026-06-11-benchmark-records-analysis.md)
+- [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
 
-Raw `runs/` and `results/` artifacts are intentionally not committed. Public
-reports summarize reproducible, credential-safe fields from local records.
+Raw `runs/`, `results/`, local logs, cloned repositories, and credentials are
+intentionally not committed. Public reports summarize reproducible,
+credential-safe fields from local records.

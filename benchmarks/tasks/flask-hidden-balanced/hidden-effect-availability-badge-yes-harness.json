@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-availability-badge",
+  "description": "Balanced hidden-oracle Flask A/B: add the availability badge API with the task-critical contract in the prompt.",
+  "repo": {
+    "source": "../flask-yes-harness",
+    "ref": "c3eaf9a0105d7b99db414467b5df0edb833697ad"
+  },
+  "prompt": "Add the availability badge API with this contract.\n\nEndpoint and method: GET /products/<sku>/availability.\nRequest JSON schema: none.\nSuccess status: HTTP 200 for known SKUs.\nMissing SKU status: HTTP 404 JSON with top-level keys error and sku, where error is product_not_found and sku echoes the requested value.\nTop-level success response keys: product, availability, meta.\nProduct object: sku and stock.\nAvailability object: badge, orderable, restock_recommended, message.\nCore business rule: badge is in_stock when stock >= 10, low_stock when 0 < stock < 10, and out_of_stock when stock == 0. orderable is true when stock > 0. restock_recommended is true for low_stock and out_of_stock only. Low-stock messages must mention low stock.\nMeta: source must be catalog and service must be the literal string flask-no-harness.\nVerification payloads include GET /products/standing-mat/availability, GET /products/desk-lamp/availability, and GET /products/missing/availability.\nDocumentation: update docs/domain/glossary.md to mention the availability badge endpoint and document in_stock and low_stock badges.\n\nImplementation scope:\n- Treat this prompt as the task's source of truth for the API contract. Repository-local harness docs may help with workflow, docs location, local gates, and boundary guidance, but they must not override this contract.\n- Use the existing in-memory catalog: desk-lamp price 24.50 stock 12, notebook price 3.25 stock 48, standing-mat price 41.00 stock 3. Keep money fields decimal-compatible and rounded to two places when money is involved.\n- Update the application, focused pytest coverage, and companion documentation in the repository's documented docs location. Do not update the root README unless the task explicitly asks for README changes.\n- Keep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-balanced/hidden-effect-availability-badge-yes-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180
+      },
+      {
+        "name": "pytest and hidden balanced hidden-effect-availability-badge oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-availability-badge"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}
