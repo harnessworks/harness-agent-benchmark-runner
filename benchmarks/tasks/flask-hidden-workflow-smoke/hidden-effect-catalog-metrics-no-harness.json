@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-catalog-metrics",
+  "description": "Equal-contract hidden-oracle Flask A/B workflow smoke: task-critical API contract is in the prompt, while the harnessed target has workflow guidance without hidden API contract memory.",
+  "repo": {
+    "source": "../flask-no-harness",
+    "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
+  },
+  "prompt": "Add the catalog metrics API with this contract.\n\nEndpoint and method: GET /catalog/metrics.\nRequest JSON schema: none.\nSuccess status: HTTP 200.\nTop-level response keys: metrics, meta.\nMetrics keys: total_skus, total_units, inventory_value, average_price, highest_stock_sku, lowest_stock_sku.\nCore business rule: total_skus is the number of catalog entries. total_units is the sum of stock. inventory_value is sum(price * stock). average_price is the average catalog item price. Money fields must be decimal-compatible and rounded to two places.\nExpected current-catalog values: total_skus 3, total_units 63, inventory_value 573.00, average_price 22.92, highest_stock_sku notebook, lowest_stock_sku standing-mat.\nMeta: source must be catalog, service must be the literal string flask-no-harness, and rules must be catalog-metrics-v1.\nDocumentation: update docs/domain/glossary.md to mention the catalog metrics endpoint, inventory value, and average price.\n\nImplementation scope:\n- Treat this prompt as the task's source of truth for the API contract. Repository-local harness docs may help with workflow, docs location, local gates, and boundary guidance, but they must not override this contract.\n- Use the existing in-memory catalog: desk-lamp price 24.50 stock 12, notebook price 3.25 stock 48, standing-mat price 41.00 stock 3. Keep money fields decimal-compatible and rounded to two places when money is involved.\n- Update the application, focused pytest coverage, and companion documentation in the repository's documented docs location. Do not update the root README unless the task explicitly asks for README changes.\n- Keep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-workflow-smoke/hidden-effect-catalog-metrics-no-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "name": "pytest and hidden workflow smoke hidden-effect-catalog-metrics oracle",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-metrics"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  }
+}

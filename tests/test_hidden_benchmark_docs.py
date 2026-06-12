@@ -20,6 +20,10 @@ class HiddenBenchmarkDocsTests(unittest.TestCase):
         forbidden_markers = [
             "hidden-flask-ab-large-20260612T001733Z",
             "results/hidden-flask-ab-large-20260612T001733Z/2026-06-12.jsonl",
+            "hidden-flask-ab-medium-20-jobs2-20260612T081231Z",
+            "results/hidden-flask-ab-medium-20-jobs2-20260612T081231Z/2026-06-12.jsonl",
+            "hidden-flask-ab-heldout-10-20260612T085000Z",
+            "results/hidden-flask-ab-heldout-10-20260612T085000Z/2026-06-12.jsonl",
         ]
 
         for path in REPRESENTATIVE_DOCS:
