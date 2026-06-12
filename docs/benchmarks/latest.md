@@ -61,7 +61,11 @@ repo was unchanged, and had no hidden access or boundary issue. This is still
 not official product evidence. A focused bundle-quote triage then stopped on
 the first bare record with a 900-second task timeout after active edits, so the
 current blocker is bundle-quote tail latency across arms, not just the previous
-600-second timeout cap.
+600-second timeout cap. The operational follow-up is now split into
+`benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
+promotion pilots and
+`benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json` for
+focused bundle-quote tail-latency triage.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -186,6 +190,10 @@ conflicts. A focused bundle-quote triage then stopped on the first bare record
 with a 900-second task timeout. It is not product evidence because the 100 did
 not complete and strict successes remained 0. The remaining blocker is
 bundle-quote tail latency across arms, not the previous 600-second timeout cap.
+Next heldout promotion work should use
+`benchmarks/suites/flask-hidden-heldout-stable-8.json`; bundle-quote should
+stay in `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`
+until its latency is separately fixed or accepted as a stress case.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

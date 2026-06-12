@@ -56,38 +56,53 @@ The script interleaves arms by round/task/group, pins Codex to one model
 configuration, and defaults to a no-cost dry run. Live agent execution requires
 `--execute`.
 
-Dry-run the pilot plan:
+Dry-run the reduced heldout promotion pilot plan:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
-  --suite benchmarks/suites/flask-hidden-heldout-10.json \
-  --mode pilot
+  --suite benchmarks/suites/flask-hidden-heldout-stable-8.json \
+  --mode pilot \
+  --agent-timeout-override 900 \
+  --agent-idle-timeout 300 \
+  --stop-on-abnormal
 ```
 
-For focused triage, select exact task groups with `--task-id`. The option may
-be repeated and is applied before `--task-limit`:
+`benchmarks/suites/flask-hidden-heldout-stable-8.json` deliberately excludes
+`hidden-effect-bundle-quote` after repeated tail-latency stops. One repeat is
+4 tasks x 2 arms, so the fresh pilot is 8 records rather than the older
+10-record full-heldout shape. For a near-100 promotion over this reduced suite,
+use 12 repeats for 96 balanced records or 13 repeats for 104 balanced records;
+do not cut a schedule mid-repeat just to force exactly 100 records.
+
+For focused triage, prefer a quarantine suite when one exists:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
-  --suite benchmarks/suites/flask-hidden-heldout-10.json \
-  --task-id hidden-effect-bundle-quote \
+  --suite benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json \
   --repeats 3
 ```
+
+For ad-hoc triage inside a larger suite, select exact task groups with
+`--task-id`. The option may be repeated and is applied after any suite
+`task_ids` filter and before `--task-limit`.
 
 Run the pilot only after approving live Codex usage:
 
 ```bash
 python3 scripts/run_hidden_flask_ab.py \
-  --suite benchmarks/suites/flask-hidden-heldout-10.json \
+  --suite benchmarks/suites/flask-hidden-heldout-stable-8.json \
   --mode pilot \
-  --agent-stall-timeout 330 \
+  --agent-timeout-override 900 \
+  --agent-idle-timeout 300 \
+  --stop-on-abnormal \
   --execute
 ```
 
-The current committed answer-free heldout and workflow-smoke suite manifests
-are still legacy two-arm calibrations. In the three-arm taxonomy,
-`no-harness` maps to `bare`, and the clean `yes-harness` ref maps to
-`workflow-only`. They do not measure `memory-harness` product value.
+The current committed answer-free heldout, reduced heldout, quarantine, and
+workflow-smoke suite manifests are still legacy two-arm calibrations. In the
+three-arm taxonomy, `no-harness` maps to `bare`, and the clean `yes-harness`
+ref maps to `workflow-only`. They do not measure `memory-harness` product
+value.
 
 A true product-value run should use a suite with:
 
@@ -142,12 +157,14 @@ accounting, and writes the result before moving to the next scheduled record.
 Use it to diagnose promotion readiness; do not hide stall counts inside
 functional or schema success rates.
 
-Do not use a short pilot watchdog as the automatic cutoff for 100-record
-promotion. In the 2026-06-12 prompt-guard heldout attempt, a 330-second
-wall-clock watchdog stopped a record that had active edits. For 100-record
-promotion, either rely on the task timeout or use `--agent-idle-timeout`, which
-stops the agent only after no stdout/stderr output has been observed for the
-configured interval. Both watchdogs record `scoring.agent_stalled=true`; use
+Do not use a short pilot watchdog as the automatic cutoff for promotion runs.
+In the current reduced heldout suite, a balanced promotion is 96 or 104
+records, not exactly 100, because `bundle-quote` is quarantined. In the
+2026-06-12 prompt-guard heldout attempt, a 330-second wall-clock watchdog
+stopped a record that had active edits. For promotion, either rely on the task
+timeout or use `--agent-idle-timeout`, which stops the agent only after no
+stdout/stderr output has been observed for the configured interval. Both
+watchdogs record `scoring.agent_stalled=true`; use
 `agent.termination_reason` to distinguish `stall_watchdog` from
 `idle_watchdog`.
 

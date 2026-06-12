@@ -34,6 +34,12 @@ product evidence. A focused bundle-quote triage then stopped on the first bare
 record with a 900-second task timeout after active edits, so bundle-quote tail
 latency remains unresolved across arms.
 
+Operational follow-up has been split into two suite manifests:
+`benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
+promotion pilots with `bundle-quote` excluded, and
+`benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json` for
+focused bundle-quote tail-latency triage.
+
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so
 strict scored success and verification passed should be read separately.
@@ -165,19 +171,29 @@ xychart-beta
 
 ## What Comes Next
 
-The next useful follow-up is not another identical `jobs=2` run. Build a
-three-arm held-out suite with `bare`, `workflow-only`, and `memory-harness`,
-then run `partial-realistic` prompts as the main product experiment and
-`full-contract` prompts as controls. Keep functional, schema-contract,
-workflow, boundary, strict success, and timeout counts separate in the report.
-For held-out pilots, use either a short `--agent-stall-timeout` when deliberately
-testing pilot-stop behavior or `--agent-idle-timeout` when long active runs
-should continue. For 100-record promotion, prefer `--agent-idle-timeout` plus
-the task timeout so long-but-active runs are not stopped by a short wall-clock
-pilot cap. If a promotion run needs more than 600 seconds, pass an explicit
-`--agent-timeout-override` and keep `--max-agent-timeout` at or above that
-value; `--max-agent-timeout` only caps task timeouts and does not extend a task
-whose `timeout_seconds` is already lower.
+The next useful follow-up is not another identical `jobs=2` run or another
+full-heldout 100-record attempt that includes `bundle-quote`. First run the
+reduced heldout suite, `benchmarks/suites/flask-hidden-heldout-stable-8.json`,
+as a fresh pilot under the final mitigation settings. Because `bundle-quote`
+is quarantined, one repeat is 8 records; use 12 repeats for a balanced
+96-record promotion or 13 repeats for a balanced 104-record promotion. Keep
+`bundle-quote` in `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`
+until its tail latency is reduced or explicitly accepted as a separate stress
+case.
+
+After that, build a three-arm held-out suite with `bare`, `workflow-only`, and
+`memory-harness`, then run `partial-realistic` prompts as the main product
+experiment and `full-contract` prompts as controls. Keep functional,
+schema-contract, workflow, boundary, strict success, and timeout counts
+separate in the report. For held-out pilots, use either a short
+`--agent-stall-timeout` when deliberately testing pilot-stop behavior or
+`--agent-idle-timeout` when long active runs should continue. For promotion,
+prefer `--agent-idle-timeout` plus the task timeout so long-but-active runs are
+not stopped by a short wall-clock pilot cap. If a promotion run needs more than
+600 seconds, pass an explicit `--agent-timeout-override` and keep
+`--max-agent-timeout` at or above that value; `--max-agent-timeout` only caps
+task timeouts and does not extend a task whose `timeout_seconds` is already
+lower.
 Keep adapter hygiene enabled during promotion checks:
 `CODEX_IGNORE_USER_CONFIG=1`, `CODEX_IGNORE_RULES=1`, and
 `CODEX_DISABLE_PLUGINS=1`.

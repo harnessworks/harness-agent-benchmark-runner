@@ -20,6 +20,12 @@ BALANCED_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-balanced"
 MEDIUM_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-medium"
 WORKFLOW_SMOKE_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-workflow-smoke"
 HELDOUT_10_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-heldout-10"
+STABLE_HELDOUT_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-stable-8.json"
+)
+BUNDLEQUOTE_QUARANTINE_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
+)
 CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
@@ -323,7 +329,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         with self.assertRaises(hidden_ab.BenchmarkPlanError):
             hidden_ab.filter_task_groups(groups, ["missing"])
 
-    def test_loads_suite_manifest_with_relative_task_dir_and_arms(self) -> None:
+    def test_loads_suite_manifest_with_relative_task_dir_arms_and_task_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             task_dir = root / "tasks"
@@ -340,6 +346,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                         "id": "fixture-suite",
                         "task_dir": "../tasks",
                         "arms": ["bare", "workflow-only", "memory-harness"],
+                        "task_ids": ["alpha"],
                         "split": "heldout",
                         "prompt_variant": "partial-realistic",
                     }
@@ -353,7 +360,29 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertEqual(suite.suite_id, "fixture-suite")
             self.assertEqual(suite.split, "heldout")
             self.assertEqual(suite.prompt_variant, "partial-realistic")
+            self.assertEqual(suite.task_ids, ("alpha",))
             self.assertEqual([group.task_id for group in groups], ["alpha"])
+
+    def test_stable_heldout_suite_quarantines_bundle_quote(self) -> None:
+        suite = hidden_ab.load_suite(STABLE_HELDOUT_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual(len(selected), 4)
+        self.assertEqual(len(schedule), 8)
+        self.assertNotIn("hidden-effect-bundle-quote", [group.task_id for group in selected])
+
+    def test_bundlequote_quarantine_suite_selects_only_bundle_quote(self) -> None:
+        suite = hidden_ab.load_suite(BUNDLEQUOTE_QUARANTINE_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual([group.task_id for group in selected], ["hidden-effect-bundle-quote"])
+        self.assertEqual(len(schedule), 2)
 
     def test_large_mode_requires_enough_task_pairs_by_default(self) -> None:
         pair = hidden_ab.TaskPair(

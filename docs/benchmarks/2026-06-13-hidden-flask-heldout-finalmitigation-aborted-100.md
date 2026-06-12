@@ -32,6 +32,13 @@ bundle-quote record with a 900-second task timeout after active edits. That
 means the current promotion blocker is not workflow-only-specific. Bundle-quote
 itself has severe tail-latency risk under the partial-realistic prompt.
 
+The operational follow-up is now split into suite manifests:
+
+- `benchmarks/suites/flask-hidden-heldout-stable-8.json`: reduced heldout
+  promotion pilots with `bundle-quote` excluded.
+- `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`:
+  focused bundle-quote tail-latency triage.
+
 ## Run Configuration
 
 - Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
@@ -194,7 +201,15 @@ Before the next full heldout promotion attempt:
 - Keep `CODEX_PROMPT_GUARD=1`, target-clean checks, hidden access scanning, and
   `--stop-on-abnormal`.
 - Keep `--agent-idle-timeout 300` and `--agent-timeout-override 900`.
-- Do not run another 100-record promotion until bundle-quote tail behavior is
-  either reduced or explicitly separated from product-value scoring.
+- Use `benchmarks/suites/flask-hidden-heldout-stable-8.json` for the next
+  reduced heldout pilot. One repeat is 8 records because bundle-quote is
+  excluded.
+- For a balanced near-100 reduced promotion, use 12 repeats for 96 records or
+  13 repeats for 104 records; do not cut the schedule mid-repeat only to force
+  exactly 100 records.
+- Keep bundle-quote in
+  `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json` until
+  its tail behavior is either reduced or explicitly separated from
+  product-value scoring.
 - Keep reporting idle-watchdog stops separately from task timeouts.
 - Add the `memory-harness` arm before making a product-value claim.

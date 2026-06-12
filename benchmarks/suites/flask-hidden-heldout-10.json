@@ -8,5 +8,5 @@
   ],
   "split": "heldout",
   "prompt_variant": "partial-realistic",
-  "notes": "Legacy two-arm answer-free heldout calibration. In the 3-arm taxonomy, no-harness maps to bare and the clean yes-harness ref maps to workflow-only; it does not measure memory-harness value."
+  "notes": "Legacy two-arm answer-free heldout calibration that includes the quarantined hidden-effect-bundle-quote task. Use flask-hidden-heldout-stable-8.json for reduced promotion pilots and flask-hidden-heldout-bundlequote-quarantine.json for bundle-quote tail-latency triage. In the 3-arm taxonomy, no-harness maps to bare and the clean yes-harness ref maps to workflow-only; it does not measure memory-harness value."
 }

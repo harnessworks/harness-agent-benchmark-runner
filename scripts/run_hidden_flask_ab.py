@@ -41,6 +41,7 @@ class SuiteSpec:
     suite_id: str
     task_dir: Path
     arms: tuple[str, ...] = ()
+    task_ids: tuple[str, ...] = ()
     split: str | None = None
     prompt_variant: str | None = None
 
@@ -83,7 +84,9 @@ def main(argv: list[str] | None = None) -> int:
         required_arms = parse_arms(args.arms)
         groups = load_task_groups(args.task_dir, required_arms=required_arms)
         validate_task_groups(groups)
-        groups = filter_task_groups(groups, args.task_id)
+        suite_task_ids = suite.task_ids if suite is not None else None
+        groups = filter_task_groups(groups, suite_task_ids, "suite task_ids")
+        groups = filter_task_groups(groups, args.task_id, "--task-id")
         selected_groups = groups[: args.task_limit] if args.task_limit else groups
         validate_run_shape(args, selected_groups)
         schedule = build_group_schedule(
@@ -227,12 +230,14 @@ def load_suite(path: Path) -> SuiteSpec:
     if not task_dir.is_absolute():
         task_dir = (suite_path.parent / task_dir).resolve()
     arms = tuple(string_list(data, "arms", suite_path))
+    task_ids = tuple(string_list(data, "task_ids", suite_path))
     split = optional_string(data, "split", suite_path)
     prompt_variant = optional_string(data, "prompt_variant", suite_path)
     return SuiteSpec(
         suite_id=suite_id,
         task_dir=task_dir,
         arms=arms,
+        task_ids=task_ids,
         split=split,
         prompt_variant=prompt_variant,
     )
@@ -284,7 +289,11 @@ def load_task_groups(task_dir: Path, required_arms: tuple[str, ...] | None = Non
     return groups
 
 
-def filter_task_groups(groups: list[TaskGroup], task_ids: list[str] | None) -> list[TaskGroup]:
+def filter_task_groups(
+    groups: list[TaskGroup],
+    task_ids: list[str] | tuple[str, ...] | None,
+    source: str = "task filter",
+) -> list[TaskGroup]:
     if not task_ids:
         return groups
     wanted = []
@@ -294,7 +303,7 @@ def filter_task_groups(groups: list[TaskGroup], task_ids: list[str] | None) -> l
     by_id = {group.task_id: group for group in groups}
     missing = [task_id for task_id in wanted if task_id not in by_id]
     if missing:
-        raise BenchmarkPlanError(f"unknown task id: {', '.join(missing)}")
+        raise BenchmarkPlanError(f"unknown task id from {source}: {', '.join(missing)}")
     return [by_id[task_id] for task_id in wanted]
 
 
