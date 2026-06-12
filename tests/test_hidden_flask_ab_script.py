@@ -507,6 +507,21 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         self.assertEqual(hidden_ab.abnormal_reasons(record), [])
 
+    def test_abnormal_reasons_distinguish_idle_watchdog(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "agent": {"termination_reason": "idle_watchdog"},
+            "scoring": {
+                "preflight_passed": True,
+                "agent_timed_out": True,
+                "agent_stalled": True,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent idle watchdog fired"])
+
     def test_build_runner_command_forwards_agent_stall_timeout(self) -> None:
         args = Namespace(
             workspace=Path("runs"),

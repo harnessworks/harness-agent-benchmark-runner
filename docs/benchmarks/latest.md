@@ -49,17 +49,17 @@ condition, not a pure sequential claim. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
 Latest heldout diagnostic:
-[`2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md) —
-after adding the idle-output watchdog, `CODEX_PROMPT_GUARD=1` completed a fresh
+[`2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md) —
+after adding both `--agent-idle-timeout 300` and
+`--agent-timeout-override 900`, `CODEX_PROMPT_GUARD=1` completed a fresh
 10-record heldout pilot with zero stalls, timeouts, hidden access, wrong-file
 edits, forbidden edits, or excluded-path conflicts. The follow-up 100-record
-sequential attempt used `--agent-idle-timeout 300`, progressed past the earlier
-record-14 wall-clock stop, and stopped at record 62 on workflow-only
-`hidden-effect-availability-badge` when the task's 600-second timeout fired.
-The stopped record had active edits, passed the local harness gate, and had no
-hidden access or boundary issue. This is still not official product evidence;
-it shows the idle watchdog fixed the short wall-clock cutoff, while tail
-timeouts remain unresolved.
+sequential attempt stopped at record 4 on workflow-only
+`hidden-effect-bundle-quote` when the idle watchdog fired after 719.3 seconds.
+The stopped record had no file edits, passed the local harness gate because the
+repo was unchanged, and had no hidden access or boundary issue. This is still
+not official product evidence; it shows the 900-second timeout override works,
+but intermittent no-edit idle stalls remain a promotion blocker.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -72,7 +72,8 @@ sequential evidence.
 
 Detailed reports:
 
-- [`2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md) ← latest heldout diagnostic
+- [`2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md) ← latest heldout diagnostic
+- [`2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md)
 - [`2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md`](2026-06-12-hidden-flask-heldout-promptguard-aborted-100.md)
 - [`2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md)
 - [`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) ← latest 100-run evidence
@@ -173,16 +174,15 @@ not file-boundary discipline. `jobs=2` introduced timeout noise: 1 no-harness
 timeout and 2 yes-harness timeouts. A sequential follow-up or a jobs=2 run with
 a higher timeout cap is needed before making a timeout-stability claim.
 
-The 2026-06-13 heldout idle-watch diagnostic is the latest promotion-readiness
-evidence for answer-free partial-realistic prompts. It completed a fresh
-10-record pilot cleanly, then stopped the 100-record attempt at record 62 on a
-workflow-only availability task timeout. The run had 0 hidden access, 0
-wrong-file edits, 0 forbidden-file edits, and 0 excluded-path conflicts. It is
-not product evidence because the 100 did not complete and strict successes
-remained 0, but it shows the 330-second wall-clock watchdog has been replaced
-by a better idle-output policy. The remaining decision is whether 600-second
-task timeouts are part of the product signal or whether promotion runs should
-use an explicit `--agent-timeout-override`.
+The latest 2026-06-13 heldout final-mitigation diagnostic is the current
+promotion-readiness evidence for answer-free partial-realistic prompts. It
+completed a fresh 10-record pilot cleanly with `--agent-idle-timeout 300` and
+`--agent-timeout-override 900`, then stopped the 100-record attempt at record 4
+on a workflow-only bundle-quote idle-watchdog stop. The run had 0 hidden
+access, 0 wrong-file edits, 0 forbidden-file edits, and 0 excluded-path
+conflicts. It is not product evidence because the 100 did not complete and
+strict successes remained 0. The remaining blocker is intermittent no-edit
+idle behavior, not the previous 600-second timeout cap.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

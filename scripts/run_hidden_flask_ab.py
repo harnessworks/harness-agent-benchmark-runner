@@ -709,11 +709,17 @@ def load_result_record(results_dir: Path, run_id: str) -> dict[str, Any] | None:
 
 def abnormal_reasons(record: dict[str, Any]) -> list[str]:
     scoring = record.get("scoring", {})
+    termination_reason = record.get("agent", {}).get("termination_reason")
     reasons: list[str] = []
     if scoring.get("preflight_passed") is False:
         reasons.append("preflight failed")
     if scoring.get("agent_stalled") is True:
-        reasons.append("agent stall watchdog fired")
+        if termination_reason == "idle_watchdog":
+            reasons.append("agent idle watchdog fired")
+        elif termination_reason == "stall_watchdog":
+            reasons.append("agent stall watchdog fired")
+        else:
+            reasons.append("agent stall watchdog fired")
     elif scoring.get("agent_timed_out") is True:
         reasons.append("agent timed out")
     if int(scoring.get("wrong_file_edits") or 0):
