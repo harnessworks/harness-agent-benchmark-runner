@@ -76,10 +76,12 @@ do not cut a schedule mid-repeat just to force exactly 100 records.
 
 Do not rerun the same 96-record reduced promotion shape until the
 workflow-only `hidden-effect-cart-validation` no-edit idle stall from the
-2026-06-13 stable-8 final-mitigation diagnostic is triaged. The one-repeat
-stable-8 pilot completed cleanly, but the 96-record attempt still stopped at
-record 11. Treat one clean reduced pilot as insufficient promotion readiness
-evidence.
+2026-06-13 stable-8 final-mitigation diagnostic is mitigated. A focused
+workflow-only cart-validation triage completed 3/3 clean records, so do not
+quarantine cart-validation based only on the stopped promotion record. The
+one-repeat stable-8 pilot completed cleanly, but the 96-record attempt still
+stopped at record 11. Treat one clean reduced pilot as insufficient promotion
+readiness evidence.
 
 For focused triage, prefer a quarantine suite when one exists:
 

@@ -23,6 +23,10 @@ diagnostic evidence:
   the repository remained unchanged, and failed hidden functional/schema checks
   because `/cart/validate` was absent.
 - The 8-record pilot was not strong enough to predict 96-record stability.
+- A follow-up focused workflow-only cart-validation triage completed 3/3 clean
+  records, so the stopped promotion record should be treated as an intermittent
+  long-run workflow-only tail rather than a deterministic cart-validation
+  failure.
 
 The current blocker is therefore broader than `bundle-quote` tail latency:
 workflow-only can still spend several minutes inspecting generic harness checks
@@ -136,6 +140,34 @@ The agent log tail showed generic harness/test inspection, including
 stopped it after 300 seconds without output. Hidden access scanning found no
 matches.
 
+## Cart-Validation Focused Triage
+
+- Workspace:
+  `runs/hidden-flask-cartvalidation-workflowonly-triage-20260612T1931Z`
+- Results:
+  `results/hidden-flask-cartvalidation-workflowonly-triage-20260612T1931Z`
+- Command: `CODEX_PROMPT_GUARD=1 CODEX_MODEL=gpt-5.5 CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority' python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-stable-8.json --arms yes-harness --task-id hidden-effect-cart-validation --repeats 3 --agent-timeout-override 900 --agent-idle-timeout 300 --stop-on-abnormal --workspace runs/hidden-flask-cartvalidation-workflowonly-triage-20260612T1931Z --results results/hidden-flask-cartvalidation-workflowonly-triage-20260612T1931Z --execute`
+- Planned records: 3
+- Completed records: 3/3
+- Hidden access: 0
+- Stalls/timeouts: 0
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+- Excluded-path conflicts: 0
+
+| Target | Task | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | p50 duration | p95 duration |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `workflow-only` | `hidden-effect-cart-validation` | 3 | 0 | 0 | 0 | 3 | 3 | 0 | 0 | 0 | 69s | 84s |
+
+This focused triage did not reproduce the 96-attempt stall. The three records
+were clean workflow/boundary failures with hidden functional/schema misses,
+which matches the expected partial-prompt failure mode.
+
+The defensible interpretation is therefore not "cart-validation is a broken
+task." It is that the workflow-only arm has intermittent no-edit idle tails
+during longer promotion schedules, and the current one-repeat pilot gate does
+not catch them reliably.
+
 ## Interpretation
 
 The reduced suite answered the immediate `bundle-quote` question:
@@ -146,8 +178,9 @@ The reduced suite answered the immediate `bundle-quote` question:
   work.
 
 This means another identical 96-record reduced promotion is not the next best
-step. A larger pilot is unlikely to be enough by itself because the 8-record
-pilot was clean and the promotion still stalled by record 11.
+step. The follow-up focused triage was clean, so the next mitigation should
+target workflow-only search burden and long-run stability rather than simply
+quarantining cart-validation.
 
 This remains consistent with the product-test conclusion: `workflow-only` gives
 local gate and boundary discipline but does not provide the generalized
@@ -163,8 +196,10 @@ reduced promotion shape.
 Before the next full heldout promotion attempt:
 
 - Keep `bundle-quote` in the quarantine suite.
-- Add a focused workflow-only cart-validation idle-stall triage run, or reduce
-  the workflow-only search burden before rerunning promotion.
+- Do not quarantine cart-validation based only on the stopped promotion record;
+  the focused workflow-only triage completed 3/3 clean records.
+- Reduce the workflow-only search burden or add stronger long-run stability
+  criteria before rerunning promotion.
 - Treat a clean one-repeat pilot as insufficient promotion evidence; require at
   least a two-round reduced pilot or another stronger stability check before a
   near-100 run.

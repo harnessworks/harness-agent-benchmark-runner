@@ -31,7 +31,9 @@ stopped record made no edits, passed the local harness gate because the repo was
 unchanged, and had no hidden access or boundary issue. It is still not official
 product evidence. The current blocker is broader than `bundle-quote`: the
 workflow-only arm can still idle out while inspecting generic harness checks
-under partial-realistic prompts.
+under partial-realistic prompts. A focused workflow-only cart-validation triage
+then completed 3/3 clean records, so the stall looks intermittent in longer
+promotion schedules rather than a deterministic cart-validation task failure.
 
 Operational follow-up has been split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
@@ -175,9 +177,10 @@ xychart-beta
 The next useful follow-up is not another identical `jobs=2` run, another
 full-heldout 100-record attempt that includes `bundle-quote`, or another
 unchanged reduced 96-record promotion. Keep `bundle-quote` in
-`benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`, then
-triage the workflow-only `cart-validation` no-edit idle stall or reduce the
-workflow-only search burden before rerunning promotion. A clean one-repeat
+`benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`, but do
+not quarantine `cart-validation` based only on the stopped promotion record.
+The next mitigation should reduce the workflow-only search burden or add a
+stronger long-run stability gate before rerunning promotion. A clean one-repeat
 reduced pilot is not enough; require at least a two-round reduced pilot or
 another stronger stability check before a near-100 run.
 

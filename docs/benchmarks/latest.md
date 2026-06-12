@@ -59,7 +59,10 @@ after 500.8 seconds. The stopped record had no file edits, passed the local
 harness gate because the repo was unchanged, and had no hidden access or
 boundary issue. This is still not official product evidence. The current
 blocker is broader than `bundle-quote`: workflow-only can still idle out while
-inspecting generic harness checks under partial-realistic prompts.
+inspecting generic harness checks under partial-realistic prompts. A focused
+workflow-only cart-validation triage then completed 3/3 clean records, so the
+stall looks intermittent in longer promotion schedules rather than a
+deterministic cart-validation task failure.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -184,7 +187,9 @@ access, 0 wrong-file edits, 0 forbidden-file edits, and 0 excluded-path
 conflicts. It is not product evidence because the 96 did not complete and
 strict successes remained 0. `bundle-quote` should stay quarantined, but the
 remaining blocker is now workflow-only no-edit idle tail under partial prompts,
-not just bundle-quote task latency.
+not just bundle-quote task latency. Focused workflow-only cart-validation
+triage completed cleanly, so do not quarantine cart-validation based only on
+the stopped promotion record.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
