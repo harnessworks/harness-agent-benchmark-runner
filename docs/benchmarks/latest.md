@@ -49,16 +49,14 @@ condition, not a pure sequential claim. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
 
 Latest heldout diagnostic:
-[`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md) —
-after adding the promotion-readiness guard, `CODEX_PROMPT_GUARD=1` started a
-stronger 2-round stable-8 pilot. It stopped at record 12 on bare
-`hidden-effect-cart-validation` when the idle watchdog fired after 314.5
-seconds. The stopped record had no file edits, no hidden access, and no
-boundary issue. The guarded 96-record command then failed before execution
-because the pilot results contained that abnormal signal. This is still not
-official product evidence. The current blocker is broader than `bundle-quote`
-or workflow-only: partial-realistic stable-8 still has intermittent no-edit
-idle tails across arms.
+[`2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md) —
+after adding `--agent-no-edit-timeout`, `CODEX_PROMPT_GUARD=1` completed a
+fresh 2-round stable-8 readiness pilot. All 16 records completed with 0
+stalls, 0 timeouts, 0 wrong-file edits, 0 forbidden-file edits, and 0 hidden
+access findings. A dry-run 96-record promotion plan passed the clean-readiness
+gate against these results. This clears the immediate operational no-edit-tail
+blocker for the reduced suite, but it is still not product evidence: strict
+success was 0/16 and schema-contract success was 0/16.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -71,7 +69,8 @@ sequential evidence.
 
 Detailed reports:
 
-- [`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md) ← latest heldout diagnostic
+- [`2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md) ← latest heldout diagnostic
+- [`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md)
 - [`2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md)
 - [`2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md`](2026-06-13-hidden-flask-heldout-finalmitigation-aborted-100.md)
 - [`2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md`](2026-06-13-hidden-flask-heldout-idlewatch-aborted-100.md)

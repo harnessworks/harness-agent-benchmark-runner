@@ -22,17 +22,14 @@ Detailed report:
 [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
 
 Latest heldout mitigation diagnostic:
-[`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md).
-After adding the promotion-readiness guard, the stronger 2-round stable-8 pilot
-stopped at record 12 on bare `cart-validation` when the idle watchdog fired
-after 314.5 seconds. The stopped record made no edits and had no hidden access
-or boundary issue. The guarded 96-record command then failed before execution
-because the pilot results contained that abnormal signal. It is still not
-official product evidence. The current blocker is broader than `bundle-quote`
-or workflow-only: partial-realistic stable-8 still has intermittent no-edit
-idle tails across arms. The runner now includes a no-edit watchdog for the next
-readiness pass, so active-output attempts that make no visible repository
-changes are separated from useful long-running work.
+[`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md).
+After adding `--agent-no-edit-timeout`, the fresh 2-round stable-8 readiness
+pilot completed all 16 records with 0 stalls, 0 timeouts, 0 wrong-file edits, 0
+forbidden-file edits, and 0 hidden-access findings. A dry-run 96-record
+promotion plan passed the clean-readiness gate against these results. This
+clears the immediate operational no-edit-tail blocker for the reduced suite,
+but it is still not product evidence: strict success was 0/16 and
+schema-contract success was 0/16.
 
 Operational follow-up remains split into two suite manifests:
 `benchmarks/suites/flask-hidden-heldout-stable-8.json` for reduced heldout
@@ -41,10 +38,10 @@ promotion pilots with `bundle-quote` excluded, and
 focused bundle-quote tail-latency triage. The first reduced promotion attempt
 found a workflow-only `cart-validation` idle stall, and the stronger 2-round
 pilot found a bare `cart-validation` idle stall, so this split is a diagnostic
-control, not a solved promotion path. The next reduced heldout step is a fresh
-16-record readiness pilot with `--agent-idle-timeout 300` and
-`--agent-no-edit-timeout 240`; do not run the 96-record promotion until that
-pilot is clean and accepted by `--promotion-run --require-clean-results`.
+control. The no-edit readiness pilot now makes a 96-record reduced promotion
+operationally possible, but the product-value path should first address the
+0/16 strict and 0/16 schema-contract result, ideally with a full-contract
+control or the intended three-arm `memory-harness` suite.
 
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so
@@ -180,20 +177,21 @@ xychart-beta
 
 The next useful follow-up is not another identical `jobs=2` run, another
 full-heldout 100-record attempt that includes `bundle-quote`, or another
-unchanged reduced 96-record promotion. Keep `bundle-quote` in
+unchanged reduced 96-record product-value promotion. Keep `bundle-quote` in
 `benchmarks/suites/flask-hidden-heldout-bundlequote-quarantine.json`, but do
-not quarantine `cart-validation` as a harness-only problem. The next mitigation
-should reduce no-edit idle tails before rerunning promotion. The runner now
-exposes a promotion guard as `--promotion-run --require-clean-results
-<results-dir> --min-clean-rounds 2`; the latest 2-round pilot failed that guard
-because it contained an idle-watchdog stop. New promotion attempts should also
-pass `--agent-no-edit-timeout`; the guard requires it.
+not quarantine `cart-validation` as a harness-only problem. The no-edit
+readiness pilot clears the immediate tail-stability blocker, and the promotion
+guard now requires `--agent-no-edit-timeout` alongside
+`--agent-idle-timeout`, `--agent-timeout-override`, and clean prior results.
 
-After that, build a three-arm held-out suite with `bare`, `workflow-only`, and
-`memory-harness`, then run `partial-realistic` prompts as the main product
-experiment and `full-contract` prompts as controls. Keep functional,
-schema-contract, workflow, boundary, strict success, and timeout counts
-separate in the report. For held-out pilots, use either a short
+The current blocker is product signal quality: the latest partial-realistic
+stable-8 pilot had 0/16 strict successes and 0/16 schema-contract successes.
+Before spending on another near-100 product run, either run a small
+full-contract control to verify the hidden oracles and agent path under explicit
+contracts, or build the intended three-arm held-out suite with `bare`,
+`workflow-only`, and `memory-harness`. Keep functional, schema-contract,
+workflow, boundary, strict success, and timeout counts separate in the report.
+For held-out pilots, use either a short
 `--agent-stall-timeout` when deliberately testing pilot-stop behavior or
 `--agent-idle-timeout` when long active runs should continue. For promotion,
 prefer `--agent-idle-timeout` and `--agent-no-edit-timeout` plus the task
