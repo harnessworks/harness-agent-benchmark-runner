@@ -58,6 +58,18 @@ gate against these results. This clears the immediate operational no-edit-tail
 blocker for the reduced suite, but it is still not product evidence: strict
 success was 0/16 and schema-contract success was 0/16.
 
+Latest full-contract control:
+[`2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md) —
+`CODEX_PROMPT_GUARD=1` ran the stable four workflow-smoke tasks with
+full-contract prompts. The initial stable-4 control passed 6/8 strict records;
+the two failures were both `cart-validation` summary key misses caused by
+ambiguous full-contract prompt wording. After tightening the cart summary
+contract and fixing the split functional oracle to inspect the `summary` object
+before item rows, a focused `cart-validation` rerun passed 2/2 strict records
+with 0 stalls, 0 timeouts, 0 wrong-file edits, 0 forbidden-file edits, and 0
+hidden-access findings. This indicates the hidden oracle and agent path can
+pass these tasks when the exact contract is explicit.
+
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
 Codex CLI repeated the balanced 20-run task set under the revised concept-docs
@@ -69,6 +81,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md) ← latest full-contract control
 - [`2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md) ← latest heldout diagnostic
 - [`2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md)
 - [`2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md)

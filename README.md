@@ -40,8 +40,17 @@ found a workflow-only `cart-validation` idle stall, and the stronger 2-round
 pilot found a bare `cart-validation` idle stall, so this split is a diagnostic
 control. The no-edit readiness pilot now makes a 96-record reduced promotion
 operationally possible, but the product-value path should first address the
-0/16 strict and 0/16 schema-contract result, ideally with a full-contract
-control or the intended three-arm `memory-harness` suite.
+0/16 strict and 0/16 schema-contract result. A focused full-contract control
+now shows the stable oracle/adapter path can pass when the contract is explicit;
+the remaining product path is the intended three-arm `memory-harness` suite or
+a smaller partial-realistic convention pilot with nonzero schema signal.
+
+Latest full-contract control:
+[`docs/benchmarks/2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](docs/benchmarks/2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md).
+The first stable-4 control passed 6/8 records. The two failures were both
+`cart-validation` and came from ambiguous summary key wording. After tightening
+the prompt and summary functional oracle, a focused `cart-validation` rerun
+passed 2/2 strict with 0 stalls, 0 timeouts, and 0 boundary issues.
 
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so
@@ -185,11 +194,12 @@ guard now requires `--agent-no-edit-timeout` alongside
 `--agent-idle-timeout`, `--agent-timeout-override`, and clean prior results.
 
 The current blocker is product signal quality: the latest partial-realistic
-stable-8 pilot had 0/16 strict successes and 0/16 schema-contract successes.
-Before spending on another near-100 product run, either run a small
-full-contract control to verify the hidden oracles and agent path under explicit
-contracts, or build the intended three-arm held-out suite with `bare`,
-`workflow-only`, and `memory-harness`. Keep functional, schema-contract,
+stable-8 pilot had 0/16 strict successes and 0/16 schema-contract successes,
+while the full-contract control path now passes after tightening the
+cart-validation summary contract. Before spending on another near-100 product
+run, build the intended three-arm held-out suite with `bare`, `workflow-only`,
+and `memory-harness`, or create a smaller partial-realistic convention pilot
+that produces nonzero schema-contract signal. Keep functional, schema-contract,
 workflow, boundary, strict success, and timeout counts separate in the report.
 For held-out pilots, use either a short
 `--agent-stall-timeout` when deliberately testing pilot-stop behavior or

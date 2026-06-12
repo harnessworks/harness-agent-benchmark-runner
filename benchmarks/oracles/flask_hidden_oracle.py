@@ -623,9 +623,10 @@ def check_cart_validation_functional() -> None:
     expect(first_present(standing_mat, ("accepted_quantity", "accepted", "available_quantity")) == 3, "standing-mat accepted quantity is wrong")
     expect(first_present(standing_mat, ("rejected_quantity", "rejected")) == 2, "standing-mat rejected quantity is wrong")
 
-    expect(first_present(payload, ("requested", "requested_quantity")) == 7, "cart requested summary is wrong")
-    expect(first_present(payload, ("accepted", "accepted_quantity")) == 5, "cart accepted summary is wrong")
-    expect(first_present(payload, ("rejected", "rejected_quantity")) == 2, "cart rejected summary is wrong")
+    summary = object_field(payload, "summary", default=payload)
+    expect(first_present(summary, ("requested", "requested_quantity")) == 7, "cart requested summary is wrong")
+    expect(first_present(summary, ("accepted", "accepted_quantity")) == 5, "cart accepted summary is wrong")
+    expect(first_present(summary, ("rejected", "rejected_quantity")) == 2, "cart rejected summary is wrong")
 
     products = json_payload(client().get("/products")).get("products")
     standing_product = next(product for product in products if product["sku"] == "standing-mat")

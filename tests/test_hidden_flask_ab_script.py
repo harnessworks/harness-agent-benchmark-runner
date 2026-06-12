@@ -115,6 +115,15 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             if "POST " in prompt:
                 for phrase in ("Request JSON schema:", "unknown_sku", "invalid_quantity"):
                     self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+            if pair.task_id == "hidden-effect-cart-validation":
+                self.assertIn(
+                    "summary object must use exactly these quantity keys: requested, accepted, rejected",
+                    prompt,
+                )
+                self.assertIn(
+                    'summary object {"requested":7,"accepted":5,"rejected":2}',
+                    prompt,
+                )
 
     def test_medium_hidden_flask_task_set_plans_exactly_twenty_runs(self) -> None:
         pairs = hidden_ab.load_task_pairs(MEDIUM_TASK_DIR)
@@ -198,6 +207,15 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 "Do not update the root README",
             ):
                 self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+            if pair.task_id == "hidden-effect-cart-validation":
+                self.assertIn(
+                    "summary object must use exactly these quantity keys: requested, accepted, rejected",
+                    prompt,
+                )
+                self.assertIn(
+                    'summary object {"requested":7,"accepted":5,"rejected":2}',
+                    prompt,
+                )
 
     def test_heldout_10_uses_clean_harness_ref_and_partial_prompts(self) -> None:
         pairs = hidden_ab.load_task_pairs(HELDOUT_10_TASK_DIR)
