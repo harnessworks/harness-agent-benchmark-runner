@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
             default_command_timeout_seconds=args.command_timeout,
             max_attempts_override=args.max_attempts,
             max_agent_timeout_seconds=args.max_agent_timeout,
+            agent_stall_timeout_seconds=args.agent_stall_timeout,
             max_cost_usd_override=args.max_cost_usd,
             repo_source_override=args.repo_source,
             repo_ref_override=args.repo_ref,
@@ -43,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"strict_success: {scoring.get('strict_success', scoring.get('success'))}")
             print(f"preflight_passed: {scoring.get('preflight_passed')}")
             print(f"verification_passed: {scoring.get('verification_passed')}")
+            print(f"agent_stalled: {scoring.get('agent_stalled')}")
             print(f"wrong_file_edits: {scoring.get('wrong_file_edits')}")
             print(f"forbidden_file_edits: {scoring.get('forbidden_file_edits')}")
         return 0 if result["scoring"].get("success") is True else 1
@@ -93,6 +95,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-agent-timeout",
         type=positive_int_arg,
         help="cap the task agent timeout in seconds",
+    )
+    run_parser.add_argument(
+        "--agent-stall-timeout",
+        type=positive_int_arg,
+        help="shorter pilot watchdog timeout; records agent_stalled when it fires",
     )
     run_parser.add_argument(
         "--max-cost-usd",

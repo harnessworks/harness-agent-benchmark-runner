@@ -235,12 +235,13 @@ class ProcessResult:
     duration_seconds: float
     log_path: str
     timed_out: bool = False
+    termination_reason: str | None = None
     stdout_tail: str = ""
     stderr_tail: str = ""
     dimensions: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "label": self.label,
             "command": self.command,
             "cwd": self.cwd,
@@ -252,6 +253,9 @@ class ProcessResult:
             "stderr_tail": self.stderr_tail,
             "dimensions": list(self.dimensions),
         }
+        if self.termination_reason is not None:
+            data["termination_reason"] = self.termination_reason
+        return data
 
 
 @dataclass(frozen=True)
@@ -263,6 +267,7 @@ class RunnerConfig:
     default_command_timeout_seconds: int = 300
     max_attempts_override: int | None = None
     max_agent_timeout_seconds: int | None = None
+    agent_stall_timeout_seconds: int | None = None
     max_cost_usd_override: float | None = None
     output_tail_chars: int = 4000
     repo_source_override: str | None = None

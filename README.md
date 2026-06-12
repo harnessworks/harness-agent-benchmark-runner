@@ -23,10 +23,10 @@ Detailed report:
 
 Latest heldout mitigation diagnostic:
 [`docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-heldout-memoryhide-aborted-pilot.md).
-That run found and fixed a hidden-path leakage issue, then stopped the fresh
-10-record pilot at record 3 because the agent produced no result after about
-5m30s. It is not official product evidence and does not justify starting the
-100-record heldout run yet.
+That diagnostic found and fixed a hidden-path leakage issue, added a stall
+watchdog, then stopped the fresh 10-record pilot at record 4 with a recorded
+`agent_stalled=true` signal. It is not official product evidence and does not
+justify starting the 100-record heldout run yet.
 
 This is representative for the explicitly measured `jobs=2` run shape. It is
 not a pure sequential claim: the run produced timeout noise, so strict scored
@@ -150,6 +150,9 @@ xychart-beta
   claim that README edits are bad; it is a strict boundary miss.
 - `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
+- `Stalls`: agent process was stopped by the shorter pilot watchdog
+  (`--agent-stall-timeout`) before the effective task timeout. Count this
+  separately from product-quality oracle failures.
 - `Preflight failures`: leakage audit failures before agent execution. These
   should fail the run without spending model budget.
 
@@ -160,6 +163,8 @@ three-arm held-out suite with `bare`, `workflow-only`, and `memory-harness`,
 then run `partial-realistic` prompts as the main product experiment and
 `full-contract` prompts as controls. Keep functional, schema-contract,
 workflow, boundary, strict success, and timeout counts separate in the report.
+For held-out pilots, use `--agent-stall-timeout` so stalled records are written
+to JSONL instead of requiring manual process termination.
 
 To separate task quality from scheduler pressure, either rerun representative
 shapes sequentially or rerun `jobs=2` with an explicitly higher timeout cap.

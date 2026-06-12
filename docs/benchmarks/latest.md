@@ -53,10 +53,11 @@ Latest heldout diagnostic:
 a fresh 10-record heldout pilot was stopped early under the abnormal-signal
 rule. A first attempt found real hidden-content leakage through
 `../_agent_excluded/benchmarks/...`; after the runner was changed to hide
-excluded paths via in-memory snapshots and a temporary git baseline, a fresh
-pilot completed two clean records and then stopped record 3 after about 5m30s
-without an agent result. This diagnostic should not be promoted to official
-product evidence and does not justify starting the 100-record heldout run.
+excluded paths via in-memory snapshots, a temporary git baseline, and a pilot
+stall watchdog, a fresh pilot completed three clean records and then stopped
+record 4 with `agent_stalled=true`. This diagnostic should not be promoted to
+official product evidence and does not justify starting the 100-record heldout
+run.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —

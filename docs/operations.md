@@ -18,6 +18,9 @@ JSONL result. A separate job can summarize results every hour or at the end of a
 - Use a dedicated benchmark machine or self-hosted runner.
 - Run with a dedicated API key and budget limit.
 - Set per-task timeout, runner `--max-agent-timeout`, and global scheduler timeout.
+- For pilots, set runner `--agent-stall-timeout` below the task timeout so
+  stalled agent attempts are recorded as JSONL evidence instead of being
+  terminated manually.
 - Keep task `max_attempts` at `1` for first-pass measurements; increase it only
   when intentionally measuring retry recovery.
 - Store raw run directories as short-retention artifacts.
@@ -66,6 +69,7 @@ Run the pilot only after approving live Codex usage:
 python3 scripts/run_hidden_flask_ab.py \
   --suite benchmarks/suites/flask-hidden-heldout-10.json \
   --mode pilot \
+  --agent-stall-timeout 330 \
   --execute
 ```
 
@@ -120,10 +124,18 @@ The script sets:
 - `--jobs 1` by default, so representative runs are sequential unless
   parallelism is explicitly part of the measured condition
 
+The optional `--agent-stall-timeout` is a pilot watchdog. It is intentionally
+separate from the effective task timeout: if it fires, the runner records
+`scoring.agent_stalled=true`, keeps `agent_timed_out=true` for timeout
+accounting, and writes the result before moving to the next scheduled record.
+Use it to diagnose promotion readiness; do not hide stall counts inside
+functional or schema success rates.
+
 The Codex adapter also applies runtime hygiene by default:
 
-- `CODEX_IGNORE_USER_CONFIG=1` unless `CODEX_PROFILE` is set, so local Codex
-  plugins, MCP clients, and personal config do not affect evidence runs.
+- `CODEX_IGNORE_USER_CONFIG=1` unless `CODEX_PROFILE` is set, reducing local
+  Codex profile/config effects in evidence runs. If Codex still emits plugin
+  manifest warnings during startup, record them as runtime noise in the report.
 - `CODEX_PROMPT_GUARD=0`; representative evidence runs leave the task prompt
   unchanged. Turn this on only for deliberate adapter debugging, and report it.
 
@@ -170,7 +182,8 @@ identical across arms and says to update companion documentation in the
 repository's documented docs location. If `expected_files` includes `docs/**`
 but not `README.md`, the prompt must explicitly exclude root `README.md` unless
 the task asks for README changes. Keep reporting strict scored success
-separately from functional, schema-contract, workflow, and boundary success.
+separately from functional, schema-contract, workflow, boundary success,
+timeouts, and stalls.
 
 Use
 `docs/benchmarks/templates/hidden-flask-ab-report-template.md` for the public

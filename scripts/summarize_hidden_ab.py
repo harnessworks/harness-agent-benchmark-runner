@@ -29,6 +29,7 @@ class Aggregate:
     wrong_file_edits: int = 0
     forbidden_file_edits: int = 0
     timeouts: int = 0
+    stalls: int = 0
     durations: list[float] = field(default_factory=list)
 
     def update(self, record: dict[str, Any]) -> None:
@@ -52,6 +53,8 @@ class Aggregate:
         self.forbidden_file_edits += int(scoring.get("forbidden_file_edits") or 0)
         if scoring.get("agent_timed_out") is True:
             self.timeouts += 1
+        if scoring.get("agent_stalled") is True:
+            self.stalls += 1
         duration = record.get("agent", {}).get("duration_seconds")
         if isinstance(duration, (int, float)):
             self.durations.append(float(duration))
@@ -86,8 +89,8 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
     lines = [
         "## Headline",
         "",
-        "| Target | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Target | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Stalls | Timeouts | p50 duration | p95 duration |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for target, values in sorted(by_target.items()):
         lines.append(headline_row(target, values))
@@ -97,8 +100,8 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
             "",
             "## Per-Task Results",
             "",
-            "| Target | Task | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Target | Task | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Stalls | Timeouts | p50 duration | p95 duration |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for (target, task_id), values in sorted(by_target_task.items()):
@@ -112,7 +115,7 @@ def headline_row(target: str, values: Aggregate) -> str:
         f"{values.functional_successes} | {values.schema_contract_successes} | "
         f"{values.workflow_successes} | {values.boundary_successes} | {values.verification_passed} | "
         f"{values.preflight_failures} | {values.wrong_file_edits} | {values.forbidden_file_edits} | "
-        f"{values.timeouts} | {duration(percentile(values.durations, 50))} | "
+        f"{values.stalls} | {values.timeouts} | {duration(percentile(values.durations, 50))} | "
         f"{duration(percentile(values.durations, 95))} |"
     )
 
@@ -124,7 +127,7 @@ def task_row(target: str, task_id: str, values: Aggregate) -> str:
         f"{values.schema_contract_successes} | {values.workflow_successes} | "
         f"{values.boundary_successes} | {values.verification_passed} | "
         f"{values.preflight_failures} | {values.wrong_file_edits} | "
-        f"{values.forbidden_file_edits} | {values.timeouts} | "
+        f"{values.forbidden_file_edits} | {values.stalls} | {values.timeouts} | "
         f"{duration(percentile(values.durations, 50))} | {duration(percentile(values.durations, 95))} |"
     )
 

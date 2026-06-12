@@ -16,6 +16,7 @@ def run_process(
     cwd: Path,
     label: str,
     timeout_seconds: int,
+    timeout_reason: str = "timeout",
     env: Mapping[str, str] | None = None,
     log_path: Path,
     tail_chars: int = 4000,
@@ -27,6 +28,7 @@ def run_process(
 
     stdout = ""
     stderr = ""
+    termination_reason: str | None = None
     try:
         process = subprocess.Popen(
             command,
@@ -45,6 +47,7 @@ def run_process(
     except subprocess.TimeoutExpired as exc:
         duration = time.monotonic() - started
         timed_out = True
+        termination_reason = timeout_reason
         exit_code = 124
         stdout = decode_output(exc.stdout)
         stderr = decode_output(exc.stderr)
@@ -52,7 +55,10 @@ def run_process(
         final_stdout, final_stderr = process.communicate()
         stdout = final_stdout or stdout
         stderr = final_stderr or stderr
-        stderr += f"\nTimed out after {timeout_seconds} seconds.\n"
+        if timeout_reason == "stall_watchdog":
+            stderr += f"\nStopped by stall watchdog after {timeout_seconds} seconds.\n"
+        else:
+            stderr += f"\nTimed out after {timeout_seconds} seconds.\n"
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(
@@ -68,6 +74,7 @@ def run_process(
         duration_seconds=duration,
         log_path=str(log_path),
         timed_out=timed_out,
+        termination_reason=termination_reason,
         stdout_tail=stdout[-tail_chars:],
         stderr_tail=stderr[-tail_chars:],
     )

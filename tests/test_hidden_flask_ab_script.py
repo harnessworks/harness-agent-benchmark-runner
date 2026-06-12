@@ -389,8 +389,10 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 reasoning_effort="medium",
                 service_tier="",
                 jobs=2,
+                stop_on_abnormal=False,
                 agent_command="fixture-agent",
                 max_agent_timeout=60,
+                agent_stall_timeout=None,
                 max_cost_usd=1.0,
             )
             schedule = [
@@ -422,6 +424,101 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             self.assertEqual(max_active, 2)
+
+    def test_stop_on_abnormal_stops_after_stalled_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=1,
+                stop_on_abnormal=True,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                agent_stall_timeout=5,
+                max_cost_usd=1.0,
+            )
+            schedule = [
+                hidden_ab.ScheduledRun(1, "task-1", "A:bare", Path("task-1.json")),
+                hidden_ab.ScheduledRun(1, "task-2", "A:bare", Path("task-2.json")),
+            ]
+            calls = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                run_id = f"run-{calls}"
+                write_jsonl_record(
+                    args.results,
+                    {
+                        "run_id": run_id,
+                        "task": {"id": f"task-{calls}"},
+                        "scoring": {
+                            "success": False,
+                            "preflight_passed": True,
+                            "agent_timed_out": True,
+                            "agent_stalled": True,
+                            "wrong_file_edits": 0,
+                            "forbidden_file_edits": 0,
+                        },
+                    },
+                )
+                return hidden_ab.subprocess.CompletedProcess(
+                    command,
+                    1,
+                    stdout=f"run_id: {run_id}\nsuccess: False\n",
+                    stderr="",
+                )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(calls, 1)
+            self.assertIn("Stopping schedule after abnormal signal", stdout.getvalue())
+            self.assertIn("agent stall watchdog fired", stdout.getvalue())
+
+    def test_abnormal_reasons_ignore_plain_oracle_failure(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "scoring": {
+                "success": False,
+                "preflight_passed": True,
+                "agent_timed_out": False,
+                "agent_stalled": False,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+                "functional_success": False,
+                "schema_contract_success": False,
+                "workflow_success": True,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), [])
+
+    def test_build_runner_command_forwards_agent_stall_timeout(self) -> None:
+        args = Namespace(
+            workspace=Path("runs"),
+            results=Path("results"),
+            agent_command="fixture-agent",
+            max_agent_timeout=60,
+            agent_stall_timeout=5,
+            max_cost_usd=1.0,
+        )
+        item = hidden_ab.ScheduledRun(1, "alpha", "A:bare", Path("alpha-bare.json"))
+
+        command = hidden_ab.build_runner_command(args, item)
+
+        self.assertIn("--agent-stall-timeout", command)
+        index = command.index("--agent-stall-timeout")
+        self.assertEqual(command[index + 1], "5")
 
 
 def write_hidden_task(
@@ -461,6 +558,12 @@ def write_hidden_task(
         ),
         encoding="utf-8",
     )
+
+
+def write_jsonl_record(results_dir: Path, record: dict[str, object]) -> None:
+    results_dir.mkdir(parents=True, exist_ok=True)
+    with (results_dir / "2026-06-12.jsonl").open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record, sort_keys=True) + "\n")
 
 
 if __name__ == "__main__":

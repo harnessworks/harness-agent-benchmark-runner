@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -145,7 +146,17 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=1,
         help="maximum runner commands to execute concurrently",
     )
+    parser.add_argument(
+        "--stop-on-abnormal",
+        action="store_true",
+        help="stop a sequential live run after timeout, stall, boundary, preflight, or hidden-access signals",
+    )
     parser.add_argument("--max-agent-timeout", type=positive_int, default=900)
+    parser.add_argument(
+        "--agent-stall-timeout",
+        type=positive_int,
+        help="optional shorter pilot watchdog timeout passed to the runner",
+    )
     parser.add_argument("--max-cost-usd", type=non_negative_float, default=1.0)
     parser.add_argument(
         "--large-min-task-pairs",
@@ -345,6 +356,8 @@ def validate_docs_boundary_prompt(data: dict[str, Any], path: Path) -> None:
 def validate_run_shape(args: argparse.Namespace, groups: list[TaskGroup] | list[TaskPair]) -> None:
     if not groups:
         raise BenchmarkPlanError("no task groups selected")
+    if getattr(args, "stop_on_abnormal", False) and args.jobs != 1:
+        raise BenchmarkPlanError("--stop-on-abnormal requires --jobs 1")
     if args.mode == "large" and len(groups) < args.large_min_task_pairs and not args.allow_small_large:
         raise BenchmarkPlanError(
             f"large mode selected {len(groups)} task groups; add more hidden tasks or pass "
@@ -433,9 +446,12 @@ def print_plan(
     print(f"Repeats: {args.repeats}")
     print(f"Planned runs: {len(schedule)}")
     print(f"Jobs: {args.jobs}")
+    print(f"Stop on abnormal: {args.stop_on_abnormal}")
     print(f"Arm order: {args.arm_order or arm_order_from_pair_order(args.pair_order)}")
     print(f"Model: {args.model}")
     print(f"Codex exec args: {codex_exec_args(args)}")
+    if args.agent_stall_timeout:
+        print(f"Agent stall timeout: {args.agent_stall_timeout}s")
     print(f"Workspace: {args.workspace}")
     print(f"Results: {args.results}")
     print("Tasks:")
@@ -520,6 +536,11 @@ def execute_schedule(args: argparse.Namespace, schedule: list[ScheduledRun]) -> 
         if result.returncode != 0:
             nonzero_commands += 1
             print_nonzero_exit(result.returncode)
+        if args.stop_on_abnormal:
+            reasons = abnormal_reasons_for_command(args.results, result)
+            if reasons:
+                print_stop_on_abnormal(reasons)
+                return 1
     if nonzero_commands:
         print(f"\nCompleted schedule with {nonzero_commands} non-zero runner exits.")
     else:
@@ -634,8 +655,87 @@ def print_nonzero_exit(returncode: int) -> None:
     )
 
 
+def print_stop_on_abnormal(reasons: list[str]) -> None:
+    print("\nStopping schedule after abnormal signal:")
+    for reason in reasons:
+        print(f"- {reason}")
+
+
+def abnormal_reasons_for_command(results_dir: Path, result: ScheduledRunResult) -> list[str]:
+    run_id = run_id_from_stdout(result.stdout)
+    if run_id is None:
+        if result.returncode != 0:
+            return ["runner command exited non-zero without reporting a run_id"]
+        return []
+
+    record = load_result_record(results_dir, run_id)
+    if record is None:
+        return [f"result record not found for {run_id}"]
+    return abnormal_reasons(record)
+
+
+def run_id_from_stdout(stdout: str) -> str | None:
+    for line in stdout.splitlines():
+        if line.startswith("run_id: "):
+            return line.split(": ", 1)[1].strip()
+    return None
+
+
+def load_result_record(results_dir: Path, run_id: str) -> dict[str, Any] | None:
+    for path in sorted(results_dir.glob("*.jsonl")):
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                if isinstance(record, dict) and record.get("run_id") == run_id:
+                    return record
+    return None
+
+
+def abnormal_reasons(record: dict[str, Any]) -> list[str]:
+    scoring = record.get("scoring", {})
+    reasons: list[str] = []
+    if scoring.get("preflight_passed") is False:
+        reasons.append("preflight failed")
+    if scoring.get("agent_stalled") is True:
+        reasons.append("agent stall watchdog fired")
+    elif scoring.get("agent_timed_out") is True:
+        reasons.append("agent timed out")
+    if int(scoring.get("wrong_file_edits") or 0):
+        reasons.append(f"wrong-file edits: {scoring.get('wrong_file_edits')}")
+    if int(scoring.get("forbidden_file_edits") or 0):
+        reasons.append(f"forbidden-file edits: {scoring.get('forbidden_file_edits')}")
+    if scoring.get("runner_error"):
+        reasons.append(f"runner error: {scoring.get('runner_error')}")
+
+    conflicts = record.get("git", {}).get("agent_excluded_path_conflicts", [])
+    if conflicts:
+        reasons.append(f"agent excluded-path conflicts: {len(conflicts)}")
+
+    if agent_log_has_hidden_access(record):
+        reasons.append("agent log contains hidden benchmark access pattern")
+    return reasons
+
+
+def agent_log_has_hidden_access(record: dict[str, Any]) -> bool:
+    log_path = record.get("agent", {}).get("log_path")
+    if not isinstance(log_path, str):
+        return False
+    path = Path(log_path)
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8", errors="replace")
+    patterns = (
+        r"_agent_excluded",
+        r"/bin/zsh -lc .*\\.\\./.*benchmarks",
+        r"/bin/zsh -lc .*benchmarks/(tasks|oracles)",
+    )
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
 def build_runner_command(args: argparse.Namespace, item: ScheduledRun) -> list[str]:
-    return [
+    command = [
         sys.executable,
         "-m",
         "harness_agent_benchmark_runner",
@@ -653,6 +753,9 @@ def build_runner_command(args: argparse.Namespace, item: ScheduledRun) -> list[s
         "--max-cost-usd",
         str(args.max_cost_usd),
     ]
+    if args.agent_stall_timeout is not None:
+        command.extend(["--agent-stall-timeout", str(args.agent_stall_timeout)])
+    return command
 
 
 def codex_exec_args(args: argparse.Namespace) -> str:

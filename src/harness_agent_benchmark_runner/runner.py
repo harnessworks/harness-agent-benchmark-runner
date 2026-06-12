@@ -37,6 +37,10 @@ def run_task(
     logs_dir = run_dir / "logs"
     prompt_path = run_dir / "prompt.txt"
     agent_timeout_seconds = effective_agent_timeout_seconds(task, config)
+    agent_process_timeout_seconds, agent_timeout_reason = effective_agent_process_timeout(
+        agent_timeout_seconds,
+        config,
+    )
     max_cost_usd = effective_max_cost_usd(task, config)
 
     run_dir.mkdir(parents=True, exist_ok=False)
@@ -63,6 +67,8 @@ def run_task(
                 },
                 "limits": {
                     "agent_timeout_seconds": agent_timeout_seconds,
+                    "agent_process_timeout_seconds": agent_process_timeout_seconds,
+                    "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                     "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                     "max_cost_usd": max_cost_usd,
                 },
@@ -106,7 +112,8 @@ def run_task(
                 config.agent_command,
                 cwd=repo_dir,
                 label="agent",
-                timeout_seconds=agent_timeout_seconds,
+                timeout_seconds=agent_process_timeout_seconds,
+                timeout_reason=agent_timeout_reason,
                 env=agent_env,
                 log_path=logs_dir / "agent.log",
                 tail_chars=config.output_tail_chars,
@@ -166,6 +173,8 @@ def run_task(
             },
             "limits": {
                 "agent_timeout_seconds": agent_timeout_seconds,
+                "agent_process_timeout_seconds": agent_process_timeout_seconds,
+                "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
@@ -200,6 +209,7 @@ def run_task(
                 "dimensions": dimension_scoring,
                 "agent_exit_code": agent_result.exit_code,
                 "agent_timed_out": agent_result.timed_out,
+                "agent_stalled": agent_stalled(agent_result),
                 "verification_passed": verification_passed,
                 "first_pass_verification": attempt_number == 1 and verification_passed,
                 "wrong_file_edits": len(wrong_files),
@@ -223,6 +233,8 @@ def run_task(
             },
             "limits": {
                 "agent_timeout_seconds": agent_timeout_seconds,
+                "agent_process_timeout_seconds": agent_process_timeout_seconds,
+                "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
@@ -644,6 +656,7 @@ def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
         "dimensions": dimensions,
         "agent_exit_code": None,
         "agent_timed_out": False,
+        "agent_stalled": False,
         "verification_passed": False,
         "first_pass_verification": False,
         "wrong_file_edits": 0,
@@ -657,6 +670,10 @@ def runner_error_scoring(error_type: str) -> dict[str, Any]:
     scoring = preflight_failure_scoring({"findings": []})
     scoring["runner_error"] = error_type
     return scoring
+
+
+def agent_stalled(agent_result: ProcessResult) -> bool:
+    return agent_result.timed_out and agent_result.termination_reason == "stall_watchdog"
 
 
 def run_verification_commands(
@@ -713,6 +730,16 @@ def effective_agent_timeout_seconds(task: TaskSpec, config: RunnerConfig) -> int
     if config.max_agent_timeout_seconds is None:
         return task.timeout_seconds
     return min(task.timeout_seconds, config.max_agent_timeout_seconds)
+
+
+def effective_agent_process_timeout(
+    agent_timeout_seconds: int,
+    config: RunnerConfig,
+) -> tuple[int, str]:
+    stall_timeout = config.agent_stall_timeout_seconds
+    if stall_timeout is not None and stall_timeout < agent_timeout_seconds:
+        return stall_timeout, "stall_watchdog"
+    return agent_timeout_seconds, "timeout"
 
 
 def effective_max_cost_usd(task: TaskSpec, config: RunnerConfig) -> float | None:

@@ -60,6 +60,7 @@ def new_counter() -> dict[str, int]:
         "verification_passed": 0,
         "first_pass_verification": 0,
         "agent_timeouts": 0,
+        "agent_stalls": 0,
         "wrong_file_edits": 0,
         "forbidden_file_edits": 0,
         "runner_errors": 0,
@@ -90,6 +91,8 @@ def update_counter(counter: dict[str, int], scoring: dict[str, Any]) -> None:
         counter["first_pass_verification"] += 1
     if scoring.get("agent_timed_out") is True:
         counter["agent_timeouts"] += 1
+    if scoring.get("agent_stalled") is True:
+        counter["agent_stalls"] += 1
     counter["wrong_file_edits"] += int(scoring.get("wrong_file_edits") or 0)
     counter["forbidden_file_edits"] += int(scoring.get("forbidden_file_edits") or 0)
     if scoring.get("runner_error"):
@@ -113,6 +116,7 @@ def format_summary(summary: dict[str, Any]) -> str:
             f"Verification passed: {total['verification_passed']}",
             f"First-pass verification: {total['first_pass_verification']}",
             f"Agent timeouts: {total['agent_timeouts']}",
+            f"Agent stalls: {total['agent_stalls']}",
             f"Wrong-file edits: {total['wrong_file_edits']}",
             f"Forbidden-file edits: {total['forbidden_file_edits']}",
             f"Runner errors: {total['runner_errors']}",
@@ -135,6 +139,7 @@ def format_summary(summary: dict[str, Any]) -> str:
             f"verification_passed={values['verification_passed']}, "
             f"first_pass_verification={values['first_pass_verification']}, "
             f"agent_timeouts={values['agent_timeouts']}, "
+            f"agent_stalls={values['agent_stalls']}, "
             f"wrong_file_edits={values['wrong_file_edits']}, "
             f"forbidden_file_edits={values['forbidden_file_edits']}, "
             f"runner_errors={values['runner_errors']}"

@@ -8,11 +8,11 @@ Suite: `benchmarks/suites/<suite>.json`
 
 ## Headline
 
-| Target arm | Target repo/ref | Prompt level | Runs | Functional success | Schema contract success | Workflow success | Strict success | Preflight failures | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `bare` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |
-| `workflow-only` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |
-| `memory-harness` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |
+| Target arm | Target repo/ref | Prompt level | Runs | Functional success | Schema contract success | Workflow success | Strict success | Preflight failures | Wrong-file edits | Forbidden-file edits | Stalls | Timeouts | p50 duration | p95 duration |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |
+| `workflow-only` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |
+| `memory-harness` | `<repo>@<ref>` | `<partial-realistic|full-contract>` |  |  |  |  |  |  |  |  |  |  |  |  |
 
 One-sentence headline:
 Under `<prompt-level>`, `<arm>` reached `<x>/<n>` functional successes and
@@ -58,6 +58,7 @@ names.
 | `boundary_success` | No wrong-file or forbidden-file edits. |
 | `execution_success` | Agent exited successfully without timeout. |
 | `strict_success` | Final score: preflight, execution, diff check, all verification commands, and boundaries passed. |
+| `agent_stalled` | A shorter pilot watchdog stopped the agent before the effective task timeout. |
 
 Legacy untagged verification commands are treated as combined verification for
 backward compatibility. New task specs should tag verification commands with
@@ -73,6 +74,7 @@ backward compatibility. New task specs should tag verification commands with
 - Concurrency: `1`, unless explicitly documented otherwise
 - Task attempts: `max_attempts=1`
 - Effective agent timeout: `<seconds>`
+- Agent stall watchdog: `<seconds|none>`
 - Budget hint: `<amount>`
 - Codex model: `gpt-5.5`
 - Codex config override:
@@ -95,11 +97,11 @@ Design notes:
 
 ## Per-Task Results
 
-| Target arm | Task | Runs | Functional | Schema contract | Workflow | Strict | Preflight failures | Wrong-file edits | Forbidden-file edits | Timeouts | p50 duration | p95 duration |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `bare` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |
-| `workflow-only` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |
-| `memory-harness` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |
+| Target arm | Task | Runs | Functional | Schema contract | Workflow | Strict | Preflight failures | Wrong-file edits | Forbidden-file edits | Stalls | Timeouts | p50 duration | p95 duration |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |  |
+| `workflow-only` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |  |
+| `memory-harness` | `<task-id>` |  |  |  |  |  |  |  |  |  |  |  |  |
 
 ## Failure Taxonomy
 
@@ -112,6 +114,7 @@ Design notes:
 | Wrong-file edit |  |  |  |  |
 | Forbidden-file edit |  |  |  |  |
 | Leakage preflight failure |  |  |  |  |
+| Stall watchdog |  |  |  |  |
 | Timeout |  |  |  |  |
 | Brittle oracle |  |  |  | Mark separately from genuine task failure. |
 

@@ -29,6 +29,7 @@ class HiddenABSummaryScriptTests(unittest.TestCase):
         self.assertIn("Strict scored successes", markdown)
         self.assertIn("Verification passed", markdown)
         self.assertIn("Wrong-file edits", markdown)
+        self.assertIn("Stalls", markdown)
         self.assertIn("| `flask-no-harness` | 2 | 1 | 50.0% | 1 |", markdown)
         self.assertIn("| `flask-yes-harness` | 2 | 2 | 100.0% | 2 |", markdown)
         self.assertIn("| `flask-no-harness` | `alpha` | 2 | 1 | 50.0% |", markdown)
@@ -50,6 +51,7 @@ def record(
             "success": success,
             "verification_passed": verification_passed,
             "agent_timed_out": False,
+            "agent_stalled": False,
             "wrong_file_edits": 0,
             "forbidden_file_edits": 0,
         },

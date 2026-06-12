@@ -97,6 +97,73 @@ stability signal, not as a product-value score. Because it stopped before
 result collection, it cannot be counted as a strict timeout or oracle failure in
 the JSONL summary, but it is enough to block a 100-record run.
 
+## Watchdog Implementation And Follow-Up
+
+The runner and A/B script now record stalls instead of relying on manual
+process termination:
+
+- `harness_agent_benchmark_runner run` accepts `--agent-stall-timeout`.
+- Result records include `limits.agent_stall_timeout_seconds`,
+  `limits.agent_process_timeout_seconds`, `agent.termination_reason`, and
+  `scoring.agent_stalled`.
+- `scripts/run_hidden_flask_ab.py` accepts `--stop-on-abnormal`, which stops a
+  sequential schedule after preflight failures, agent stalls, agent timeouts,
+  wrong/forbidden edits, excluded-path conflicts, runner errors, or hidden
+  benchmark access patterns in agent logs.
+
+A narrow diagnostic was run after this implementation:
+
+- Workspace: `runs/hidden-flask-bundle-bare-stallwatch-20260612T1252Z`
+- Results: `results/hidden-flask-bundle-bare-stallwatch-20260612T1252Z`
+- Task: `hidden-effect-bundle-quote`
+- Target arm: `bare`
+- Agent stall watchdog: 330 seconds
+- Agent duration: 92.998 seconds
+- Stall/timeout: no
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+- Excluded-path conflicts: 0
+- Hidden benchmark access patterns: 0
+
+The narrow diagnostic failed only hidden functional/schema checks:
+
+- Functional: missing expected field matching one of `item_count`.
+- Schema: `bundle_quote.metadata.discount_applied` was not decimal-compatible.
+
+This confirms the earlier bare bundle stall was not reliably reproducible once
+measured with the watchdog.
+
+## Fresh Pilot With Stall Watchdog
+
+- Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
+- Planned shape: 5 tasks x 2 arms x 1 repeat = 10 records
+- Completed records before stop: 4
+- Workspace: `runs/hidden-flask-heldout-10-stallwatch-20260612T1256Z`
+- Results: `results/hidden-flask-heldout-10-stallwatch-20260612T1256Z`
+- Command: `python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-limit 5 --repeats 1 --agent-stall-timeout 330 --stop-on-abnormal --workspace runs/hidden-flask-heldout-10-stallwatch-20260612T1256Z --results results/hidden-flask-heldout-10-stallwatch-20260612T1256Z --execute`
+- Stop reason: record 4, `workflow-only` `hidden-effect-bundle-quote`, stopped
+  by the stall watchdog at 330.004 seconds.
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Stalls | Timeouts | Wrong-file edits | Forbidden-file edits | Excluded-path conflicts |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 2 | 0 | 0 | 0 | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
+| `workflow-only` | 2 | 0 | 0 | 0 | 1 | 2 | 1 | 1 | 0 | 0 | 0 |
+
+| Record | Target | Task | Agent duration | Stall | Hidden access | Result |
+| --- | --- | --- | ---: | --- | --- | --- |
+| `20260612T125617Z-hidden-effect-availability-badge-95097bd6` | `bare` | `hidden-effect-availability-badge` | 63.894s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T125759Z-hidden-effect-availability-badge-1c48ffc6` | `workflow-only` | `hidden-effect-availability-badge` | 102.828s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T125950Z-hidden-effect-bundle-quote-463a9588` | `bare` | `hidden-effect-bundle-quote` | 114.637s | no | no | Functional/schema failed; workflow and boundary passed. |
+| `20260612T130151Z-hidden-effect-bundle-quote-d3c2d55a` | `workflow-only` | `hidden-effect-bundle-quote` | 330.004s | yes | no | No files changed; workflow failed because the agent was stopped by the watchdog. |
+
+The stopped `workflow-only` record had no wrong-file edits, no forbidden-file
+edits, no excluded-path conflicts, no git-history exploration, and no hidden
+benchmark access pattern. The agent attempted broad local discovery, saw
+`benchmarks` was absent, read app/tests/docs/harness files, and then stalled
+before making edits. Codex startup logs still contained local plugin manifest
+warnings despite the adapter's default `--ignore-user-config`; treat that as
+runtime noise to investigate before another promotion attempt.
+
 ## Recommendation
 
 Do not proceed to the 100-record heldout run yet.
@@ -104,14 +171,14 @@ Do not proceed to the 100-record heldout run yet.
 Before the next promotion attempt:
 
 - Keep the in-memory `agent_excluded_paths` handling and temporary git baseline.
-- Add a short pilot watchdog to the orchestrator so "no result after N seconds"
-  is captured as a first-class interrupted/stalled record rather than requiring
-  manual termination.
-- Re-run a narrow `bare` `hidden-effect-bundle-quote` diagnostic with log
-  streaming enabled or a lower pilot cap to determine whether the stall is
-  Codex execution latency, task-specific exploration, or adapter buffering.
+- Use the runner's `--agent-stall-timeout` pilot watchdog so "no result after N
+  seconds" is captured as a first-class `agent_stalled` record rather than
+  requiring manual termination.
+- Investigate why the `workflow-only` `hidden-effect-bundle-quote` record
+  stalled after local discovery and no edits. Pay particular attention to Codex
+  startup/plugin manifest warnings and adapter isolation behavior.
 - Only rerun the fresh 10-record pilot after the stall is explained or made
-  measurable. Promote to 100 records only if the 10-record pilot has zero
-  stalls, zero agent timeouts, zero excluded-path conflicts, zero preflight
-  failures, zero wrong/forbidden edits, and no hidden benchmark-content access.
-
+  consistently non-recurring. Promote to 100 records only if the 10-record pilot
+  has zero stalls, zero agent timeouts, zero excluded-path conflicts, zero
+  preflight failures, zero wrong/forbidden edits, and no hidden
+  benchmark-content access.

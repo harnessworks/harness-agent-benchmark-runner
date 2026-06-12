@@ -211,6 +211,51 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["limits"]["agent_timeout_seconds"], 3)
             self.assertEqual(result["limits"]["max_cost_usd"], 1.25)
 
+    def test_runner_records_agent_stall_watchdog(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "import time",
+                        "time.sleep(10)",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {"name": "always passes", "command": [sys.executable, "-c", "pass"]}
+                ],
+                extra_fields={"timeout_seconds": 30},
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                    agent_stall_timeout_seconds=1,
+                ),
+            )
+
+            self.assertFalse(result["scoring"]["success"])
+            self.assertTrue(result["scoring"]["agent_timed_out"])
+            self.assertTrue(result["scoring"]["agent_stalled"])
+            self.assertFalse(result["scoring"]["execution_success"])
+            self.assertEqual(result["agent"]["termination_reason"], "stall_watchdog")
+            self.assertEqual(result["limits"]["agent_timeout_seconds"], 30)
+            self.assertEqual(result["limits"]["agent_process_timeout_seconds"], 1)
+            self.assertEqual(result["limits"]["agent_stall_timeout_seconds"], 1)
+            self.assertLess(result["agent"]["duration_seconds"], 5)
+            self.assertTrue(any((root / "results").glob("*.jsonl")))
+
     def test_runner_records_dimension_scoring_and_benchmark_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -537,6 +582,7 @@ class RunnerTests(unittest.TestCase):
                     "verification_passed": True,
                     "first_pass_verification": True,
                     "agent_timed_out": False,
+                    "agent_stalled": False,
                     "wrong_file_edits": 0,
                     "forbidden_file_edits": 0,
                 },
@@ -548,6 +594,7 @@ class RunnerTests(unittest.TestCase):
                     "verification_passed": True,
                     "first_pass_verification": False,
                     "agent_timed_out": True,
+                    "agent_stalled": True,
                     "wrong_file_edits": 1,
                     "forbidden_file_edits": 0,
                 },
@@ -562,6 +609,7 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(summary["total"]["wrong_file_edits"], 1)
         self.assertEqual(summary["total"]["first_pass_verification"], 1)
         self.assertEqual(summary["total"]["agent_timeouts"], 1)
+        self.assertEqual(summary["total"]["agent_stalls"], 1)
         self.assertEqual(summary["by_task"]["task-a"]["runs"], 2)
 
     def test_materialize_verification_command_replaces_task_placeholders(self) -> None:
