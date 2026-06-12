@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 import sys
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
@@ -9,13 +10,35 @@ from typing import Any
 
 ROOT = Path.cwd()
 sys.path.insert(0, str(ROOT))
+SNAKE_CASE = re.compile(r"^[a-z][a-z0-9_]*$")
+MONEY_KEY_TERMS = ("amount", "cost", "discount", "price", "subtotal", "tax", "total", "value")
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        fail("usage: flask_hidden_oracle.py <task-id>")
+    if len(argv) not in {2, 3}:
+        fail("usage: flask_hidden_oracle.py <task-id> [strict|functional|schema]")
 
-    checks = {
+    mode = argv[2] if len(argv) == 3 else "strict"
+    checks_by_mode = {
+        "strict": strict_checks(),
+        "functional": functional_checks(),
+        "schema": schema_checks(),
+    }
+    if mode not in checks_by_mode:
+        fail(f"unknown hidden oracle mode: {mode}")
+
+    checks = checks_by_mode[mode]
+    task_id = argv[1]
+    if task_id not in checks:
+        fail(f"unknown hidden task id for {mode} oracle: {task_id}")
+
+    checks[task_id]()
+    print(f"{task_id}: hidden {mode} oracle passed")
+    return 0
+
+
+def strict_checks() -> dict[str, Any]:
+    return {
         "hidden-effect-availability-badge": check_availability_badge,
         "hidden-effect-stock-risk": check_stock_risk,
         "hidden-effect-supplier-readiness": check_supplier_readiness,
@@ -27,13 +50,35 @@ def main(argv: list[str]) -> int:
         "hidden-effect-reservation-preview": check_reservation_preview,
         "hidden-effect-tax-preview": check_tax_preview,
     }
-    task_id = argv[1]
-    if task_id not in checks:
-        fail(f"unknown hidden task id: {task_id}")
 
-    checks[task_id]()
-    print(f"{task_id}: hidden oracle passed")
-    return 0
+
+def functional_checks() -> dict[str, Any]:
+    return {
+        "hidden-effect-availability-badge": check_availability_badge_functional,
+        "hidden-effect-bundle-quote": check_bundle_quote_functional,
+        "hidden-effect-cart-validation": check_cart_validation_functional,
+        "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
+        "hidden-effect-catalog-segments": check_catalog_segments_functional,
+    }
+
+
+def schema_checks() -> dict[str, Any]:
+    return {
+        "hidden-effect-availability-badge": lambda: check_get_schema_style(
+            "/products/standing-mat/availability",
+            "availability badge",
+        ),
+        "hidden-effect-bundle-quote": check_bundle_quote_schema,
+        "hidden-effect-cart-validation": check_cart_validation_schema,
+        "hidden-effect-catalog-metrics": lambda: check_get_schema_style(
+            "/catalog/metrics",
+            "catalog metrics",
+        ),
+        "hidden-effect-catalog-segments": lambda: check_get_schema_style(
+            "/catalog/segments",
+            "catalog segments",
+        ),
+    }
 
 
 def client():
@@ -461,6 +506,244 @@ def check_tax_preview() -> None:
     expect("tax rate" in decision and "0.0825" in decision, "decision must mention tax rate 0.0825")
 
 
+def check_availability_badge_functional() -> None:
+    response = client().get("/products/standing-mat/availability")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    availability = object_field(payload, "availability", default=payload)
+
+    expect(
+        normalized_status(availability, ("badge", "status", "state")) == "low_stock",
+        "standing-mat availability status must be low_stock",
+    )
+    expect(availability.get("orderable") is True, "standing-mat must be orderable")
+    expect(availability.get("restock_recommended") is True, "standing-mat must recommend restock")
+    expect(isinstance(availability.get("message"), str), "availability must include a human-readable message")
+
+    product = payload.get("product") or availability.get("product")
+    if product is not None:
+        expect(isinstance(product, dict), "availability product summary must be an object when present")
+        expect(product.get("sku") == "standing-mat", "availability product sku is wrong")
+        expect(product.get("stock") == 3, "availability product stock is wrong")
+
+    in_stock = json_payload(client().get("/products/desk-lamp/availability"))
+    in_stock_availability = object_field(in_stock, "availability", default=in_stock)
+    expect(
+        normalized_status(in_stock_availability, ("badge", "status", "state")) == "in_stock",
+        "desk-lamp availability status must be in_stock",
+    )
+    expect(
+        in_stock_availability.get("restock_recommended") is False,
+        "desk-lamp must not recommend restock",
+    )
+
+    missing = client().get("/products/missing/availability")
+    assert_status(missing, 404)
+    missing_payload = json_payload(missing)
+    expect(missing_payload.get("error") == "product_not_found", "missing SKU must return product_not_found")
+    expect(missing_payload.get("sku") == "missing", "missing response must echo sku")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/products/<sku>/availability", "in_stock", "low_stock"),
+        "glossary must document availability route and statuses",
+    )
+
+
+def check_bundle_quote_functional() -> None:
+    response, request_key = first_successful_post(
+        "/catalog/bundle-quote",
+        (
+            {
+                "bundle": [
+                    {"sku": "desk-lamp", "quantity": 1},
+                    {"sku": "notebook", "quantity": 4},
+                ]
+            },
+            {
+                "items": [
+                    {"sku": "desk-lamp", "quantity": 1},
+                    {"sku": "notebook", "quantity": 4},
+                ]
+            },
+        ),
+        "bundle quote",
+    )
+    payload = json_payload(response)
+    expect(first_present(payload, ("currency",)) == "USD", "bundle quote currency must be USD")
+    expect(first_present(payload, ("item_count",)) == 5, "bundle quote item_count is wrong")
+    expect_money(first_present(payload, ("subtotal",)), Decimal("37.50"), "bundle quote subtotal")
+    expect_money(first_present(payload, ("discount",)), Decimal("3.75"), "bundle quote discount")
+    expect_money(first_present(payload, ("total",)), Decimal("33.75"), "bundle quote total")
+    discount_rate = first_present(payload, ("discount_rate",), required=False)
+    if discount_rate is not None:
+        expect(str(discount_rate) in {"0.10", "0.1"}, "bundle quote discount_rate is wrong")
+
+    unknown = client().post(
+        "/catalog/bundle-quote",
+        json={request_key: [{"sku": "missing", "quantity": 1}]},
+    )
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown bundle SKU must return unknown_sku")
+
+    invalid = client().post(
+        "/catalog/bundle-quote",
+        json={request_key: [{"sku": "desk-lamp", "quantity": 0}]},
+    )
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid quantity must return invalid_quantity")
+
+    decision = docs_text("docs/decisions") + "\n" + docs_text("docs/domain")
+    normalized = " ".join(decision.split()).lower()
+    expect("post /catalog/bundle-quote" in normalized, "docs must mention POST /catalog/bundle-quote")
+    expect("bundle discount" in normalized, "docs must mention bundle discount")
+    expect("preview" in normalized, "docs must mention preview behavior")
+
+
+def check_cart_validation_functional() -> None:
+    response = client().post(
+        "/cart/validate",
+        json={
+            "items": [
+                {"sku": "desk-lamp", "quantity": 2},
+                {"sku": "standing-mat", "quantity": 5},
+            ]
+        },
+    )
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    desk_lamp = rows.get("desk-lamp")
+    standing_mat = rows.get("standing-mat")
+    expect(isinstance(desk_lamp, dict), "cart validation must include desk-lamp row")
+    expect(isinstance(standing_mat, dict), "cart validation must include standing-mat row")
+    expect(normalized_status(desk_lamp, ("status", "state")) == "accepted", "desk-lamp row must be accepted")
+    expect(normalized_status(standing_mat, ("status", "state")) == "limited", "standing-mat row must be limited")
+    expect(first_present(standing_mat, ("accepted_quantity", "accepted", "available_quantity")) == 3, "standing-mat accepted quantity is wrong")
+    expect(first_present(standing_mat, ("rejected_quantity", "rejected")) == 2, "standing-mat rejected quantity is wrong")
+
+    expect(first_present(payload, ("requested", "requested_quantity")) == 7, "cart requested summary is wrong")
+    expect(first_present(payload, ("accepted", "accepted_quantity")) == 5, "cart accepted summary is wrong")
+    expect(first_present(payload, ("rejected", "rejected_quantity")) == 2, "cart rejected summary is wrong")
+
+    products = json_payload(client().get("/products")).get("products")
+    standing_product = next(product for product in products if product["sku"] == "standing-mat")
+    expect(standing_product.get("stock") == 3, "cart validation must not mutate stock")
+
+    unknown = client().post("/cart/validate", json={"items": [{"sku": "missing", "quantity": 1}]})
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown cart SKU must return unknown_sku")
+
+    invalid = client().post("/cart/validate", json={"items": [{"sku": "desk-lamp", "quantity": 0}]})
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid cart quantity must return invalid_quantity")
+
+
+def check_catalog_metrics_functional() -> None:
+    response = client().get("/catalog/metrics")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    metrics = object_field(payload, "metrics", default=payload)
+
+    expect(first_present(metrics, ("total_skus", "sku_count", "skus")) == 3, "catalog metrics sku count is wrong")
+    expect(first_present(metrics, ("total_units", "unit_count", "stock_units")) == 63, "catalog metrics total units is wrong")
+    expect_money(first_present(metrics, ("inventory_value",)), Decimal("573.00"), "catalog metrics inventory value")
+    expect_money(first_present(metrics, ("average_price", "average_item_price")), Decimal("22.92"), "catalog metrics average price")
+    expect(
+        first_present(metrics, ("highest_stock_sku", "max_stock_sku")) == "notebook",
+        "catalog metrics highest stock sku is wrong",
+    )
+    expect(
+        first_present(metrics, ("lowest_stock_sku", "min_stock_sku")) == "standing-mat",
+        "catalog metrics lowest stock sku is wrong",
+    )
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/metrics", "inventory value", "average price"),
+        "glossary must document catalog metrics route and concepts",
+    )
+
+
+def check_catalog_segments_functional() -> None:
+    response = client().get("/catalog/segments")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": ("standard", "steady"),
+        "notebook": ("budget", "deep"),
+        "standing-mat": ("premium", "scarce"),
+    }
+    for sku, (price_band, stock_band) in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog segments must include {sku} row")
+        expect(row.get("price_band") == price_band, f"{sku} price band is wrong")
+        expect(row.get("stock_band") == stock_band, f"{sku} stock band is wrong")
+
+    expect(first_present(payload, ("budget",)) == 1, "catalog segments budget count is wrong")
+    expect(first_present(payload, ("standard",)) == 1, "catalog segments standard count is wrong")
+    expect(first_present(payload, ("premium",)) == 1, "catalog segments premium count is wrong")
+    expect(first_present(payload, ("scarce",)) == 1, "catalog segments scarce count is wrong")
+    expect(first_present(payload, ("steady",)) == 1, "catalog segments steady count is wrong")
+    expect(first_present(payload, ("deep",)) == 1, "catalog segments deep count is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/segments", "budget", "standard", "premium", "scarce", "steady", "deep"),
+        "glossary must document catalog segments route and bands",
+    )
+
+
+def check_bundle_quote_schema() -> None:
+    response, request_key = first_successful_post(
+        "/catalog/bundle-quote",
+        (
+            {"bundle": [{"sku": "desk-lamp", "quantity": 1}]},
+            {"items": [{"sku": "desk-lamp", "quantity": 1}]},
+        ),
+        "bundle quote schema",
+    )
+    check_response_schema_style(response, "bundle quote")
+    error_response = client().post(
+        "/catalog/bundle-quote",
+        json={request_key: [{"sku": "missing", "quantity": 1}]},
+    )
+    check_error_schema_style(error_response, "bundle quote unknown SKU")
+
+
+def check_cart_validation_schema() -> None:
+    response = client().post("/cart/validate", json={"items": [{"sku": "desk-lamp", "quantity": 1}]})
+    check_response_schema_style(response, "cart validation")
+    error_response = client().post("/cart/validate", json={"items": [{"sku": "missing", "quantity": 1}]})
+    check_error_schema_style(error_response, "cart validation unknown SKU")
+
+
+def check_get_schema_style(path: str, label: str) -> None:
+    response = client().get(path)
+    check_response_schema_style(response, label)
+
+
+def check_response_schema_style(response: Any, label: str) -> None:
+    assert_status(response, 200)
+    payload = json_payload(response)
+    expect_snake_case_keys(payload, label)
+    expect_money_like_values(payload, label)
+    meta = payload.get("meta")
+    expect(isinstance(meta, dict), f"{label} must include meta object")
+    expect(meta.get("service") == "flask-no-harness", f"{label} meta.service is wrong")
+
+
+def check_error_schema_style(response: Any, label: str) -> None:
+    expect(response.status_code in {400, 404}, f"{label} must return a client error status")
+    payload = json_payload(response)
+    expect_snake_case_keys(payload, label)
+    expect(isinstance(payload.get("error"), str), f"{label} error response must include error string")
+
+
 def assert_status(response: Any, expected_status: int) -> None:
     expect(
         response.status_code == expected_status,
@@ -472,6 +755,118 @@ def json_payload(response: Any) -> dict[str, Any]:
     payload = response.get_json(silent=True)
     expect(isinstance(payload, dict), f"response was not a JSON object: {response.get_data(as_text=True)}")
     return payload
+
+
+def object_field(payload: dict[str, Any], key: str, *, default: dict[str, Any]) -> dict[str, Any]:
+    value = payload.get(key)
+    if value is None:
+        return default
+    expect(isinstance(value, dict), f"{key} must be an object when present")
+    return value
+
+
+def normalized_status(payload: dict[str, Any], keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = payload.get(key)
+        if value is not None:
+            return str(value).strip().lower().replace(" ", "_")
+    return ""
+
+
+def normalized_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return " ".join(normalized_text(child) for child in value.values())
+    if isinstance(value, list):
+        return " ".join(normalized_text(child) for child in value)
+    return str(value).lower()
+
+
+def first_successful_post(
+    path: str,
+    payloads: tuple[dict[str, Any], ...],
+    label: str,
+) -> tuple[Any, str]:
+    last_response = None
+    for payload in payloads:
+        response = client().post(path, json=payload)
+        if response.status_code == 200:
+            return response, next(iter(payload))
+        last_response = response
+    if last_response is None:
+        fail(f"{label} did not receive any request payloads")
+    assert_status(last_response, 200)
+    fail(f"{label} did not accept any supported request envelope")
+
+
+def first_present(payload: Any, keys: tuple[str, ...], *, required: bool = True) -> Any:
+    if isinstance(payload, dict):
+        for key in keys:
+            if key in payload:
+                return payload[key]
+        for child in payload.values():
+            value = first_present(child, keys, required=False)
+            if value is not None:
+                return value
+    elif isinstance(payload, list):
+        for child in payload:
+            value = first_present(child, keys, required=False)
+            if value is not None:
+                return value
+    if required:
+        fail(f"missing expected field matching one of: {', '.join(keys)}")
+    return None
+
+
+def rows_by_sku(payload: Any) -> dict[str, dict[str, Any]]:
+    rows: dict[str, dict[str, Any]] = {}
+    collect_rows_by_sku(payload, rows)
+    return rows
+
+
+def collect_rows_by_sku(value: Any, rows: dict[str, dict[str, Any]]) -> None:
+    if isinstance(value, dict):
+        sku = value.get("sku")
+        if isinstance(sku, str):
+            rows[sku] = value
+        for child in value.values():
+            collect_rows_by_sku(child, rows)
+    elif isinstance(value, list):
+        for child in value:
+            collect_rows_by_sku(child, rows)
+
+
+def expect_snake_case_keys(value: Any, label: str, path: str = "$") -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            expect(isinstance(key, str) and bool(SNAKE_CASE.match(key)), f"{label} key {path}.{key} must be snake_case")
+            expect_snake_case_keys(child, label, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            expect_snake_case_keys(child, label, f"{path}[{index}]")
+
+
+def expect_money_like_values(value: Any, label: str, path: str = "$", key: str = "") -> None:
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            child_path = f"{path}.{child_key}"
+            if is_money_key(child_key):
+                expect_decimal_compatible(child, label, child_path)
+            expect_money_like_values(child, label, child_path, child_key)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            expect_money_like_values(child, label, f"{path}[{index}]", key)
+
+
+def is_money_key(key: str) -> bool:
+    return any(term in key for term in MONEY_KEY_TERMS)
+
+
+def expect_decimal_compatible(value: Any, label: str, path: str) -> None:
+    expect(value is not None and not isinstance(value, bool), f"{label} {path} must be decimal-compatible")
+    try:
+        Decimal(str(value))
+    except Exception as exc:  # noqa: BLE001
+        fail(f"{label} {path} must be decimal-compatible: {value!r} ({exc})")
 
 
 def docs_text(relative_dir: str) -> str:

@@ -27,17 +27,26 @@
   "verification": {
     "commands": [
       {
-        "name": "pytest and heldout-10 hidden-effect-catalog-metrics oracle",
+        "name": "functional heldout oracle for hidden-effect-catalog-metrics",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-catalog-metrics"
+          "hidden-effect-catalog-metrics",
+          "functional"
         ],
         "timeout_seconds": 180,
-        "dimensions": [
-          "functional",
+        "dimension": "functional"
+      },
+      {
+        "name": "generic schema style oracle for hidden-effect-catalog-metrics",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-metrics",
           "schema"
-        ]
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
       }
     ]
   },

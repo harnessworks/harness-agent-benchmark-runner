@@ -27,17 +27,26 @@
   "verification": {
     "commands": [
       {
-        "name": "pytest and heldout-10 hidden-effect-availability-badge oracle",
+        "name": "functional heldout oracle for hidden-effect-availability-badge",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-availability-badge"
+          "hidden-effect-availability-badge",
+          "functional"
         ],
         "timeout_seconds": 180,
-        "dimensions": [
-          "functional",
+        "dimension": "functional"
+      },
+      {
+        "name": "generic schema style oracle for hidden-effect-availability-badge",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-availability-badge",
           "schema"
-        ]
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
       }
     ]
   },

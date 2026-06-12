@@ -238,8 +238,28 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                     self.assertEqual(benchmark.get("prompt_variant"), prompt_variant)
                     self.assertIn("forbidden_text", data.get("leakage_audit", {}))
                     self.assertIn("catalog-metrics-v1", data["leakage_audit"]["forbidden_text"])
-                    command = data["verification"]["commands"][0]
-                    self.assertEqual(command.get("dimensions"), ["functional", "schema"])
+                    commands = data["verification"]["commands"]
+                    if target_arm == "workflow-only":
+                        self.assertTrue(
+                            any(
+                                command.get("name") == "harness gate"
+                                and command.get("dimension") == "workflow"
+                                for command in commands
+                            )
+                        )
+                    hidden_commands = [
+                        command for command in commands if command.get("name") != "harness gate"
+                    ]
+                    dimensions = [
+                        command.get("dimension") or command.get("dimensions")
+                        for command in hidden_commands
+                    ]
+                    if task_dir == HELDOUT_10_TASK_DIR:
+                        self.assertEqual(dimensions, ["functional", "schema"])
+                        self.assertIn("functional", hidden_commands[0]["command"])
+                        self.assertIn("schema", hidden_commands[1]["command"])
+                    else:
+                        self.assertEqual(dimensions, [["functional", "schema"]])
 
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -33,10 +33,7 @@
           "scripts/check_harness.py"
         ],
         "timeout_seconds": 180,
-        "dimensions": [
-          "functional",
-          "schema"
-        ]
+        "dimension": "workflow"
       },
       {
         "name": "pytest and hidden workflow smoke hidden-effect-availability-badge oracle",
