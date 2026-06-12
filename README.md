@@ -30,7 +30,9 @@ follow-up 100-record attempt stopped at record 4 on workflow-only
 `bundle-quote` when the idle watchdog fired after 719.3 seconds. That stopped
 record made no edits, passed the local harness gate because the repo was
 unchanged, and had no hidden access or boundary issue. It is still not official
-product evidence; intermittent no-edit idle stalls remain unresolved.
+product evidence. A focused bundle-quote triage then stopped on the first bare
+record with a 900-second task timeout after active edits, so bundle-quote tail
+latency remains unresolved across arms.
 
 The balanced 100-run is representative for the explicitly measured `jobs=2` run
 shape. It is not a pure sequential claim: the run produced timeout noise, so

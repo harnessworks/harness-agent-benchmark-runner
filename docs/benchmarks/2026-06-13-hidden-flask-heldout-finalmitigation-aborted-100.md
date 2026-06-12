@@ -27,6 +27,11 @@ The failure mode is therefore different from the previous 600-second task
 timeout. It is an intermittent workflow-only no-edit idle stall on a held-out
 task, not a timeout-cap artifact and not a boundary/leakage issue.
 
+A follow-up focused bundle-quote triage then stopped on the first `bare`
+bundle-quote record with a 900-second task timeout after active edits. That
+means the current promotion blocker is not workflow-only-specific. Bundle-quote
+itself has severe tail-latency risk under the partial-realistic prompt.
+
 ## Run Configuration
 
 - Suite: `benchmarks/suites/flask-hidden-heldout-10.json`
@@ -131,6 +136,33 @@ The agent log tail showed it was reading generic local harness files such as
 stopped it after 300 seconds without output. Hidden access scanning found no
 matches.
 
+## Bundle-Quote Focused Triage
+
+- Workspace:
+  `runs/hidden-flask-bundlequote-finalmitigation-triage-20260612T182328Z`
+- Results:
+  `results/hidden-flask-bundlequote-finalmitigation-triage-20260612T182328Z`
+- Command: `CODEX_PROMPT_GUARD=1 CODEX_MODEL=gpt-5.5 CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority' python3 scripts/run_hidden_flask_ab.py --suite benchmarks/suites/flask-hidden-heldout-10.json --task-id hidden-effect-bundle-quote --repeats 3 --agent-timeout-override 900 --agent-idle-timeout 300 --stop-on-abnormal --workspace runs/hidden-flask-bundlequote-finalmitigation-triage-20260612T182328Z --results results/hidden-flask-bundlequote-finalmitigation-triage-20260612T182328Z --execute`
+- Planned records: 6
+- Completed records before stop: 1
+- Stop reason: record 1, `bare` `hidden-effect-bundle-quote`,
+  `termination_reason=timeout`, duration 900.0 seconds
+- Hidden access: 0
+- Wrong-file edits: 0
+- Forbidden-file edits: 0
+- Excluded-path conflicts: 0
+
+| Target | Runs | Strict successes | Functional | Schema contract | Workflow | Boundary | Hidden access | Stalls | Timeouts | Wrong-file edits | p50 duration | p95 duration |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 1 | 0 | 900s | 900s |
+
+The stopped bare record edited `app/__init__.py`, `app/catalog.py`,
+`tests/test_app.py`, and `docs/`, and local pytest passed before the timeout.
+It still timed out before a clean agent exit. This focused triage weakens the
+hypothesis that the final-mitigation 100-run stop was only a workflow-only
+problem. The more defensible reading is that `hidden-effect-bundle-quote` is a
+tail-heavy held-out task under partial-realistic prompts.
+
 ## Interpretation
 
 The final mitigation split the prior timeout question correctly:
@@ -142,8 +174,9 @@ The final mitigation split the prior timeout question correctly:
 
 That is operationally better than the prior wall-clock and task-timeout
 attempts, but it also means another identical 100-record run is not the next
-best step. The promotion blocker is now intermittent no-edit idle behavior on
-workflow-only held-out tasks.
+best step. After the focused bundle-quote triage, the promotion blocker should
+be treated as bundle-quote tail latency across arms, with at least one
+workflow-only idle stall and one bare 900-second task timeout observed.
 
 This remains consistent with the product-test conclusion: `workflow-only` is
 not enough to solve hidden functional/schema contracts under partial-realistic
@@ -161,7 +194,7 @@ Before the next full heldout promotion attempt:
 - Keep `CODEX_PROMPT_GUARD=1`, target-clean checks, hidden access scanning, and
   `--stop-on-abnormal`.
 - Keep `--agent-idle-timeout 300` and `--agent-timeout-override 900`.
-- Triage workflow-only `bundle-quote` with a small paired repeat before another
-  100-record run.
+- Do not run another 100-record promotion until bundle-quote tail behavior is
+  either reduced or explicitly separated from product-value scoring.
 - Keep reporting idle-watchdog stops separately from task timeouts.
 - Add the `memory-harness` arm before making a product-value claim.

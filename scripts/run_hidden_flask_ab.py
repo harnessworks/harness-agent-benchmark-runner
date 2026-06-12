@@ -83,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         required_arms = parse_arms(args.arms)
         groups = load_task_groups(args.task_dir, required_arms=required_arms)
         validate_task_groups(groups)
+        groups = filter_task_groups(groups, args.task_id)
         selected_groups = groups[: args.task_limit] if args.task_limit else groups
         validate_run_shape(args, selected_groups)
         schedule = build_group_schedule(
@@ -121,6 +122,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--task-limit",
         type=positive_int,
         help="limit task pairs; defaults to 4 for pilot and all task pairs for large",
+    )
+    parser.add_argument(
+        "--task-id",
+        action="append",
+        help="select one task id; may be repeated for focused triage runs",
     )
     parser.add_argument("--repeats", type=positive_int, help="override repeat count")
     parser.add_argument(
@@ -276,6 +282,20 @@ def load_task_groups(task_dir: Path, required_arms: tuple[str, ...] | None = Non
     if not groups:
         raise BenchmarkPlanError(f"no complete hidden Flask task groups found in {task_dir}")
     return groups
+
+
+def filter_task_groups(groups: list[TaskGroup], task_ids: list[str] | None) -> list[TaskGroup]:
+    if not task_ids:
+        return groups
+    wanted = []
+    for task_id in task_ids:
+        if task_id not in wanted:
+            wanted.append(task_id)
+    by_id = {group.task_id: group for group in groups}
+    missing = [task_id for task_id in wanted if task_id not in by_id]
+    if missing:
+        raise BenchmarkPlanError(f"unknown task id: {', '.join(missing)}")
+    return [by_id[task_id] for task_id in wanted]
 
 
 def arm_suffix(path: Path) -> str | None:

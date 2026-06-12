@@ -58,8 +58,10 @@ sequential attempt stopped at record 4 on workflow-only
 `hidden-effect-bundle-quote` when the idle watchdog fired after 719.3 seconds.
 The stopped record had no file edits, passed the local harness gate because the
 repo was unchanged, and had no hidden access or boundary issue. This is still
-not official product evidence; it shows the 900-second timeout override works,
-but intermittent no-edit idle stalls remain a promotion blocker.
+not official product evidence. A focused bundle-quote triage then stopped on
+the first bare record with a 900-second task timeout after active edits, so the
+current blocker is bundle-quote tail latency across arms, not just the previous
+600-second timeout cap.
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -180,9 +182,10 @@ completed a fresh 10-record pilot cleanly with `--agent-idle-timeout 300` and
 `--agent-timeout-override 900`, then stopped the 100-record attempt at record 4
 on a workflow-only bundle-quote idle-watchdog stop. The run had 0 hidden
 access, 0 wrong-file edits, 0 forbidden-file edits, and 0 excluded-path
-conflicts. It is not product evidence because the 100 did not complete and
-strict successes remained 0. The remaining blocker is intermittent no-edit
-idle behavior, not the previous 600-second timeout cap.
+conflicts. A focused bundle-quote triage then stopped on the first bare record
+with a 900-second task timeout. It is not product evidence because the 100 did
+not complete and strict successes remained 0. The remaining blocker is
+bundle-quote tail latency across arms, not the previous 600-second timeout cap.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).

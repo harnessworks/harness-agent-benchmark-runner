@@ -306,6 +306,23 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 ],
             )
 
+    def test_filters_task_groups_by_task_id(self) -> None:
+        groups = [
+            hidden_ab.TaskGroup("alpha", {"bare": Path("alpha-bare.json")}),
+            hidden_ab.TaskGroup("beta", {"bare": Path("beta-bare.json")}),
+            hidden_ab.TaskGroup("gamma", {"bare": Path("gamma-bare.json")}),
+        ]
+
+        selected = hidden_ab.filter_task_groups(groups, ["gamma", "alpha", "gamma"])
+
+        self.assertEqual([group.task_id for group in selected], ["gamma", "alpha"])
+
+    def test_filter_task_groups_rejects_unknown_task_id(self) -> None:
+        groups = [hidden_ab.TaskGroup("alpha", {"bare": Path("alpha-bare.json")})]
+
+        with self.assertRaises(hidden_ab.BenchmarkPlanError):
+            hidden_ab.filter_task_groups(groups, ["missing"])
+
     def test_loads_suite_manifest_with_relative_task_dir_and_arms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

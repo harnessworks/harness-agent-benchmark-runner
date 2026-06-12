@@ -64,6 +64,16 @@ python3 scripts/run_hidden_flask_ab.py \
   --mode pilot
 ```
 
+For focused triage, select exact task groups with `--task-id`. The option may
+be repeated and is applied before `--task-limit`:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --suite benchmarks/suites/flask-hidden-heldout-10.json \
+  --task-id hidden-effect-bundle-quote \
+  --repeats 3
+```
+
 Run the pilot only after approving live Codex usage:
 
 ```bash
