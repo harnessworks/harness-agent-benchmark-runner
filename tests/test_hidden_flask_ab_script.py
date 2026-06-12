@@ -30,7 +30,8 @@ BUNDLEQUOTE_QUARANTINE_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
 )
 CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
-MEMORY_HARNESS_REF = "bc097c48d592e7ddcd26beb7bb2c185d7a33fa59"
+THREE_ARM_WORKFLOW_REF = "8227136359b6c2807c3fa6630f2ce840b59e7281"
+MEMORY_HARNESS_REF = "a710c2c1f237aeb1cd3ebd772dd28fe25d28b740"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -419,6 +420,10 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertEqual(memory["repo"]["source"], "../flask-memory-harness")
             self.assertEqual(memory["repo"]["ref"], MEMORY_HARNESS_REF)
             self.assertEqual(memory["benchmark"]["target_arm"], "memory-harness")
+            workflow = hidden_ab.read_json(group.arms["workflow-only"])
+            self.assertEqual(workflow["repo"]["source"], "../flask-yes-harness")
+            self.assertEqual(workflow["repo"]["ref"], THREE_ARM_WORKFLOW_REF)
+            self.assertEqual(workflow["benchmark"]["target_arm"], "workflow-only")
 
     def test_bundlequote_quarantine_suite_selects_only_bundle_quote(self) -> None:
         suite = hidden_ab.load_suite(BUNDLEQUOTE_QUARANTINE_SUITE)
