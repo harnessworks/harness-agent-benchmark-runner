@@ -4,7 +4,7 @@
   "description": "Add the repository's supplier readiness API using hidden external scoring.",
   "repo": {
     "source": "../flask-no-harness",
-    "ref": "HEAD"
+    "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
   },
   "prompt": "Add the supplier readiness API described by this repository's conventions. Update the application, tests, and related project docs. Keep the change focused and do not modify benchmark task specs or oracle code.",
   "prompt_ref": "benchmarks/tasks/flask-hidden/hidden-effect-supplier-readiness-no-harness.json",
