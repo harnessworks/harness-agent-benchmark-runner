@@ -134,8 +134,11 @@ functional or schema success rates.
 Do not use a short pilot watchdog as the automatic cutoff for 100-record
 promotion. In the 2026-06-12 prompt-guard heldout attempt, a 330-second
 wall-clock watchdog stopped a record that had active edits. For 100-record
-promotion, either rely on the task timeout or add an idle-progress watchdog
-that can distinguish no-output hangs from long-but-active runs.
+promotion, either rely on the task timeout or use `--agent-idle-timeout`, which
+stops the agent only after no stdout/stderr output has been observed for the
+configured interval. Both watchdogs record `scoring.agent_stalled=true`; use
+`agent.termination_reason` to distinguish `stall_watchdog` from
+`idle_watchdog`.
 
 The Codex adapter also applies runtime hygiene by default:
 

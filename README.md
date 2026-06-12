@@ -153,9 +153,10 @@ xychart-beta
   claim that README edits are bad; it is a strict boundary miss.
 - `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
-- `Stalls`: agent process was stopped by the shorter pilot watchdog
-  (`--agent-stall-timeout`) before the effective task timeout. Count this
-  separately from product-quality oracle failures.
+- `Stalls`: agent process was stopped by either the shorter pilot watchdog
+  (`--agent-stall-timeout`) or the idle-output watchdog
+  (`--agent-idle-timeout`). Count this separately from product-quality oracle
+  failures.
 - `Preflight failures`: leakage audit failures before agent execution. These
   should fail the run without spending model budget.
 
@@ -167,7 +168,9 @@ then run `partial-realistic` prompts as the main product experiment and
 `full-contract` prompts as controls. Keep functional, schema-contract,
 workflow, boundary, strict success, and timeout counts separate in the report.
 For held-out pilots, use `--agent-stall-timeout` so stalled records are written
-to JSONL instead of requiring manual process termination.
+to JSONL instead of requiring manual process termination. For 100-record
+promotion, prefer `--agent-idle-timeout` or the task timeout so long-but-active
+runs are not stopped by a short wall-clock pilot cap.
 Keep adapter hygiene enabled during promotion checks:
 `CODEX_IGNORE_USER_CONFIG=1`, `CODEX_IGNORE_RULES=1`, and
 `CODEX_DISABLE_PLUGINS=1`.

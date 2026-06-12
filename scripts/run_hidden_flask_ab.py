@@ -157,6 +157,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         type=positive_int,
         help="optional shorter pilot watchdog timeout passed to the runner",
     )
+    parser.add_argument(
+        "--agent-idle-timeout",
+        type=positive_int,
+        help="optional idle-output watchdog timeout passed to the runner",
+    )
     parser.add_argument("--max-cost-usd", type=non_negative_float, default=1.0)
     parser.add_argument(
         "--large-min-task-pairs",
@@ -452,6 +457,8 @@ def print_plan(
     print(f"Codex exec args: {codex_exec_args(args)}")
     if args.agent_stall_timeout:
         print(f"Agent stall timeout: {args.agent_stall_timeout}s")
+    if args.agent_idle_timeout:
+        print(f"Agent idle timeout: {args.agent_idle_timeout}s")
     print(f"Workspace: {args.workspace}")
     print(f"Results: {args.results}")
     print("Tasks:")
@@ -755,6 +762,8 @@ def build_runner_command(args: argparse.Namespace, item: ScheduledRun) -> list[s
     ]
     if args.agent_stall_timeout is not None:
         command.extend(["--agent-stall-timeout", str(args.agent_stall_timeout)])
+    if args.agent_idle_timeout is not None:
+        command.extend(["--agent-idle-timeout", str(args.agent_idle_timeout)])
     return command
 
 

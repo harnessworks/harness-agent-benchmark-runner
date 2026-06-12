@@ -123,8 +123,7 @@ For the next heldout promotion attempt:
 - Keep hidden access scanning and stop-on-abnormal.
 - Do not use `--agent-stall-timeout 330` as the 100-record promotion cutoff.
   Either omit the pilot watchdog for the 100-run and rely on the task timeout
-  of 600 seconds, or implement an idle-output watchdog that can distinguish
-  no-output hangs from long-but-active runs.
+  of 600 seconds, or use `--agent-idle-timeout` so no-output hangs are stopped
+  without cutting off long-but-active runs.
 - Continue reporting strict success, functional success, schema-contract
   success, workflow success, boundary success, stalls, and timeouts separately.
-

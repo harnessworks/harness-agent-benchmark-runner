@@ -69,6 +69,7 @@ def run_task(
                     "agent_timeout_seconds": agent_timeout_seconds,
                     "agent_process_timeout_seconds": agent_process_timeout_seconds,
                     "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
+                    "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
                     "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                     "max_cost_usd": max_cost_usd,
                 },
@@ -114,6 +115,7 @@ def run_task(
                 label="agent",
                 timeout_seconds=agent_process_timeout_seconds,
                 timeout_reason=agent_timeout_reason,
+                idle_timeout_seconds=config.agent_idle_timeout_seconds,
                 env=agent_env,
                 log_path=logs_dir / "agent.log",
                 tail_chars=config.output_tail_chars,
@@ -175,6 +177,7 @@ def run_task(
                 "agent_timeout_seconds": agent_timeout_seconds,
                 "agent_process_timeout_seconds": agent_process_timeout_seconds,
                 "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
+                "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
@@ -235,6 +238,7 @@ def run_task(
                 "agent_timeout_seconds": agent_timeout_seconds,
                 "agent_process_timeout_seconds": agent_process_timeout_seconds,
                 "agent_stall_timeout_seconds": config.agent_stall_timeout_seconds,
+                "agent_idle_timeout_seconds": config.agent_idle_timeout_seconds,
                 "max_agent_timeout_seconds": config.max_agent_timeout_seconds,
                 "max_cost_usd": max_cost_usd,
             },
@@ -673,7 +677,10 @@ def runner_error_scoring(error_type: str) -> dict[str, Any]:
 
 
 def agent_stalled(agent_result: ProcessResult) -> bool:
-    return agent_result.timed_out and agent_result.termination_reason == "stall_watchdog"
+    return agent_result.timed_out and agent_result.termination_reason in {
+        "stall_watchdog",
+        "idle_watchdog",
+    }
 
 
 def run_verification_commands(

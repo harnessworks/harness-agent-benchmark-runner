@@ -393,6 +393,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 agent_command="fixture-agent",
                 max_agent_timeout=60,
                 agent_stall_timeout=None,
+                agent_idle_timeout=None,
                 max_cost_usd=1.0,
             )
             schedule = [
@@ -439,6 +440,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 agent_command="fixture-agent",
                 max_agent_timeout=60,
                 agent_stall_timeout=5,
+                agent_idle_timeout=None,
                 max_cost_usd=1.0,
             )
             schedule = [
@@ -510,6 +512,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             agent_command="fixture-agent",
             max_agent_timeout=60,
             agent_stall_timeout=5,
+            agent_idle_timeout=7,
             max_cost_usd=1.0,
         )
         item = hidden_ab.ScheduledRun(1, "alpha", "A:bare", Path("alpha-bare.json"))
@@ -519,6 +522,9 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         self.assertIn("--agent-stall-timeout", command)
         index = command.index("--agent-stall-timeout")
         self.assertEqual(command[index + 1], "5")
+        self.assertIn("--agent-idle-timeout", command)
+        idle_index = command.index("--agent-idle-timeout")
+        self.assertEqual(command[idle_index + 1], "7")
 
 
 def write_hidden_task(
