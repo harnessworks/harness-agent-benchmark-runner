@@ -33,24 +33,20 @@ Updated: 2026-06-12
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B pilot (post-hoc concept-docs rescore) | 10 | 10 | 100% | 0 | 0 | 0 |
 | `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B `jobs=2` calibration | 10 | 9 | 90% | 0 | 0 | 0 |
 | `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B `jobs=2` calibration | 10 | 10 | 100% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Balanced hidden-oracle A/B 100-run `jobs=2` | 50 | 46 | 92% | 0 | 0 | 1 |
+| `flask-yes-harness` | Codex CLI | Balanced hidden-oracle A/B 100-run `jobs=2` | 50 | 48 | 96% | 0 | 0 | 2 |
 
 Latest run:
-[`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) —
-Codex CLI balanced pilot on all ten hidden-oracle Flask A/B task pairs after the
-task-critical API contracts were moved into the shared prompt. The harnessed
-target reached 10/10 strict scored successes and 10/10 verification passes at
-run time. The bare target reached 6/10 at run time under the original
-phrase-based docs oracle. Both targets had 0 wrong-file edits, 0 forbidden-file
-edits, and 0 timeouts. After reviewing the pilot, the docs oracle was relaxed
-from exact phrase substrings to concept-based route and domain-term checks; a
-post-hoc rescore of the saved run directories is 9/10 for `flask-no-harness`
-and 10/10 for `flask-yes-harness`. This is official pilot evidence, not
-representative large-run evidence. Codex was run with
+[`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) —
+Codex CLI completed the balanced hidden-oracle Flask A/B suite with all ten
+task pairs, `repeats=5`, and `--jobs 2`. `flask-no-harness` reached 46/50
+strict scored successes and 46/50 verification passes. `flask-yes-harness`
+reached 48/50 strict scored successes and 49/50 verification passes. Both
+targets had 0 wrong-file edits and 0 forbidden-file edits. Timeout behavior was
+not cleanly in favor of the harnessed target: no-harness had 1 timeout, while
+yes-harness had 2 timeouts. This is representative for the measured `jobs=2`
+condition, not a pure sequential claim. Codex was run with
 `CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
-The latest repeated hidden-oracle evidence remains
-[`2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](2026-06-11-hidden-oracle-harness-effect-ab-3x.md),
-and the latest broader repeated snapshot remains
-[`2026-06-11-codex-cli-5runs.md`](2026-06-11-codex-cli-5runs.md).
 
 Recent throughput calibration:
 [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) —
@@ -63,6 +59,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) ← latest 100-run evidence
 - [`2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md) ← latest throughput calibration
 - [`2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](2026-06-12-hidden-flask-balanced-ab-20-pilot.md) ← latest pilot
 - [`2026-06-12-hidden-flask-ab-calibration-1x.md`](2026-06-12-hidden-flask-ab-calibration-1x.md)
@@ -151,6 +148,14 @@ timeouts and 0 boundary violations, scoring 9/10 for `flask-no-harness` and
 10/10 for `flask-yes-harness`. This supports `jobs=2` as a candidate
 wall-clock-saving shape, but any 100-run report that uses it must state the
 parallelism explicitly and keep timeout behavior separate from task quality.
+
+The follow-up 100-run `jobs=2` evidence run completed all 100 planned records.
+It narrowed the strict success gap to 46/50 for `flask-no-harness` vs 48/50 for
+`flask-yes-harness`, while verification passed was 46/50 vs 49/50. The harness
+signal is therefore small and mostly visible in deterministic oracle misses,
+not file-boundary discipline. `jobs=2` introduced timeout noise: 1 no-harness
+timeout and 2 yes-harness timeouts. A sequential follow-up or a jobs=2 run with
+a higher timeout cap is needed before making a timeout-stability claim.
 
 Full records analysis:
 [`2026-06-11-benchmark-records-analysis.md`](2026-06-11-benchmark-records-analysis.md).
