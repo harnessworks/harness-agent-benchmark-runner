@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: run a fresh 9-record v2 pilot, not another identical stable-4
-  promotion.
+- Next step: triage the H1 price-policy pilot failure, then rerun a small
+  multi-repeat five-arm memory pilot before considering promotion.
 
 Safe claims:
 
@@ -80,12 +80,13 @@ The product reading is narrow and useful:
   signal is operational repeatability: max duration was 87.6s versus 544.7s
   for `workflow-only` and 639.3s for `bare`.
 
-Latest v2 scaffold check:
-[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md).
-The first v2 held-out task completed 3/3 cleanly; `workflow-only` and
-`memory-harness` passed strict scoring, while `bare` failed functional/schema
-scoring. Treat it as scaffold validation and an early signal, not as the main
-representative result.
+Latest execution:
+[`docs/benchmarks/2026-06-14-flask-full-harness-memory-pilot-1x.md`](docs/benchmarks/2026-06-14-flask-full-harness-memory-pilot-1x.md).
+The five-arm H1/H2 memory pilot completed all 25 records with 0 stalls,
+0 timeouts, 0 hidden-access findings, and 0 forbidden-file edits. Treat it as
+operational pilot evidence, not as the representative result: H1 record
+consistency was 0/5, while H2 mistake prevention showed a `bare` versus
+non-bare signal.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
