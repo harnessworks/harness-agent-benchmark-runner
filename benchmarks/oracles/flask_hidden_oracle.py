@@ -1234,7 +1234,7 @@ def expect_money_like_values(value: Any, label: str, path: str = "$", key: str =
 
 
 def is_money_key(key: str) -> bool:
-    if key.endswith(("_band", "_bands", "_tier", "_tiers")):
+    if any(term in key for term in ("price_band", "price_tier")):
         return False
     return any(term in key for term in MONEY_KEY_TERMS)
 
