@@ -39,6 +39,14 @@ harnessed target retained repository-local workflow, documentation, boundary,
 and local-gate guidance. Its timeout stability remains unresolved because that
 parallel run produced timeout noise.
 
+Latest v2 smoke:
+[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md).
+The first v2 held-out task, `hidden-effect-replenishment-signals`, completed
+3/3 records cleanly. `bare` failed functional/schema scoring, while
+`workflow-only` and `memory-harness` both passed strict scoring. This validates
+the v2 scaffold and gives an early convention-transfer signal; it is not a
+replacement for the 96-record stable-4 promotion.
+
 ## Current Evidence
 
 | Target | Arm | Runs | Strict successes | Functional successes | Schema successes | Timeouts | Boundary issues |
@@ -46,6 +54,9 @@ parallel run produced timeout noise.
 | `flask-no-harness` | `bare` | 32 | 0 | 0 | 0 | 0 | 0 |
 | `flask-yes-harness` | `workflow-only` | 32 | 8 | 8 | 24 | 0 | 0 |
 | `flask-memory-harness` | `memory-harness` | 32 | 8 | 8 | 24 | 0 | 0 |
+| `flask-no-harness` | `bare` v2 smoke | 1 | 0 | 0 | 0 | 0 | 0 |
+| `flask-yes-harness` | `workflow-only` v2 smoke | 1 | 1 | 1 | 1 | 0 | 0 |
+| `flask-memory-harness` | `memory-harness` v2 smoke | 1 | 1 | 1 | 1 | 0 | 0 |
 
 Boundary issues combine wrong-file edits and forbidden-file edits. Both were 0
 across all three arms in the promotion96 run.
@@ -107,6 +118,9 @@ some successful agent work more repeatable.
 | `flask-memory-harness` three-arm stable-4 | Codex CLI | all-slim promotion96 | 32 | 8 | 8 | 0 | 0 |
 | `flask-yes-harness` three-arm stable-4 | Codex CLI | all-slim promotion96 | 32 | 8 | 8 | 0 | 0 |
 | `flask-no-harness` three-arm stable-4 | Codex CLI | all-slim promotion96 | 32 | 0 | 0 | 0 | 0 |
+| `flask-memory-harness` three-arm v2 | Codex CLI | replenishment smoke | 1 | 1 | 1 | 0 | 0 |
+| `flask-yes-harness` three-arm v2 | Codex CLI | replenishment smoke | 1 | 1 | 1 | 0 | 0 |
+| `flask-no-harness` three-arm v2 | Codex CLI | replenishment smoke | 1 | 0 | 0 | 0 | 0 |
 | `flask-yes-harness` balanced hidden-oracle A/B | Codex CLI | 100-run jobs=2 | 50 | 48 | 49 | 2 | 0 |
 | `flask-no-harness` balanced hidden-oracle A/B | Codex CLI | 100-run jobs=2 | 50 | 46 | 46 | 1 | 0 |
 | `flask-yes-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot, run-time oracle | 10 | 10 | 10 | 0 | 0 |
@@ -186,6 +200,7 @@ tails should stop.
 
 ## Reports
 
+- [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-2round-pilot-aborted.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md`](docs/benchmarks/2026-06-13-hidden-flask-heldout-stable8-finalmitigation-aborted-96.md)

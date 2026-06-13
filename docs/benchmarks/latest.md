@@ -41,8 +41,21 @@ Updated: 2026-06-13
 | `flask-no-harness` | Codex CLI | Three-arm stable-4 all-slim promotion96 | 32 | 0 | 0% | 0 | 0 | 0 |
 | `flask-yes-harness` | Codex CLI | Three-arm stable-4 all-slim promotion96 | 32 | 8 | 25% | 0 | 0 | 0 |
 | `flask-memory-harness` | Codex CLI | Three-arm stable-4 all-slim promotion96 | 32 | 8 | 25% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Three-arm v2 smoke | 1 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Three-arm v2 smoke | 1 | 1 | 100% | 0 | 0 | 0 |
+| `flask-memory-harness` | Codex CLI | Three-arm v2 smoke | 1 | 1 | 100% | 0 | 0 | 0 |
 
 Latest run:
+[`2026-06-13-hidden-flask-three-arm-v2-smoke.md`](2026-06-13-hidden-flask-three-arm-v2-smoke.md) —
+`CODEX_PROMPT_GUARD=1` completed the first v2 held-out three-arm smoke with
+3/3 records and 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file
+edits, and 0 forbidden-file edits. `bare` failed functional/schema scoring,
+while `workflow-only` and `memory-harness` both passed strict scoring. This is
+a runnable v2 scaffold check and early signal, not a replacement for the
+96-record stable-4 promotion. The memory arm completed in 47.8s versus
+493.9s for workflow-only.
+
+Latest representative promotion:
 [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) —
 `CODEX_PROMPT_GUARD=1` completed the sequential three-arm stable-4 all-slim
 promotion with 96/96 records and 0 stalls, 0 timeouts, 0 hidden-access findings,
@@ -121,6 +134,7 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-three-arm-v2-smoke.md`](2026-06-13-hidden-flask-three-arm-v2-smoke.md) ← latest run / latest v2 smoke
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) ← latest run / latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md`](2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md) ← latest workflow-tail mitigation check
 - [`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) ← previous promotion attempt
