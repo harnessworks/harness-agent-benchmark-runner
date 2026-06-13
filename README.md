@@ -159,8 +159,9 @@ xychart-beta
 
 The next useful follow-up is not another identical stable-4 promotion. The
 96-record run is already clean and repeatable enough for this suite. The next
-product-value step is a v2 held-out suite that creates more convention-transfer
-tasks and better separates workflow guidance from generalized memory.
+product-value path is the v2 held-out suite scaffolded at
+`benchmarks/suites/flask-hidden-three-arm-v2.json`, starting with
+`hidden-effect-replenishment-signals`.
 
 Keep the same three arms: `bare`, `workflow-only`, and `memory-harness`. Keep
 `partial-realistic` prompts as the main product experiment and `full-contract`
@@ -170,6 +171,11 @@ failure memory.
 `cart-validation` should be split or redesigned before it is used as a memory
 discriminator. It currently behaves as a hard semantic/API-design task: all
 arms scored 0/8 strict and 0/8 schema in the latest promotion.
+
+Grow v2 by adding more new catalog/API tasks that apply the same general
+conventions to routes not present in target docs. Each new task should include
+functional and schema oracle dimensions, a route leakage audit, and identical
+partial-realistic prompts across the three arms.
 
 For held-out pilots, keep functional, schema-contract, workflow, boundary,
 strict success, timeout, and duration-tail counts separate in the report. For

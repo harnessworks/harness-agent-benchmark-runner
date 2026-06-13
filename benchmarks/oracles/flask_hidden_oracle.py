@@ -46,6 +46,7 @@ def strict_checks() -> dict[str, Any]:
         "hidden-effect-cart-validation": check_cart_validation,
         "hidden-effect-catalog-metrics": check_catalog_metrics,
         "hidden-effect-catalog-segments": check_catalog_segments,
+        "hidden-effect-replenishment-signals": check_replenishment_signals,
         "hidden-effect-pick-list": check_pick_list,
         "hidden-effect-reservation-preview": check_reservation_preview,
         "hidden-effect-tax-preview": check_tax_preview,
@@ -59,6 +60,7 @@ def functional_checks() -> dict[str, Any]:
         "hidden-effect-cart-validation": check_cart_validation_functional,
         "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
         "hidden-effect-catalog-segments": check_catalog_segments_functional,
+        "hidden-effect-replenishment-signals": check_replenishment_signals_functional,
     }
 
 
@@ -77,6 +79,10 @@ def schema_checks() -> dict[str, Any]:
         "hidden-effect-catalog-segments": lambda: check_get_schema_style(
             "/catalog/segments",
             "catalog segments",
+        ),
+        "hidden-effect-replenishment-signals": lambda: check_get_schema_style(
+            "/catalog/replenishment-signals",
+            "catalog replenishment signals",
         ),
     }
 
@@ -422,6 +428,55 @@ def check_catalog_segments() -> None:
     )
 
 
+def check_replenishment_signals() -> None:
+    response = client().get("/catalog/replenishment-signals")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    signals = payload.get("signals")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(signals, list), "replenishment signals must return signals list")
+    expect(
+        [
+            (
+                item.get("sku"),
+                item.get("signal"),
+                item.get("stock"),
+                item.get("target_stock"),
+                item.get("recommended_order_quantity"),
+            )
+            for item in signals
+        ]
+        == [
+            ("desk-lamp", "watch", 12, 25, 13),
+            ("notebook", "healthy", 48, 25, 0),
+            ("standing-mat", "reorder_now", 3, 25, 22),
+        ],
+        "replenishment signal rows are wrong",
+    )
+    expect(
+        summary
+        == {
+            "reorder_now": 1,
+            "watch": 1,
+            "healthy": 1,
+            "total_recommended_order_quantity": 35,
+        },
+        "replenishment summary is wrong",
+    )
+    expect(isinstance(meta, dict), "replenishment signals must include meta object")
+    expect(meta.get("source") == "catalog", "replenishment signals meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "replenishment signals meta.service is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/replenishment-signals", "reorder_now", "watch", "healthy", "target stock"),
+        "glossary must document replenishment route and signal terms",
+    )
+
+
 def check_pick_list() -> None:
     response = client().post(
         "/warehouse/pick-list",
@@ -696,6 +751,59 @@ def check_catalog_segments_functional() -> None:
         glossary,
         ("/catalog/segments", "budget", "standard", "premium", "scarce", "steady", "deep"),
         "glossary must document catalog segments route and bands",
+    )
+
+
+def check_replenishment_signals_functional() -> None:
+    response = client().get("/catalog/replenishment-signals")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": ("watch", 12, 13),
+        "notebook": ("healthy", 48, 0),
+        "standing-mat": ("reorder_now", 3, 22),
+    }
+    for sku, (signal, stock, order_quantity) in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"replenishment signals must include {sku} row")
+        expect(normalized_status(row, ("signal", "status", "state")) == signal, f"{sku} signal is wrong")
+        expect(row.get("stock") == stock, f"{sku} stock is wrong")
+        expect(
+            first_present(
+                row,
+                (
+                    "recommended_order_quantity",
+                    "suggested_order_quantity",
+                    "suggested_order_units",
+                    "order_quantity",
+                ),
+            )
+            == order_quantity,
+            f"{sku} recommended order quantity is wrong",
+        )
+
+    expect(first_present(payload, ("reorder_now",)) == 1, "replenishment reorder_now count is wrong")
+    expect(first_present(payload, ("watch",)) == 1, "replenishment watch count is wrong")
+    expect(first_present(payload, ("healthy",)) == 1, "replenishment healthy count is wrong")
+    expect(
+        first_present(
+            payload,
+            (
+                "total_recommended_order_quantity",
+                "total_suggested_order_quantity",
+                "total_suggested_order_units",
+            ),
+        )
+        == 35,
+        "replenishment total recommended order quantity is wrong",
+    )
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/replenishment-signals", "reorder_now", "watch", "healthy", "target stock"),
+        "glossary must document replenishment route and signal terms",
     )
 
 
