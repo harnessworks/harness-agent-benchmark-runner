@@ -91,6 +91,18 @@ The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
 parallel run produced timeout noise.
 
+## Product Effects Shown By The Benchmark
+
+The representative run supports four product effects:
+
+- Agent failures become controlled failures instead of dirty repository states.
+- Hidden-oracle feedback turns vague misses into specific contract, schema, and
+  edge-case findings.
+- Repo-local workflow and domain guidance can steer agents into a successful
+  implementation pattern on tasks that depend on conventions.
+- Repeated runs become comparable because execution, workflow, boundary, and
+  verification signals are recorded separately.
+
 ## Why This Kit Matters
 
 The kit is valuable when an agent result must be safe enough to inspect and
