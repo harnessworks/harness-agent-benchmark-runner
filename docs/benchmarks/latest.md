@@ -38,18 +38,19 @@ Updated: 2026-06-13
 | `flask-no-harness` | Codex CLI | Three-arm stable-4 doc-slim pilot | 4 | 0 | 0% | 0 | 0 | 0 |
 | `flask-yes-harness` | Codex CLI | Three-arm stable-4 doc-slim pilot | 4 | 0 | 0% | 0 | 0 | 0 |
 | `flask-memory-harness` | Codex CLI | Three-arm stable-4 doc-slim pilot | 4 | 1 | 25% | 0 | 0 | 0 |
+| `flask-no-harness` | Codex CLI | Three-arm stable-4 all-slim promotion96 | 32 | 0 | 0% | 0 | 0 | 0 |
+| `flask-yes-harness` | Codex CLI | Three-arm stable-4 all-slim promotion96 | 32 | 8 | 25% | 0 | 0 | 0 |
+| `flask-memory-harness` | Codex CLI | Three-arm stable-4 all-slim promotion96 | 32 | 8 | 25% | 0 | 0 | 0 |
 
 Latest run:
-[`2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](2026-06-12-hidden-flask-balanced-ab-100-jobs2.md) —
-Codex CLI completed the balanced hidden-oracle Flask A/B suite with all ten
-task pairs, `repeats=5`, and `--jobs 2`. `flask-no-harness` reached 46/50
-strict scored successes and 46/50 verification passes. `flask-yes-harness`
-reached 48/50 strict scored successes and 49/50 verification passes. Both
-targets had 0 wrong-file edits and 0 forbidden-file edits. Timeout behavior was
-not cleanly in favor of the harnessed target: no-harness had 1 timeout, while
-yes-harness had 2 timeouts. This is representative for the measured `jobs=2`
-condition, not a pure sequential claim. Codex was run with
-`CODEX_EXEC_ARGS='-c model_reasoning_effort=medium -c service_tier=priority'`.
+[`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) —
+`CODEX_PROMPT_GUARD=1` completed the sequential three-arm stable-4 all-slim
+promotion with 96/96 records and 0 stalls, 0 timeouts, 0 hidden-access findings,
+0 wrong-file edits, and 0 forbidden-file edits. `bare` scored 0/32 strict and
+0/32 schema. `workflow-only` and `memory-harness` both scored 8/32 strict,
+8/32 functional, and 24/32 schema. The memory arm did not beat workflow-only on
+accuracy, but it had a much lower duration tail: p95 86.2s and max 87.6s versus
+workflow-only p95 124.1s and max 544.7s.
 
 Latest heldout diagnostic:
 [`2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md`](2026-06-13-hidden-flask-heldout-stable8-noedit-2round-pilot.md) —
@@ -74,25 +75,22 @@ hidden-access findings. This indicates the hidden oracle and agent path can
 pass these tasks when the exact contract is explicit.
 
 Latest three-arm product diagnostic:
-[`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md) —
-after trimming the memory target guidance into a shorter benchmark feature fast
-path, the fresh three-arm stable-4 pilot completed all 12 planned records with
-0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0
-forbidden-file edits. `bare` scored 0/4 strict, `workflow-only` scored 0/4
-strict, and `memory-harness` scored 1/4 strict. Schema-contract success was
-0/4, 3/4, and 3/4 respectively. This is the first clean three-arm
-partial-realistic stable-4 matrix, but the product signal is still small. The
-promotion guard requires at least two clean rounds, so this is not yet enough
-to execute the 96-record promotion run.
+[`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) —
+after trimming both `workflow-only` and `memory-harness` guidance into shorter
+feature fast paths, a fresh 24-record readiness run passed the promotion guard
+and the 96-record promotion completed cleanly. The product signal is narrow but
+repeatable: harness arms recovered schema on `availability-badge`,
+`catalog-metrics`, and `catalog-segments`, and both passed `catalog-segments`
+8/8 strict. `cart-validation` remains 0/8 strict across all arms.
 
-Latest promotion attempt:
+Previous promotion attempt:
 [`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) —
 a second clean 12-record round was collected and the promotion guard accepted
 24 readiness records, but the live 96-record promotion aborted at record 2.
 The abnormal record was `workflow-only` `availability-badge`, which hit the
 360-second no-edit watchdog with no repository changes. Promotion remains
-blocked until the workflow-only first-edit tail is mitigated and the two-clean
-round readiness gate is rebuilt for the updated target refs.
+unblocked by the later all-slim run above, but this remains useful evidence for
+why the workflow-only guidance was trimmed.
 
 Latest workflow-tail mitigation check:
 [`2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md`](2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md) —
@@ -123,9 +121,10 @@ sequential evidence.
 
 Detailed reports:
 
+- [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) ← latest run / latest three-arm product diagnostic
 - [`2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md`](2026-06-13-hidden-flask-workflow-availability-docslim-rerun.md) ← latest workflow-tail mitigation check
-- [`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) ← latest promotion attempt
-- [`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md) ← latest three-arm product diagnostic
+- [`2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-promotion96-aborted.md) ← previous promotion attempt
+- [`2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-docslim-pilot.md)
 - [`2026-06-13-hidden-flask-memory-segments-docslim-rerun.md`](2026-06-13-hidden-flask-memory-segments-docslim-rerun.md) ← latest targeted mitigation check
 - [`2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md`](2026-06-13-hidden-flask-three-arm-stable4-gatememory-pilot.md)
 - [`2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md`](2026-06-13-hidden-flask-three-arm-stable4-pilot-aborted.md)
