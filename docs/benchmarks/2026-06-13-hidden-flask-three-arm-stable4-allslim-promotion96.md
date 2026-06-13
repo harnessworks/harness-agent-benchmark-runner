@@ -3,6 +3,20 @@
 This report records the fresh all-slim three-arm readiness run and the following
 96-record promotion run for the stable-4 held-out Flask suite.
 
+This run is promoted as the current representative result for the kit's
+safety-and-measurement claim. It is representative because it used
+answer-free partial-realistic prompts, kept task-specific answers out of target
+repositories, ran a three-arm comparison, and separated failure dimensions
+instead of reducing the outcome to one pass/fail number.
+
+Supported kit-effect claim:
+
+> In answer-free held-out Flask tasks, the kit made agent work safer and more
+> measurable, and the harnessed repos preserved project API/schema conventions
+> that the bare repo missed. The representative run completed 96/96 records
+> with no operational abnormal events, and schema-contract success improved
+> from 0/32 in `bare` to 24/32 in both harness arms.
+
 The promotion completed all 96 planned records with no operational abnormal:
 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and
 0 forbidden-file edits.
@@ -75,6 +89,17 @@ The runner printed `Completed schedule with 80 non-zero runner exits`. Those
 80 exits are expected benchmark failures, not runner abnormalities. They are
 the 96 records minus the 16 strict successes.
 
+## Representative Reading
+
+| Signal | Reading |
+| --- | --- |
+| Safety | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
+| Failure measurement | Strict, functional, schema, workflow, boundary, hidden-access, timeout, and duration-tail signals are separable. |
+| Harness workflow value | Harness arms recovered schema-contract behavior in 24/32 records; `bare` recovered 0/32. |
+| Correctness value | Strict lift was real but narrow: `catalog-segments` passed 8/8 for both harness arms and 0/8 for `bare`. |
+| Memory value | `memory-harness` tied `workflow-only` on correctness, but had the lowest duration tail. |
+| Known hard failure | `cart-validation` stayed 0/8 strict and 0/8 schema across all arms, so it should not be treated as a clean memory discriminator. |
+
 ## Per-Task Results
 
 | Target | Task | Runs | Strict | Functional | Schema contract | Workflow | p95 duration | Max duration |
@@ -108,10 +133,21 @@ the 96 records minus the 16 strict successes.
 
 ## Interpretation
 
-This is the first clean 96-record three-arm product diagnostic for the
-answer-free stable-4 suite.
+This is the first clean 96-record three-arm representative result for the
+answer-free stable-4 suite. The strongest claim is not raw coding uplift. The
+strongest claim is that the kit makes agent work safe to run and precise to
+diagnose.
 
-The product signal is real but narrow:
+The run shows that the benchmark can tell apart:
+
+- expected benchmark failures versus runner abnormalities;
+- functional endpoint failures versus schema-contract failures;
+- workflow/local-gate success versus hidden-oracle success;
+- file-boundary discipline versus task correctness;
+- timeout/no-edit problems versus semantic implementation problems.
+
+That separation is the main product value. It converts "the agent failed" into
+actionable failure classes:
 
 - `bare` is a strong negative baseline under partial-realistic prompts:
   0/32 strict and 0/32 schema.
@@ -120,7 +156,8 @@ The product signal is real but narrow:
 - The strict lift came entirely from `catalog-segments`.
 - The schema lift came from `availability-badge`, `catalog-metrics`, and
   `catalog-segments`.
-- `cart-validation` remains unsolved across all arms.
+- `cart-validation` remains unsolved across all arms and should be redesigned
+  or split before being used as a memory-specific discriminator.
 
 The `memory-harness` did not beat `workflow-only` on strict, functional, or
 schema accuracy in this suite. Its useful signal is operational: it had a much
@@ -131,8 +168,9 @@ evidence, not as proof of better correctness.
 ## Recommended Next Step
 
 Do not spend the next run on another identical 96-record promotion. The current
-suite has answered its main question: harness guidance helps contract shape and
-one convention-transfer task, while memory-specific guidance does not yet add
+suite has answered its main question for this scope: the kit is strong at
+safety and failure measurement, harness workflow guidance helps contract shape
+and one convention-transfer task, and memory-specific guidance does not yet add
 accuracy beyond workflow-only.
 
 The next product experiment should be a v2 held-out suite:
@@ -147,4 +185,3 @@ The next product experiment should be a v2 held-out suite:
 - Keep task-specific answers out of target docs and failure memory.
 - Continue reporting functional, schema-contract, workflow, boundary, strict,
   timeout, and duration-tail metrics separately.
-
