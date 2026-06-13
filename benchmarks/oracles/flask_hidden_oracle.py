@@ -517,11 +517,7 @@ def check_catalog_price_policy_functional() -> None:
         expect(isinstance(row.get("price_band"), str), f"{sku} row must include price_band")
 
     summary = object_field(payload, "summary", default=payload)
-    expect(isinstance(summary, dict), "catalog price policy must include summary object")
-    expect(
-        sum(value for value in summary.values() if isinstance(value, int) and not isinstance(value, bool)) >= 3,
-        "catalog price policy summary must count the current catalog rows",
-    )
+    catalog_price_band_counts(summary)
 
     glossary = glossary_text()
     expect_terms(
@@ -560,8 +556,68 @@ def check_catalog_price_policy_record_consistency() -> None:
         expect(row.get("price_band") == band, f"{sku} must use decision-consistent price_band {band}")
 
     summary = object_field(payload, "summary", default=payload)
+    counts = catalog_price_band_counts(summary)
     for band in ("budget", "standard", "premium"):
-        expect(first_present(summary, (band,)) == 1, f"catalog price policy summary must count {band}")
+        expect(counts[band] == 1, f"catalog price policy summary must count {band}")
+
+    check_catalog_price_policy_hidden_decision_edge()
+
+
+def catalog_price_band_counts(summary: dict[str, Any]) -> dict[str, int]:
+    expect(isinstance(summary, dict), "catalog price policy must include summary object")
+    candidate_keys = ("price_bands", "price_band_counts", "counts", "counts_by_price_band")
+    candidates = [summary]
+    for key in candidate_keys:
+        value = summary.get(key)
+        if isinstance(value, dict):
+            candidates.append(value)
+
+    for candidate in candidates:
+        counts: dict[str, int] = {}
+        for band in ("budget", "standard", "premium"):
+            value = candidate.get(band)
+            if isinstance(value, int) and not isinstance(value, bool):
+                counts[band] = value
+        if len(counts) == 3:
+            expect(
+                sum(counts.values()) >= 3,
+                "catalog price policy summary must count the current catalog rows",
+            )
+            return counts
+
+    fail("catalog price policy summary must count budget, standard, and premium bands")
+
+
+def check_catalog_price_policy_hidden_decision_edge() -> None:
+    from app import catalog as catalog_module
+
+    original_products = list(catalog_module.PRODUCTS)
+    try:
+        catalog_module.PRODUCTS.append(
+            {
+                "sku": "policy-edge-37",
+                "name": "Policy edge item",
+                "price": "37.00",
+                "stock": 7,
+            }
+        )
+        payload = json_payload(client().get("/catalog/price-policy"))
+    finally:
+        catalog_module.PRODUCTS[:] = original_products
+
+    rows = rows_by_sku(payload)
+    edge_row = rows.get("policy-edge-37")
+    expect(isinstance(edge_row, dict), "catalog price policy must include hidden 37.00 edge row")
+    expect(
+        edge_row.get("price_band") == "premium",
+        "37.00 price must use decision-consistent premium price_band",
+    )
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_price_band_counts(summary)
+    expect(counts["budget"] == 1, "catalog price policy edge summary must count budget")
+    expect(counts["standard"] == 1, "catalog price policy edge summary must count standard")
+    expect(counts["premium"] == 2, "catalog price policy edge summary must count premium")
 
 
 def check_catalog_price_ladder() -> None:

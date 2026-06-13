@@ -86,7 +86,9 @@ The five-arm H1/H2 memory pilot completed all 25 records with 0 stalls,
 0 timeouts, 0 hidden-access findings, and 0 forbidden-file edits. Treat it as
 operational pilot evidence, not as the representative result: H1 record
 consistency was 0/5, while H2 mistake prevention showed a `bare` versus
-non-bare signal.
+non-bare signal. Post-run H1 triage found a brittle price-policy summary
+oracle and added a hidden 37.00 threshold edge; rerun a small multi-repeat
+pilot before using the H1 row as evidence.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

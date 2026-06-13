@@ -254,6 +254,21 @@ Prepared runner artifacts:
   failure records target prompt-named response-key drift and `meta.service`
   envelope drift.
 
+Post-run H1 oracle triage:
+
+- The first 1x pilot exposed a brittle `catalog-price-policy` summary check:
+  `summary.price_bands` was rejected even though the prompt only required a
+  compact summary with counts by price band.
+- The oracle now accepts direct or nested price-band count objects and keeps
+  the stricter requirement that all three adopted band labels are counted.
+- The `record_consistency` check now adds a hidden 37.00 price edge case, so
+  the adopted 35.00 premium threshold is measured directly rather than inferred
+  from the current catalog rows.
+- Replaying saved H1 worktrees under the revised oracle classifies
+  `decision-only` as record-consistent, keeps `workflow-only` and
+  `failure-only` negative because they lack the decision record, and keeps
+  `full-harness` negative because it used a 40.00 threshold.
+
 Pre-execution checks completed:
 
 - each non-bare target variant passes `python3 scripts/check_harness.py`;
@@ -310,8 +325,8 @@ accuracy lift.
 
 ## Minimum Next Implementation Steps
 
-1. Execute the prepared 50-record measurement pilot without
-   `--stop-on-abnormal`.
+1. Rerun a small multi-repeat H1/H2 pilot under the revised price-policy
+   oracle before promoting the 50-record plan.
 2. Classify every abnormal result after the run: hidden access, wrong-file
    edits, forbidden-file edits, preflight failures, stalls, and timeouts.
 3. Summarize public-safe pilot evidence under `docs/benchmarks/`.

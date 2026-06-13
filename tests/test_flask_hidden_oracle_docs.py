@@ -87,6 +87,31 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
         self.assertTrue(flask_hidden_oracle.is_money_key("unit_price"))
         self.assertTrue(flask_hidden_oracle.is_money_key("total_amount"))
 
+    def test_catalog_price_policy_summary_accepts_nested_price_band_counts(self) -> None:
+        counts = flask_hidden_oracle.catalog_price_band_counts(
+            {
+                "price_bands": {
+                    "budget": 1,
+                    "standard": 1,
+                    "premium": 1,
+                }
+            }
+        )
+
+        self.assertEqual(counts, {"budget": 1, "standard": 1, "premium": 1})
+
+    def test_catalog_price_policy_summary_requires_all_price_band_counts(self) -> None:
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.catalog_price_band_counts(
+                    {
+                        "price_bands": {
+                            "budget": 1,
+                            "standard": 2,
+                        }
+                    }
+                )
+
     def test_cart_functional_summary_prefers_summary_object_over_item_rows(self) -> None:
         class Response:
             def __init__(self, status_code: int, payload: dict[str, object]) -> None:

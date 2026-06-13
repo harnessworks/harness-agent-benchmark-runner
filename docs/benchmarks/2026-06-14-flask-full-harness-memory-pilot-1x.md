@@ -100,6 +100,30 @@ oracle pass on this task. Before scaling H1, triage the task and oracle around
 the price-policy summary expectation and the record-consistency command
 tagging.
 
+Post-run triage found one brittle oracle condition in this H1 result: the
+original functional check rejected `summary.price_bands`, even though the
+prompt only required a compact summary with counts by price band and existing
+catalog segment conventions use nested band-count objects. The oracle was
+updated after this run to accept `summary.price_bands` and to add a hidden
+37.00 price edge case for the adopted 35.00 decision threshold.
+
+Replaying the revised oracle against the saved H1 worktrees gives this
+classification:
+
+- `bare`: functional still fails because no domain glossary exists;
+  record-consistency still fails because no decision record exists.
+- `workflow-only`: functional passes; record-consistency fails because no
+  decision record exists.
+- `decision-only`: functional passes; record-consistency passes.
+- `failure-only`: functional passes; record-consistency fails because no
+  decision record exists.
+- `full-harness`: functional passes; record-consistency fails because the
+  implementation used a 40.00 threshold, and the hidden 37.00 edge must be
+  `premium` under the decision record.
+
+Do not compare the original H1 row from this report directly with future H1
+runs unless this oracle revision is called out.
+
 ## H2: Mistake-Prevention Signal
 
 H2 was represented by schema oracles tagged `mistake_prevention` on the four
@@ -154,11 +178,12 @@ Use this as a pilot-readiness result:
 - The five-arm suite completed cleanly from an operations perspective.
 - The new `record_consistency` and `mistake_prevention` dimensions were
   recorded and can be summarized.
-- H1 is not supported by this 1x result.
+- The original H1 score was not supported by a clean oracle; post-run triage
+  fixed a brittle summary-shape check and added a hidden threshold edge.
 - H2 has a clear `bare` versus non-bare signal, but not a memory-layer
   separation inside the non-bare arms.
-- The next useful step is H1 triage plus a small multi-repeat rerun, not a
-  direct promotion from this 1x result.
+- The next useful step is a small multi-repeat rerun under the revised H1
+  oracle, not a direct promotion from this 1x result.
 
 ## Raw Artifacts
 
