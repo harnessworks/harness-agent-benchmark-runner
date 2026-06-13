@@ -234,9 +234,9 @@ The first executable five-arm Flask pilot scaffold is prepared:
 | --- | --- | --- |
 | `bare` | `../flask-no-harness` | `b5351eae78ed9f17d46a43eee05354e9e13f6b94` |
 | `workflow-only` | `../flask-workflow-only` | `1a79d8cf9e0799789b3da8029dbbb5a572b3133e` |
-| `decision-only` | `../flask-decision-only` | `12284d76e6bddab685e347a0ab9af5814fe72e61` |
+| `decision-only` | `../flask-decision-only` | `95a843171d2183865c8698207b3b7d4075ba567b` |
 | `failure-only` | `../flask-failure-only` | `18330ea23880b1ca7a647ea58b0d694e2c658fc8` |
-| `full-harness` | `../flask-memory-harness` | `bd1a0f4cda36144fc07d0293117dc9ba3d35ab75` |
+| `full-harness` | `../flask-memory-harness` | `51700b72737a32fd9d96625a7547e28562865c57` |
 
 Prepared runner artifacts:
 
@@ -268,6 +268,10 @@ Post-run H1 oracle triage:
   `decision-only` as record-consistent, keeps `workflow-only` and
   `failure-only` negative because they lack the decision record, and keeps
   `full-harness` negative because it used a 40.00 threshold.
+- The decision-bearing target refs now also surface a narrow discoverability
+  rule: when a prompt refers to an adopted or repository policy that is not
+  fully specified, agents should search `docs/decisions/` by prompt domain
+  terms and apply the accepted decision without editing decision records.
 
 Pre-execution checks completed:
 

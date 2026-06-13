@@ -4,7 +4,7 @@
   "description": "H1 decision-memory task: use a pre-existing catalog price-band decision omitted from the prompt details.",
   "repo": {
     "source": "../flask-memory-harness",
-    "ref": "bd1a0f4cda36144fc07d0293117dc9ba3d35ab75"
+    "ref": "51700b72737a32fd9d96625a7547e28562865c57"
   },
   "prompt": "Add a catalog price policy endpoint.\n\nAdd GET /catalog/price-policy. It should classify the current in-memory catalog using the repository's adopted catalog price-band policy. Return one row per SKU in a top-level `products` list with `sku`, `price`, and `price_band`, sorted deterministically by SKU. Include a compact summary with counts by price band.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog price policy rows. Update companion documentation in the repository's documented domain docs location so future maintainers can find the route and stable price-band terms. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, decision records, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-full-harness-memory-pilot/hidden-effect-catalog-price-policy-full-harness.json",
