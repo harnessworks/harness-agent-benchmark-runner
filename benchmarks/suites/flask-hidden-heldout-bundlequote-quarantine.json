@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "flask-hidden-heldout-bundlequote-quarantine",
+  "task_dir": "../tasks/flask-hidden-heldout-10",
+  "arms": [
+    "no-harness",
+    "yes-harness"
+  ],
+  "task_ids": [
+    "hidden-effect-bundle-quote"
+  ],
+  "split": "heldout-quarantine",
+  "prompt_variant": "partial-realistic",
+  "notes": "Focused quarantine suite for hidden-effect-bundle-quote tail-latency triage. Do not mix this task into heldout promotion scoring until the task is simplified, split, or proven stable under the current mitigation limits."
+}

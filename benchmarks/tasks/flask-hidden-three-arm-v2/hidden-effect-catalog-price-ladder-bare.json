@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-catalog-price-ladder",
+  "description": "V2 held-out convention-transfer task: new catalog price ladder API with partial-realistic prompt and deterministic hidden oracle.",
+  "repo": {
+    "source": "../flask-no-harness",
+    "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
+  },
+  "prompt": "Add a catalog price ladder endpoint.\n\nAdd GET /catalog/price-ladder. It should classify each catalog product into a price tier. Use tier `economy` for prices below 10, `core` for prices from 10 up to but not including 30, and `premium` for prices 30 or higher. For each row include the prompt-named concepts `price_tier` and `price`. Sort rows deterministically by price ascending, then SKU. Include a compact summary with counts by tier.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog price ladder. Update companion documentation in the repository's documented docs location so future maintainers can find the tier definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-three-arm-v2/hidden-effect-catalog-price-ladder-bare.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
+    "commands": [
+      {
+        "name": "install Python dependencies for agent",
+        "command": [
+          "bash",
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  },
+  "verification": {
+    "commands": [
+      {
+        "name": "functional heldout oracle for hidden-effect-catalog-price-ladder",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-price-ladder",
+          "functional"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "functional"
+      },
+      {
+        "name": "generic schema style oracle for hidden-effect-catalog-price-ladder",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-price-ladder",
+          "schema"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
+      }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-three-arm-v2",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "bare"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/catalog/replenishment-signals",
+      "/catalog/price-ladder",
+      "/catalog/value-snapshot",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1",
+      "replenishment-signals-v1",
+      "price-ladder-v1",
+      "value-snapshot-v1"
+    ]
+  }
+}

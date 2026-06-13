@@ -2,148 +2,242 @@
 
 # Harness Agent Benchmark Runner
 
-Benchmark infrastructure for measuring coding-agent behavior against
-deterministic repository tasks. The runner isolates each attempt under `runs/`,
-records append-only JSONL evidence under `results/`, and publishes only
-credential-safe summaries in `docs/benchmarks/`.
+Benchmark infrastructure for running coding agents safely and measuring why
+they succeed or fail.
 
-This README is the short evidence front page. Operational details live in task
-specs, runner code, and detailed benchmark reports.
+## At A Glance
+
+- Product claim: the kit is strong at making agent work isolated, auditable,
+  and measurable.
+- Representative result: a clean 96-record three-arm Flask promotion with
+  0 stalls, 0 timeouts, 0 hidden-access findings, and 0 file-boundary issues.
+- Observed lift: harness arms recovered schema-contract behavior in 24/32
+  records; `bare` recovered 0/32.
+- Current limit: `memory-harness` did not beat `workflow-only` on correctness,
+  and `cart-validation` failed across all arms.
+- Next step: run a fresh 9-record v2 pilot, not another identical stable-4
+  promotion.
+
+Safe claims:
+
+- The runner separates functional, schema, workflow, boundary, timeout, and
+  hidden-access failures.
+- The harness helps agents preserve repo-local API/documentation conventions in
+  this suite.
+- The latest representative run was operationally clean enough to publish.
+
+Claims not supported yet:
+
+- The harness generally improves raw coding ability across arbitrary tasks.
+- Memory guidance is more accurate than workflow-only guidance.
+- Parallel `jobs=2` timeout stability is solved.
+
+The runner executes every attempt in an isolated clone or worktree under
+`runs/`, writes append-only local records under `results/`, and publishes only
+credential-safe summaries under `docs/benchmarks/`.
 
 ## Benchmark Status
 
-Current official evidence is the balanced hidden-oracle Flask A/B 100-run
-`jobs=2` evidence run. Both targets received the task-critical API contract in
-the prompt, while only the harnessed target retained repository-local workflow,
-documentation, boundary, and local-gate guidance.
+Representative result:
+[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md).
 
-Detailed report:
-[`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md).
+Supported kit-effect claim:
 
-This is representative for the explicitly measured `jobs=2` run shape. It is
-not a pure sequential claim: the run produced timeout noise, so strict scored
-success and verification passed should be read separately.
+> In answer-free held-out Flask tasks, the kit made agent work safer and more
+> measurable, and the harnessed repos preserved project API/schema conventions
+> that the bare repo missed. The representative run completed 96/96 records
+> with no operational abnormal events, and schema-contract success improved
+> from 0/32 in `bare` to 24/32 in both harness arms.
 
-## Current Evidence
+This 96-record sequential three-arm promotion is the current representative
+evidence because it used answer-free partial-realistic prompts, compared
+`bare`, `workflow-only`, and `memory-harness` targets, kept task-specific
+answers out of target repositories, and scored results with a hidden oracle
+from this runner repository.
 
-| Target | Harness | Runs | Strict successes | Verification passed | Non-timeout oracle failures | Timeouts | Boundary issues |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `flask-no-harness` | No | 50 | 46 | 46 | 3 | 1 | 0 |
-| `flask-yes-harness` | Yes | 50 | 48 | 49 | 0 | 2 | 0 |
+Headline: all 96 planned records completed with 0 stalls, 0 timeouts,
+0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits.
+There were 80 expected benchmark failures, but no operational abnormal events.
 
-Boundary issues combine wrong-file edits and forbidden-file edits. Both were 0
-on both sides in the 100-run jobs=2 evidence run.
+| Arm | Runs | Strict successes | Functional successes | Schema successes | Workflow successes | Boundary clean | p95 duration | Max duration |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bare` | 32 | 0 | 0 | 0 | 32 | 32 | 134.6s | 639.3s |
+| `workflow-only` | 32 | 8 | 8 | 24 | 32 | 32 | 124.1s | 544.7s |
+| `memory-harness` | 32 | 8 | 8 | 24 | 32 | 32 | 86.2s | 87.6s |
 
-Guardrail detail:
+The product reading is narrow and useful:
 
-| Target | Wrong-file edits | Forbidden-file edits | Timeouts |
-| --- | ---: | ---: | ---: |
-| `flask-no-harness` | 0 | 0 | 1 |
-| `flask-yes-harness` | 0 | 0 | 2 |
+- The kit is strong at making agent work measurable: strict, functional,
+  schema, workflow, boundary, timeout, and duration-tail signals are reported
+  separately.
+- The harness arms recovered schema-contract behavior in 24/32 records, while
+  `bare` recovered 0/32.
+- The only strict correctness lift was `catalog-segments`, where both harness
+  arms passed 8/8 and `bare` passed 0/8.
+- `cart-validation` stayed 0/8 strict across all arms, which is useful failure
+  evidence rather than a runner failure.
+- `memory-harness` did not beat `workflow-only` on correctness. Its current
+  signal is operational repeatability: max duration was 87.6s versus 544.7s
+  for `workflow-only` and 639.3s for `bare`.
 
-The no-harness target reached 46/50 strict successes after endpoint, method,
-request shape, response keys, constants, status codes, and business rules were
-moved into the prompt. The yes-harness target reached 48/50. Verification
-passed was 46/50 vs 49/50, showing a small residual harness lift under equal
-prompt-level contract disclosure. Timeout behavior moved against the harnessed
-target under `jobs=2`, so timeout stability remains unresolved.
+Latest v2 scaffold check:
+[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md).
+The first v2 held-out task completed 3/3 cleanly; `workflow-only` and
+`memory-harness` passed strict scoring, while `bare` failed functional/schema
+scoring. Treat it as scaffold validation and an early signal, not as the main
+representative result.
 
-## What This Shows
+The older balanced 100-run `jobs=2` report remains a full-contract control, not
+the main product claim. Its timeout stability remains unresolved because the
+parallel run produced timeout noise.
 
-The balanced pilot no longer measures whether the agent can guess a hidden API
-contract from repository conventions. It measures whether repository harnessing
-improves completion after the basic contract is shared:
+## Why This Kit Matters
 
-| Dimension | Observed signal |
-| --- | --- |
-| Functional implementation | no-harness had 2 reservation-preview summary misses; yes-harness had no non-timeout functional oracle misses. |
-| Companion documentation | no-harness had 1 catalog-metrics docs concept miss; yes-harness had none. |
-| File-boundary discipline | both targets had 0 wrong-file edits and 0 forbidden-file edits. |
-| Timeout stability | jobs=2 produced 1 no-harness timeout and 2 yes-harness timeouts, so this run does not show a harness timeout advantage. |
-| Local workflow use | yes-harness also ran its local harness gate before the hidden oracle. |
+The kit is valuable when an agent result must be safe enough to inspect and
+precise enough to learn from.
 
-This is a narrower and more defensible claim than the earlier hidden-contract
-calibration: the harness appears to produce a small residual verification-rate
-lift under the measured Flask API task shape. It is not a generic claim about
-all coding tasks or all repositories.
-
-## Why Use The Harness
-
-The harness is useful when agent success depends on more than writing code that
-passes obvious local tests. It gives the repository a durable way to teach and
-enforce local expectations without putting every convention into every prompt.
-
-| Harness advantage | Practical effect | Evidence in latest run |
+| Need | What the kit provides | Evidence in representative run |
 | --- | --- | --- |
-| Repository-local guidance | Agents can find project conventions, docs locations, and completion gates inside the target repository. | yes-harness completed 48/50 strict successes and 49/50 verification passes; no-harness completed 46/50 on both measures. |
-| Better companion docs discipline | Agents are steered toward the documented docs location and expected terminology. | no-harness had 1 catalog-metrics docs concept miss in the 100-run jobs=2 evidence run; yes-harness had none. |
-| Local gate before hidden scoring | The harnessed target can run repository-specific checks before the external hidden oracle. | yes-harness ran `scripts/check_harness.py` before hidden oracle checks. |
-| Boundary reinforcement | The target can state what files are in scope and what files are off-limits. | Both targets had 0 wrong-file edits in the latest 100-run jobs=2 evidence run; earlier hidden-oracle runs showed boundary drift when prompt wording was weaker. |
-| Less prompt burden over time | Stable conventions live in the repo instead of being repeated in every benchmark prompt. | The balanced prompt exposed the API contract; harness guidance still carried workflow, docs, and gate behavior. |
+| Isolate work | Each attempt runs in a fresh clone/worktree under `runs/`. | 96/96 records completed without dirty-source or runner abnormal findings. |
+| Prevent answer leakage | Task specs and hidden oracles stay in the runner, not the target repo. | 0 hidden-access findings under `CODEX_PROMPT_GUARD=1`. |
+| Enforce boundaries | Expected and forbidden paths are checked after the agent exits. | 0 wrong-file edits and 0 forbidden-file edits across all arms. |
+| Separate failure modes | Functional, schema, workflow, boundary, strict, timeout, and duration metrics are distinct. | 80 non-strict records were classified as expected benchmark failures, not runner failures. |
+| Make failures actionable | Reports preserve per-task clusters instead of hiding them in one score. | `cart-validation` is now clearly a hard semantic/API-design task, not a harness-memory discriminator. |
+| Keep prompts realistic | Stable conventions can live in repo guidance while task-specific answers stay out. | Harness arms recovered schema conventions without exposing exact hidden oracle payloads. |
 
-The current evidence does not prove that a harness always improves raw coding
-ability. It shows a more specific and useful thing: under convention-heavy
-repository tasks, the harness can reduce missed local expectations and make
-successful agent work more repeatable.
+This framing is important. A passing test suite alone is not enough when an
+agent edits the wrong file, touches a forbidden path, leaks hidden answers, or
+times out after producing a plausible diff. The runner measures those cases
+explicitly.
 
-## Evidence Trail
+## Benchmark Model
 
-| Scope | Agent | Mode | Runs | Strict successes | Verification passed | Timeouts | Boundary issues |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `flask-yes-harness` balanced hidden-oracle A/B | Codex CLI | 100-run jobs=2 | 50 | 48 | 49 | 2 | 0 |
-| `flask-no-harness` balanced hidden-oracle A/B | Codex CLI | 100-run jobs=2 | 50 | 46 | 46 | 1 | 0 |
-| `flask-yes-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot, run-time oracle | 10 | 10 | 10 | 0 | 0 |
-| `flask-no-harness` balanced hidden-oracle A/B | Codex CLI | 20-run pilot, run-time oracle | 10 | 6 | 6 | 0 | 0 |
+Current harness-effect experiments use three arms:
 
-Older `harness-starter-kit` runs remain useful agent-adapter evidence, but the
-Flask A/B rows are the relevant harness-effect evidence.
+| Arm | Target meaning |
+| --- | --- |
+| `bare` | Plain target repository with no harness guidance. |
+| `workflow-only` | Repository has AGENTS guidance, local gate, docs placement rules, and boundary conventions. |
+| `memory-harness` | Repository has workflow guidance plus generalized project conventions and failure memory. |
 
-```mermaid
-xychart-beta
-    title "Flask A/B Strict Success Rates"
-    x-axis ["100 jobs2 no", "100 jobs2 yes", "20 pilot no runtime", "20 pilot no rescore", "20 pilot yes"]
-    y-axis "Success %" 0 --> 100
-    bar [92, 96, 60, 90, 100]
-```
+Prompt levels are intentionally separated:
+
+| Prompt level | Use |
+| --- | --- |
+| `partial-realistic` | Main product experiment. The prompt omits task-specific answer strings and asks whether repo conventions transfer. |
+| `full-contract` | Control experiment. The prompt discloses the exact contract, so a small harness gap is expected. |
+
+Task-specific answer strings do not belong in target docs or memory. Examples
+to avoid include exact response keys, hidden oracle payloads, and route-specific
+answer catalogs for the task being scored.
 
 ## Metric Definitions
 
-- `Strict scored success`: final scored success after agent exit, diff check,
-  verification, and file-boundary checks. A passing test suite alone is not
-  counted as full success if file boundaries are violated.
+- `Strict successes`: final scored successes after preflight, agent exit, diff
+  checks, verification, and file-boundary checks.
+- `Functional success`: hidden-oracle behavior for endpoint semantics, status
+  codes, calculations, mutations, and edge cases.
+- `Schema contract success`: response envelope, key naming, metadata, and
+  API-style checks.
+- `Workflow success`: agent exit, diff check, local workflow/gate commands, and
+  file-boundary checks.
 - `Verification passed`: deterministic pytest plus hidden-oracle success before
   any file-boundary penalty.
-- `Functional oracle failures`: hidden-oracle failures in endpoint behavior,
-  response shape, calculations, status codes, mutation behavior, or edge cases.
-- `Docs oracle failures`: hidden-oracle failures in required companion
-  documentation content or placement.
-- `Wrong-file edits`: changed files outside the task's expected file boundary.
-  In these Flask runs, root `README.md` is outside the allowed companion-docs
-  path (`docs/**`) unless the task explicitly asks for README changes. A
-  README edit here is not a functional failure by itself and is not a general
-  claim that README edits are bad; it is a strict boundary miss.
-- `Forbidden-file edits`: changed files matching explicitly forbidden patterns.
+- `Boundary issues`: wrong-file edits plus forbidden-file edits.
+- `Wrong-file edits`: changes outside the task's expected file boundary. In
+  these Flask runs, root `README.md` is outside the allowed companion-docs path
+  (`docs/**`) unless the task explicitly asks for README changes. A README edit
+  here is not a functional failure by itself; it is a strict boundary miss.
+- `Forbidden-file edits`: changes matching explicitly forbidden patterns.
 - `Timeouts`: agent process failed to exit before the effective task timeout.
+- `Stalls`: agent process was stopped by the pilot stall watchdog, idle-output
+  watchdog, or no-edit watchdog. Count this separately from product-quality
+  oracle failures.
+- `Preflight failures`: leakage or readiness failures before agent execution.
+  These should fail the run without spending model budget.
+
+## Current Evidence
+
+| Scope | Mode | Runs | Strict successes | Verification passed | Timeouts | Boundary issues | Reading |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Three-arm stable-4 | `bare` promotion96 | 32 | 0 | 0 | 0 | 0 | Strong negative baseline under answer-free prompts. |
+| Three-arm stable-4 | `workflow-only` promotion96 | 32 | 8 | 8 | 0 | 0 | Repo workflow and conventions recover schema behavior. |
+| Three-arm stable-4 | `memory-harness` promotion96 | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Three-arm v2 | replenishment smoke | 3 | 2 | 2 | 0 | 0 | Scaffold check; not yet representative. |
+| Balanced Flask A/B | 100-run `jobs=2` full-contract control | 100 | 94 | 95 | 3 | 0 | Useful control, but parallel timeout stability remains unresolved. |
+
+Older `harness-starter-kit` runs remain useful agent-adapter evidence. The
+Flask hidden-oracle rows are the relevant harness-effect evidence.
+
+```mermaid
+xychart-beta
+    title "Representative Stable-4 Strict Success Rates"
+    x-axis ["bare", "workflow-only", "memory-harness"]
+    y-axis "Success %" 0 --> 100
+    bar [0, 25, 25]
+```
+
+## Operating Guidance
+
+Before a real pilot or promotion:
+
+- Keep the source repository clean unless the task explicitly documents why a
+  dirty source is required.
+- Run each attempt in an isolated clone or worktree under `runs/`.
+- Run leakage audits before execution; a hidden-answer hit should stop the run.
+- Keep deterministic scoring in the runner or target oracle, not in LLM-only
+  review.
+- Report functional, schema, workflow, boundary, strict, timeout, and duration
+  metrics separately.
+- Publish public-safe summaries in `docs/benchmarks/`; do not commit raw
+  `runs/`, `results/`, local logs, cloned repositories, credentials, or keys.
+
+Validation for this repository:
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+Smoke run against a sibling `harness-starter-kit` checkout:
+
+```bash
+python3 -m harness_agent_benchmark_runner run \
+  --task benchmarks/tasks/harness-starter-kit-smoke.json \
+  --agent-command "python3 $PWD/examples/agents/noop_agent.py"
+```
 
 ## What Comes Next
 
-The next useful follow-up is not another identical `jobs=2` run. To separate
-task quality from scheduler pressure, either rerun the same 100-record shape
-sequentially or rerun `jobs=2` with an explicitly higher timeout cap. Keep
-strict scored success, verification passed, and timeout counts separate in the
-report.
+Do not spend the next run on another identical stable-4 promotion. The
+representative 96-record result is clean enough for its current scope.
+
+The next product path is the v2 held-out suite at
+`benchmarks/suites/flask-hidden-three-arm-v2.json`, currently covering
+`hidden-effect-replenishment-signals`, `hidden-effect-catalog-price-ladder`,
+and `hidden-effect-catalog-value-snapshot`. Run a fresh 9-record v2 pilot
+before any larger promotion.
+
+Keep these rules for v2:
+
+- Preserve the same three arms: `bare`, `workflow-only`, and `memory-harness`.
+- Use `partial-realistic` prompts as the main product experiment.
+- Use `full-contract` prompts only as controls.
+- Keep task-specific answers out of target docs and failure memory.
+- Include functional and schema oracle dimensions for each task.
+- Keep route leakage audits and public-safe reporting mandatory.
+
+`cart-validation` should be split or redesigned before using it as a memory
+discriminator. In the representative run it behaved as a hard semantic/API
+design task: all arms scored 0/8 strict and 0/8 schema.
 
 ## Reports
 
-- [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md)
-- [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-jobs2-calibration.md)
-- [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-20-pilot.md)
-- [`docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-calibration-1x.md)
-- [`docs/benchmarks/2026-06-12-hidden-flask-ab-partial-calibration-35.md`](docs/benchmarks/2026-06-12-hidden-flask-ab-partial-calibration-35.md)
-- [`docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md)
-- [`docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-complex-harness-effect-ab-3x.md)
-- [`docs/benchmarks/2026-06-11-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-harness-effect-ab-3x.md)
 - [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
+- [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md)
+- [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md)
+- [`docs/benchmarks/2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](docs/benchmarks/2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md)
+- [`docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md`](docs/benchmarks/2026-06-12-hidden-flask-balanced-ab-100-jobs2.md)
+- [`docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md`](docs/benchmarks/2026-06-11-hidden-oracle-harness-effect-ab-3x.md)
 
 Raw `runs/`, `results/`, local logs, cloned repositories, and credentials are
 intentionally not committed. Public reports summarize reproducible,

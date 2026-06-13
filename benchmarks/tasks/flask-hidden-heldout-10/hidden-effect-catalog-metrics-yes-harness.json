@@ -4,7 +4,7 @@
   "description": "Held-out 10-run product evidence smoke: realistic partial prompt, answer-memory-free yes-harness ref, deterministic hidden oracle.",
   "repo": {
     "source": "../flask-yes-harness",
-    "ref": "91da156916e4cf924ded1fdc4d4db80338b19284"
+    "ref": "0f478ddede915b2f0cf41662373c53d8c70f3f86"
   },
   "prompt": "Add a catalog metrics endpoint.\n\nAdd GET /catalog/metrics. It should summarize the current in-memory catalog with SKU count, total units, inventory value, average item price, and the SKUs with the highest and lowest stock. Use the project's normal decimal-compatible money formatting for calculated money values.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, and status codes. Add focused pytest coverage for the current catalog metrics. Update companion documentation in the repository's documented docs location so future maintainers can find the inventory value and average price definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-hidden-heldout-10/hidden-effect-catalog-metrics-yes-harness.json",
@@ -24,6 +24,22 @@
     "runs/**",
     "results/**"
   ],
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
+    "commands": [
+      {
+        "name": "install Python dependencies for agent",
+        "command": [
+          "bash",
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  },
   "verification": {
     "commands": [
       {
@@ -32,17 +48,60 @@
           "python3",
           "scripts/check_harness.py"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimension": "workflow"
       },
       {
-        "name": "pytest and heldout-10 hidden-effect-catalog-metrics oracle",
+        "name": "functional heldout oracle for hidden-effect-catalog-metrics",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-catalog-metrics"
+          "hidden-effect-catalog-metrics",
+          "functional"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimension": "functional"
+      },
+      {
+        "name": "generic schema style oracle for hidden-effect-catalog-metrics",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-metrics",
+          "schema"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
       }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-heldout-10-answer-free",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "workflow-only"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1"
     ]
   }
 }

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "flask-hidden-three-arm-stable4",
+  "task_dir": "../tasks/flask-hidden-three-arm-stable4",
+  "arms": [
+    "bare",
+    "workflow-only",
+    "memory-harness"
+  ],
+  "task_ids": [
+    "hidden-effect-availability-badge",
+    "hidden-effect-cart-validation",
+    "hidden-effect-catalog-metrics",
+    "hidden-effect-catalog-segments"
+  ],
+  "split": "heldout",
+  "prompt_variant": "partial-realistic",
+  "notes": "First three-arm partial-realistic stable4 pilot suite. Memory-harness uses a separate target repo with generalized response-key failure memory and no task-specific hidden route answers."
+}

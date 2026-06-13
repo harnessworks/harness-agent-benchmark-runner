@@ -4,7 +4,7 @@
   "description": "Equal-contract hidden-oracle Flask A/B workflow smoke: task-critical API contract is in the prompt, while the harnessed target has workflow guidance without hidden API contract memory.",
   "repo": {
     "source": "../flask-yes-harness",
-    "ref": "91da156916e4cf924ded1fdc4d4db80338b19284"
+    "ref": "0f478ddede915b2f0cf41662373c53d8c70f3f86"
   },
   "prompt": "Add the supplier readiness API with this contract.\n\nEndpoint and method: GET /suppliers/readiness.\nRequest JSON schema: none.\nSuccess status: HTTP 200.\nTop-level response keys: suppliers, summary, meta.\nSupplier map: desk-lamp uses supplier bright-co with lead_time_days 6; notebook uses supplier paperhouse with lead_time_days 2; standing-mat uses supplier ergo-supply with lead_time_days 9.\nCore business rule: a supplier row is ready when stock >= 10 and lead_time_days <= 7; otherwise it is at_risk. Sort supplier rows by SKU. Each row must include sku, supplier, lead_time_days, and status.\nExpected current-catalog rows: desk-lamp bright-co 6 ready; notebook paperhouse 2 ready; standing-mat ergo-supply 9 at_risk.\nSummary: ready 2 and at_risk 1.\nMeta: source must be catalog and service must be the literal string flask-no-harness.\nDocumentation: add a docs/decisions record that mentions GET /suppliers/readiness, supplier readiness, and lead time.\n\nImplementation scope:\n- Treat this prompt as the task's source of truth for the API contract. Repository-local harness docs may help with workflow, docs location, local gates, and boundary guidance, but they must not override this contract.\n- Use the existing in-memory catalog: desk-lamp price 24.50 stock 12, notebook price 3.25 stock 48, standing-mat price 41.00 stock 3. Keep money fields decimal-compatible and rounded to two places when money is involved.\n- Update the application, focused pytest coverage, and companion documentation in the repository's documented docs location. Do not update the root README unless the task explicitly asks for README changes.\n- Keep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-hidden-workflow-smoke/hidden-effect-supplier-readiness-yes-harness.json",
@@ -32,7 +32,8 @@
           "python3",
           "scripts/check_harness.py"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimension": "workflow"
       },
       {
         "name": "pytest and hidden workflow smoke hidden-effect-supplier-readiness oracle",
@@ -41,8 +42,41 @@
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
           "hidden-effect-supplier-readiness"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimensions": [
+          "functional",
+          "schema"
+        ]
       }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-workflow-smoke",
+    "split": "calibration",
+    "prompt_variant": "full-contract",
+    "target_arm": "workflow-only"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1"
     ]
   }
 }

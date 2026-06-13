@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "flask-hidden-heldout-stable-8-answer-free",
+  "task_dir": "../tasks/flask-hidden-heldout-10",
+  "arms": [
+    "no-harness",
+    "yes-harness"
+  ],
+  "task_ids": [
+    "hidden-effect-availability-badge",
+    "hidden-effect-cart-validation",
+    "hidden-effect-catalog-metrics",
+    "hidden-effect-catalog-segments"
+  ],
+  "split": "heldout",
+  "prompt_variant": "partial-realistic",
+  "notes": "Reduced heldout promotion suite that quarantines hidden-effect-bundle-quote after repeated tail-latency stops. One repeat is 8 records. In the 3-arm taxonomy, no-harness maps to bare and the clean yes-harness ref maps to workflow-only; it does not measure memory-harness value."
+}

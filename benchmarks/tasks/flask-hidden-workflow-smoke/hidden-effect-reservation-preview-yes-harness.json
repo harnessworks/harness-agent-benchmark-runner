@@ -4,7 +4,7 @@
   "description": "Equal-contract hidden-oracle Flask A/B workflow smoke: task-critical API contract is in the prompt, while the harnessed target has workflow guidance without hidden API contract memory.",
   "repo": {
     "source": "../flask-yes-harness",
-    "ref": "91da156916e4cf924ded1fdc4d4db80338b19284"
+    "ref": "0f478ddede915b2f0cf41662373c53d8c70f3f86"
   },
   "prompt": "Add the reservation preview API with this contract.\n\nEndpoint and method: POST /inventory/reservations/preview.\nRequest JSON schema: an object with items, where items is a list and each item has sku and quantity.\nSuccess status: HTTP 200.\nError statuses: HTTP 400 JSON with error unknown_sku for an unknown SKU; HTTP 400 JSON with error invalid_quantity for a missing, non-integer, zero, or negative quantity.\nTop-level success response keys: reservations, summary, meta.\nSafety stock: 2.\nCore business rule: this is preview-only and must not mutate catalog stock. A SKU can reserve at most stock - safety_stock with a lower bound of 0. Each reservation row must include sku, status, requested_quantity, accepted_quantity, rejected_quantity, and projected_stock. Use status reserved when the full request is accepted, partial when only part is accepted, and rejected when none is accepted. Summary must include total requested, accepted, and rejected quantities.\nVerification payloads include {\"items\":[{\"sku\":\"desk-lamp\",\"quantity\":4},{\"sku\":\"standing-mat\",\"quantity\":2}]} expecting desk-lamp reserved accepted 4 rejected 0 projected_stock 8, standing-mat partial accepted 1 rejected 1 projected_stock 2, and summary requested 6 accepted 5 rejected 1. The catalog stock for standing-mat must remain 3 after preview.\nMeta: mode must be preview, safety_stock must be 2, and service must be the literal string flask-no-harness.\nDocumentation: update docs/domain/glossary.md to mention the reservation preview endpoint, safety stock, and value 2.\n\nImplementation scope:\n- Treat this prompt as the task's source of truth for the API contract. Repository-local harness docs may help with workflow, docs location, local gates, and boundary guidance, but they must not override this contract.\n- Use the existing in-memory catalog: desk-lamp price 24.50 stock 12, notebook price 3.25 stock 48, standing-mat price 41.00 stock 3. Keep money fields decimal-compatible and rounded to two places when money is involved.\n- Update the application, focused pytest coverage, and companion documentation in the repository's documented docs location. Do not update the root README unless the task explicitly asks for README changes.\n- Keep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-hidden-workflow-smoke/hidden-effect-reservation-preview-yes-harness.json",
@@ -32,7 +32,8 @@
           "python3",
           "scripts/check_harness.py"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimension": "workflow"
       },
       {
         "name": "pytest and hidden workflow smoke hidden-effect-reservation-preview oracle",
@@ -41,8 +42,41 @@
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
           "hidden-effect-reservation-preview"
         ],
-        "timeout_seconds": 180
+        "timeout_seconds": 180,
+        "dimensions": [
+          "functional",
+          "schema"
+        ]
       }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-workflow-smoke",
+    "split": "calibration",
+    "prompt_variant": "full-contract",
+    "target_arm": "workflow-only"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1"
     ]
   }
 }

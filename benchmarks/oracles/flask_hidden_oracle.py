@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 import sys
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
@@ -9,13 +10,35 @@ from typing import Any
 
 ROOT = Path.cwd()
 sys.path.insert(0, str(ROOT))
+SNAKE_CASE = re.compile(r"^[a-z][a-z0-9_]*$")
+MONEY_KEY_TERMS = ("amount", "cost", "discount", "price", "subtotal", "tax", "total", "value")
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        fail("usage: flask_hidden_oracle.py <task-id>")
+    if len(argv) not in {2, 3}:
+        fail("usage: flask_hidden_oracle.py <task-id> [strict|functional|schema]")
 
-    checks = {
+    mode = argv[2] if len(argv) == 3 else "strict"
+    checks_by_mode = {
+        "strict": strict_checks(),
+        "functional": functional_checks(),
+        "schema": schema_checks(),
+    }
+    if mode not in checks_by_mode:
+        fail(f"unknown hidden oracle mode: {mode}")
+
+    checks = checks_by_mode[mode]
+    task_id = argv[1]
+    if task_id not in checks:
+        fail(f"unknown hidden task id for {mode} oracle: {task_id}")
+
+    checks[task_id]()
+    print(f"{task_id}: hidden {mode} oracle passed")
+    return 0
+
+
+def strict_checks() -> dict[str, Any]:
+    return {
         "hidden-effect-availability-badge": check_availability_badge,
         "hidden-effect-stock-risk": check_stock_risk,
         "hidden-effect-supplier-readiness": check_supplier_readiness,
@@ -23,17 +46,57 @@ def main(argv: list[str]) -> int:
         "hidden-effect-cart-validation": check_cart_validation,
         "hidden-effect-catalog-metrics": check_catalog_metrics,
         "hidden-effect-catalog-segments": check_catalog_segments,
+        "hidden-effect-replenishment-signals": check_replenishment_signals,
+        "hidden-effect-catalog-price-ladder": check_catalog_price_ladder,
+        "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot,
         "hidden-effect-pick-list": check_pick_list,
         "hidden-effect-reservation-preview": check_reservation_preview,
         "hidden-effect-tax-preview": check_tax_preview,
     }
-    task_id = argv[1]
-    if task_id not in checks:
-        fail(f"unknown hidden task id: {task_id}")
 
-    checks[task_id]()
-    print(f"{task_id}: hidden oracle passed")
-    return 0
+
+def functional_checks() -> dict[str, Any]:
+    return {
+        "hidden-effect-availability-badge": check_availability_badge_functional,
+        "hidden-effect-bundle-quote": check_bundle_quote_functional,
+        "hidden-effect-cart-validation": check_cart_validation_functional,
+        "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
+        "hidden-effect-catalog-segments": check_catalog_segments_functional,
+        "hidden-effect-replenishment-signals": check_replenishment_signals_functional,
+        "hidden-effect-catalog-price-ladder": check_catalog_price_ladder_functional,
+        "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot_functional,
+    }
+
+
+def schema_checks() -> dict[str, Any]:
+    return {
+        "hidden-effect-availability-badge": lambda: check_get_schema_style(
+            "/products/standing-mat/availability",
+            "availability badge",
+        ),
+        "hidden-effect-bundle-quote": check_bundle_quote_schema,
+        "hidden-effect-cart-validation": check_cart_validation_schema,
+        "hidden-effect-catalog-metrics": lambda: check_get_schema_style(
+            "/catalog/metrics",
+            "catalog metrics",
+        ),
+        "hidden-effect-catalog-segments": lambda: check_get_schema_style(
+            "/catalog/segments",
+            "catalog segments",
+        ),
+        "hidden-effect-replenishment-signals": lambda: check_get_schema_style(
+            "/catalog/replenishment-signals",
+            "catalog replenishment signals",
+        ),
+        "hidden-effect-catalog-price-ladder": lambda: check_get_schema_style(
+            "/catalog/price-ladder",
+            "catalog price ladder",
+        ),
+        "hidden-effect-catalog-value-snapshot": lambda: check_get_schema_style(
+            "/catalog/value-snapshot",
+            "catalog value snapshot",
+        ),
+    }
 
 
 def client():
@@ -377,6 +440,121 @@ def check_catalog_segments() -> None:
     )
 
 
+def check_replenishment_signals() -> None:
+    response = client().get("/catalog/replenishment-signals")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    signals = payload.get("signals")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(signals, list), "replenishment signals must return signals list")
+    expect(
+        [
+            (
+                item.get("sku"),
+                item.get("signal"),
+                item.get("stock"),
+                item.get("target_stock"),
+                item.get("recommended_order_quantity"),
+            )
+            for item in signals
+        ]
+        == [
+            ("desk-lamp", "watch", 12, 25, 13),
+            ("notebook", "healthy", 48, 25, 0),
+            ("standing-mat", "reorder_now", 3, 25, 22),
+        ],
+        "replenishment signal rows are wrong",
+    )
+    expect(
+        summary
+        == {
+            "reorder_now": 1,
+            "watch": 1,
+            "healthy": 1,
+            "total_recommended_order_quantity": 35,
+        },
+        "replenishment summary is wrong",
+    )
+    expect(isinstance(meta, dict), "replenishment signals must include meta object")
+    expect(meta.get("source") == "catalog", "replenishment signals meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "replenishment signals meta.service is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/replenishment-signals", "reorder_now", "watch", "healthy", "target stock"),
+        "glossary must document replenishment route and signal terms",
+    )
+
+
+def check_catalog_price_ladder() -> None:
+    response = client().get("/catalog/price-ladder")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    ladder = payload.get("ladder")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(ladder, list), "price ladder must return ladder list")
+    expect(
+        [(item.get("sku"), item.get("price_tier")) for item in ladder]
+        == [
+            ("notebook", "economy"),
+            ("desk-lamp", "core"),
+            ("standing-mat", "premium"),
+        ],
+        "price ladder rows are wrong",
+    )
+    prices_by_sku = {item.get("sku"): item.get("price") for item in ladder}
+    expect_money(prices_by_sku.get("notebook"), Decimal("3.25"), "notebook price")
+    expect_money(prices_by_sku.get("desk-lamp"), Decimal("24.50"), "desk-lamp price")
+    expect_money(prices_by_sku.get("standing-mat"), Decimal("41.00"), "standing-mat price")
+    expect(
+        summary == {"economy": 1, "core": 1, "premium": 1},
+        "price ladder summary is wrong",
+    )
+    expect(isinstance(meta, dict), "price ladder must include meta object")
+    expect(meta.get("source") == "catalog", "price ladder meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "price ladder meta.service is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/price-ladder", "economy", "core", "premium"),
+        "glossary must document price ladder route and tiers",
+    )
+
+
+def check_catalog_value_snapshot() -> None:
+    response = client().get("/catalog/value-snapshot")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    snapshot = payload.get("snapshot")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(snapshot, list), "value snapshot must return snapshot list")
+    rows = {item.get("sku"): item for item in snapshot}
+    expect_money(rows.get("desk-lamp", {}).get("inventory_value"), Decimal("294.00"), "desk-lamp inventory value")
+    expect_money(rows.get("notebook", {}).get("inventory_value"), Decimal("156.00"), "notebook inventory value")
+    expect_money(rows.get("standing-mat", {}).get("inventory_value"), Decimal("123.00"), "standing-mat inventory value")
+    expect(isinstance(summary, dict), "value snapshot must include summary object")
+    expect_money(summary.get("total_inventory_value"), Decimal("573.00"), "total inventory value")
+    expect(summary.get("highest_value_sku") == "desk-lamp", "highest value sku is wrong")
+    expect(isinstance(meta, dict), "value snapshot must include meta object")
+    expect(meta.get("source") == "catalog", "value snapshot meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "value snapshot meta.service is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/value-snapshot", "inventory value", "highest value"),
+        "glossary must document value snapshot route and concepts",
+    )
+
+
 def check_pick_list() -> None:
     response = client().post(
         "/warehouse/pick-list",
@@ -461,6 +639,356 @@ def check_tax_preview() -> None:
     expect("tax rate" in decision and "0.0825" in decision, "decision must mention tax rate 0.0825")
 
 
+def check_availability_badge_functional() -> None:
+    response = client().get("/products/standing-mat/availability")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    availability = object_field(payload, "availability", default=payload)
+
+    expect(
+        normalized_status(availability, ("badge", "status", "state")) == "low_stock",
+        "standing-mat availability status must be low_stock",
+    )
+    expect(availability.get("orderable") is True, "standing-mat must be orderable")
+    expect(availability.get("restock_recommended") is True, "standing-mat must recommend restock")
+    expect(isinstance(availability.get("message"), str), "availability must include a human-readable message")
+
+    product = payload.get("product") or availability.get("product")
+    if product is not None:
+        expect(isinstance(product, dict), "availability product summary must be an object when present")
+        expect(product.get("sku") == "standing-mat", "availability product sku is wrong")
+        expect(product.get("stock") == 3, "availability product stock is wrong")
+
+    in_stock = json_payload(client().get("/products/desk-lamp/availability"))
+    in_stock_availability = object_field(in_stock, "availability", default=in_stock)
+    expect(
+        normalized_status(in_stock_availability, ("badge", "status", "state")) == "in_stock",
+        "desk-lamp availability status must be in_stock",
+    )
+    expect(
+        in_stock_availability.get("restock_recommended") is False,
+        "desk-lamp must not recommend restock",
+    )
+
+    missing = client().get("/products/missing/availability")
+    assert_status(missing, 404)
+    missing_payload = json_payload(missing)
+    expect(missing_payload.get("error") == "product_not_found", "missing SKU must return product_not_found")
+    expect(missing_payload.get("sku") == "missing", "missing response must echo sku")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/products/<sku>/availability", "in_stock", "low_stock"),
+        "glossary must document availability route and statuses",
+    )
+
+
+def check_bundle_quote_functional() -> None:
+    response, request_key = first_successful_post(
+        "/catalog/bundle-quote",
+        (
+            {
+                "bundle": [
+                    {"sku": "desk-lamp", "quantity": 1},
+                    {"sku": "notebook", "quantity": 4},
+                ]
+            },
+            {
+                "items": [
+                    {"sku": "desk-lamp", "quantity": 1},
+                    {"sku": "notebook", "quantity": 4},
+                ]
+            },
+        ),
+        "bundle quote",
+    )
+    payload = json_payload(response)
+    expect(first_present(payload, ("currency",)) == "USD", "bundle quote currency must be USD")
+    expect(first_present(payload, ("item_count",)) == 5, "bundle quote item_count is wrong")
+    expect_money(first_present(payload, ("subtotal",)), Decimal("37.50"), "bundle quote subtotal")
+    expect_money(first_present(payload, ("discount",)), Decimal("3.75"), "bundle quote discount")
+    expect_money(first_present(payload, ("total",)), Decimal("33.75"), "bundle quote total")
+    discount_rate = first_present(payload, ("discount_rate",), required=False)
+    if discount_rate is not None:
+        expect(str(discount_rate) in {"0.10", "0.1"}, "bundle quote discount_rate is wrong")
+
+    unknown = client().post(
+        "/catalog/bundle-quote",
+        json={request_key: [{"sku": "missing", "quantity": 1}]},
+    )
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown bundle SKU must return unknown_sku")
+
+    invalid = client().post(
+        "/catalog/bundle-quote",
+        json={request_key: [{"sku": "desk-lamp", "quantity": 0}]},
+    )
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid quantity must return invalid_quantity")
+
+    decision = docs_text("docs/decisions") + "\n" + docs_text("docs/domain")
+    normalized = " ".join(decision.split()).lower()
+    expect("post /catalog/bundle-quote" in normalized, "docs must mention POST /catalog/bundle-quote")
+    expect("bundle discount" in normalized, "docs must mention bundle discount")
+    expect("preview" in normalized, "docs must mention preview behavior")
+
+
+def check_cart_validation_functional() -> None:
+    response = client().post(
+        "/cart/validate",
+        json={
+            "items": [
+                {"sku": "desk-lamp", "quantity": 2},
+                {"sku": "standing-mat", "quantity": 5},
+            ]
+        },
+    )
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    desk_lamp = rows.get("desk-lamp")
+    standing_mat = rows.get("standing-mat")
+    expect(isinstance(desk_lamp, dict), "cart validation must include desk-lamp row")
+    expect(isinstance(standing_mat, dict), "cart validation must include standing-mat row")
+    expect(normalized_status(desk_lamp, ("status", "state")) == "accepted", "desk-lamp row must be accepted")
+    expect(normalized_status(standing_mat, ("status", "state")) == "limited", "standing-mat row must be limited")
+    expect(first_present(standing_mat, ("accepted_quantity", "accepted", "available_quantity")) == 3, "standing-mat accepted quantity is wrong")
+    expect(first_present(standing_mat, ("rejected_quantity", "rejected")) == 2, "standing-mat rejected quantity is wrong")
+
+    summary = object_field(payload, "summary", default=payload)
+    expect(first_present(summary, ("requested", "requested_quantity")) == 7, "cart requested summary is wrong")
+    expect(first_present(summary, ("accepted", "accepted_quantity")) == 5, "cart accepted summary is wrong")
+    expect(first_present(summary, ("rejected", "rejected_quantity")) == 2, "cart rejected summary is wrong")
+
+    products = json_payload(client().get("/products")).get("products")
+    standing_product = next(product for product in products if product["sku"] == "standing-mat")
+    expect(standing_product.get("stock") == 3, "cart validation must not mutate stock")
+
+    unknown = client().post("/cart/validate", json={"items": [{"sku": "missing", "quantity": 1}]})
+    assert_status(unknown, 400)
+    expect(json_payload(unknown).get("error") == "unknown_sku", "unknown cart SKU must return unknown_sku")
+
+    invalid = client().post("/cart/validate", json={"items": [{"sku": "desk-lamp", "quantity": 0}]})
+    assert_status(invalid, 400)
+    expect(json_payload(invalid).get("error") == "invalid_quantity", "invalid cart quantity must return invalid_quantity")
+
+
+def check_catalog_metrics_functional() -> None:
+    response = client().get("/catalog/metrics")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    metrics = object_field(payload, "metrics", default=payload)
+
+    expect(first_present(metrics, ("total_skus", "sku_count", "skus")) == 3, "catalog metrics sku count is wrong")
+    expect(first_present(metrics, ("total_units", "unit_count", "stock_units")) == 63, "catalog metrics total units is wrong")
+    expect_money(first_present(metrics, ("inventory_value",)), Decimal("573.00"), "catalog metrics inventory value")
+    expect_money(first_present(metrics, ("average_price", "average_item_price")), Decimal("22.92"), "catalog metrics average price")
+    expect(
+        first_present(metrics, ("highest_stock_sku", "max_stock_sku")) == "notebook",
+        "catalog metrics highest stock sku is wrong",
+    )
+    expect(
+        first_present(metrics, ("lowest_stock_sku", "min_stock_sku")) == "standing-mat",
+        "catalog metrics lowest stock sku is wrong",
+    )
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/metrics", "inventory value", "average price"),
+        "glossary must document catalog metrics route and concepts",
+    )
+
+
+def check_catalog_segments_functional() -> None:
+    response = client().get("/catalog/segments")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": ("standard", "steady"),
+        "notebook": ("budget", "deep"),
+        "standing-mat": ("premium", "scarce"),
+    }
+    for sku, (price_band, stock_band) in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog segments must include {sku} row")
+        expect(row.get("price_band") == price_band, f"{sku} price band is wrong")
+        expect(row.get("stock_band") == stock_band, f"{sku} stock band is wrong")
+
+    expect(first_present(payload, ("budget",)) == 1, "catalog segments budget count is wrong")
+    expect(first_present(payload, ("standard",)) == 1, "catalog segments standard count is wrong")
+    expect(first_present(payload, ("premium",)) == 1, "catalog segments premium count is wrong")
+    expect(first_present(payload, ("scarce",)) == 1, "catalog segments scarce count is wrong")
+    expect(first_present(payload, ("steady",)) == 1, "catalog segments steady count is wrong")
+    expect(first_present(payload, ("deep",)) == 1, "catalog segments deep count is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/segments", "budget", "standard", "premium", "scarce", "steady", "deep"),
+        "glossary must document catalog segments route and bands",
+    )
+
+
+def check_replenishment_signals_functional() -> None:
+    response = client().get("/catalog/replenishment-signals")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": ("watch", 12, 13),
+        "notebook": ("healthy", 48, 0),
+        "standing-mat": ("reorder_now", 3, 22),
+    }
+    for sku, (signal, stock, order_quantity) in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"replenishment signals must include {sku} row")
+        expect(normalized_status(row, ("signal", "status", "state")) == signal, f"{sku} signal is wrong")
+        expect(row.get("stock") == stock, f"{sku} stock is wrong")
+        expect(
+            first_present(
+                row,
+                (
+                    "recommended_order_quantity",
+                    "suggested_order_quantity",
+                    "suggested_order_units",
+                    "order_quantity",
+                ),
+            )
+            == order_quantity,
+            f"{sku} recommended order quantity is wrong",
+        )
+
+    expect(first_present(payload, ("reorder_now",)) == 1, "replenishment reorder_now count is wrong")
+    expect(first_present(payload, ("watch",)) == 1, "replenishment watch count is wrong")
+    expect(first_present(payload, ("healthy",)) == 1, "replenishment healthy count is wrong")
+    expect(
+        first_present(
+            payload,
+            (
+                "total_recommended_order_quantity",
+                "total_suggested_order_quantity",
+                "total_suggested_order_units",
+            ),
+        )
+        == 35,
+        "replenishment total recommended order quantity is wrong",
+    )
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/replenishment-signals", "reorder_now", "watch", "healthy", "target stock"),
+        "glossary must document replenishment route and signal terms",
+    )
+
+
+def check_catalog_price_ladder_functional() -> None:
+    response = client().get("/catalog/price-ladder")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected = {
+        "notebook": ("economy", Decimal("3.25")),
+        "desk-lamp": ("core", Decimal("24.50")),
+        "standing-mat": ("premium", Decimal("41.00")),
+    }
+    for sku, (tier, price) in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"price ladder must include {sku} row")
+        expect(normalized_status(row, ("price_tier", "tier", "band")) == tier, f"{sku} price tier is wrong")
+        expect_money(first_present(row, ("price",)), price, f"{sku} price")
+
+    expect(first_present(payload, ("economy",)) == 1, "price ladder economy count is wrong")
+    expect(first_present(payload, ("core",)) == 1, "price ladder core count is wrong")
+    expect(first_present(payload, ("premium",)) == 1, "price ladder premium count is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/price-ladder", "economy", "core", "premium"),
+        "glossary must document price ladder route and tiers",
+    )
+
+
+def check_catalog_value_snapshot_functional() -> None:
+    response = client().get("/catalog/value-snapshot")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected_values = {
+        "desk-lamp": Decimal("294.00"),
+        "notebook": Decimal("156.00"),
+        "standing-mat": Decimal("123.00"),
+    }
+    for sku, expected_value in expected_values.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"value snapshot must include {sku} row")
+        expect_money(first_present(row, ("inventory_value", "value")), expected_value, f"{sku} inventory value")
+
+    expect_money(
+        first_present(payload, ("total_inventory_value", "inventory_value_total")),
+        Decimal("573.00"),
+        "total inventory value",
+    )
+    expect(first_present(payload, ("highest_value_sku", "top_value_sku")) == "desk-lamp", "highest value sku is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/value-snapshot", "inventory value", "highest value"),
+        "glossary must document value snapshot route and concepts",
+    )
+
+
+def check_bundle_quote_schema() -> None:
+    response, request_key = first_successful_post(
+        "/catalog/bundle-quote",
+        (
+            {"bundle": [{"sku": "desk-lamp", "quantity": 1}]},
+            {"items": [{"sku": "desk-lamp", "quantity": 1}]},
+        ),
+        "bundle quote schema",
+    )
+    check_response_schema_style(response, "bundle quote")
+    error_response = client().post(
+        "/catalog/bundle-quote",
+        json={request_key: [{"sku": "missing", "quantity": 1}]},
+    )
+    check_error_schema_style(error_response, "bundle quote unknown SKU")
+
+
+def check_cart_validation_schema() -> None:
+    response = client().post("/cart/validate", json={"items": [{"sku": "desk-lamp", "quantity": 1}]})
+    check_response_schema_style(response, "cart validation")
+    error_response = client().post("/cart/validate", json={"items": [{"sku": "missing", "quantity": 1}]})
+    check_error_schema_style(error_response, "cart validation unknown SKU")
+
+
+def check_get_schema_style(path: str, label: str) -> None:
+    response = client().get(path)
+    check_response_schema_style(response, label)
+
+
+def check_response_schema_style(response: Any, label: str) -> None:
+    assert_status(response, 200)
+    payload = json_payload(response)
+    expect_snake_case_keys(payload, label)
+    expect_money_like_values(payload, label)
+    meta = payload.get("meta")
+    expect(isinstance(meta, dict), f"{label} must include meta object")
+    expect(meta.get("service") == "flask-no-harness", f"{label} meta.service is wrong")
+
+
+def check_error_schema_style(response: Any, label: str) -> None:
+    expect(response.status_code in {400, 404}, f"{label} must return a client error status")
+    payload = json_payload(response)
+    expect_snake_case_keys(payload, label)
+    expect(isinstance(payload.get("error"), str), f"{label} error response must include error string")
+
+
 def assert_status(response: Any, expected_status: int) -> None:
     expect(
         response.status_code == expected_status,
@@ -472,6 +1000,120 @@ def json_payload(response: Any) -> dict[str, Any]:
     payload = response.get_json(silent=True)
     expect(isinstance(payload, dict), f"response was not a JSON object: {response.get_data(as_text=True)}")
     return payload
+
+
+def object_field(payload: dict[str, Any], key: str, *, default: dict[str, Any]) -> dict[str, Any]:
+    value = payload.get(key)
+    if value is None:
+        return default
+    expect(isinstance(value, dict), f"{key} must be an object when present")
+    return value
+
+
+def normalized_status(payload: dict[str, Any], keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = payload.get(key)
+        if value is not None:
+            return str(value).strip().lower().replace(" ", "_")
+    return ""
+
+
+def normalized_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return " ".join(normalized_text(child) for child in value.values())
+    if isinstance(value, list):
+        return " ".join(normalized_text(child) for child in value)
+    return str(value).lower()
+
+
+def first_successful_post(
+    path: str,
+    payloads: tuple[dict[str, Any], ...],
+    label: str,
+) -> tuple[Any, str]:
+    last_response = None
+    for payload in payloads:
+        response = client().post(path, json=payload)
+        if response.status_code == 200:
+            return response, next(iter(payload))
+        last_response = response
+    if last_response is None:
+        fail(f"{label} did not receive any request payloads")
+    assert_status(last_response, 200)
+    fail(f"{label} did not accept any supported request envelope")
+
+
+def first_present(payload: Any, keys: tuple[str, ...], *, required: bool = True) -> Any:
+    if isinstance(payload, dict):
+        for key in keys:
+            if key in payload:
+                return payload[key]
+        for child in payload.values():
+            value = first_present(child, keys, required=False)
+            if value is not None:
+                return value
+    elif isinstance(payload, list):
+        for child in payload:
+            value = first_present(child, keys, required=False)
+            if value is not None:
+                return value
+    if required:
+        fail(f"missing expected field matching one of: {', '.join(keys)}")
+    return None
+
+
+def rows_by_sku(payload: Any) -> dict[str, dict[str, Any]]:
+    rows: dict[str, dict[str, Any]] = {}
+    collect_rows_by_sku(payload, rows)
+    return rows
+
+
+def collect_rows_by_sku(value: Any, rows: dict[str, dict[str, Any]]) -> None:
+    if isinstance(value, dict):
+        sku = value.get("sku")
+        if isinstance(sku, str):
+            rows[sku] = value
+        for child in value.values():
+            collect_rows_by_sku(child, rows)
+    elif isinstance(value, list):
+        for child in value:
+            collect_rows_by_sku(child, rows)
+
+
+def expect_snake_case_keys(value: Any, label: str, path: str = "$") -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            expect(isinstance(key, str) and bool(SNAKE_CASE.match(key)), f"{label} key {path}.{key} must be snake_case")
+            expect_snake_case_keys(child, label, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            expect_snake_case_keys(child, label, f"{path}[{index}]")
+
+
+def expect_money_like_values(value: Any, label: str, path: str = "$", key: str = "") -> None:
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            child_path = f"{path}.{child_key}"
+            if is_money_key(child_key):
+                expect_decimal_compatible(child, label, child_path)
+            expect_money_like_values(child, label, child_path, child_key)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            expect_money_like_values(child, label, f"{path}[{index}]", key)
+
+
+def is_money_key(key: str) -> bool:
+    if key.endswith(("_band", "_bands", "_tier", "_tiers")):
+        return False
+    return any(term in key for term in MONEY_KEY_TERMS)
+
+
+def expect_decimal_compatible(value: Any, label: str, path: str) -> None:
+    expect(value is not None and not isinstance(value, bool), f"{label} {path} must be decimal-compatible")
+    try:
+        Decimal(str(value))
+    except Exception as exc:  # noqa: BLE001
+        fail(f"{label} {path} must be decimal-compatible: {value!r} ({exc})")
 
 
 def docs_text(relative_dir: str) -> str:

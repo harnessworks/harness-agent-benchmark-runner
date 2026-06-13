@@ -24,17 +24,75 @@
     "runs/**",
     "results/**"
   ],
-  "verification": {
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
     "commands": [
       {
-        "name": "pytest and heldout-10 hidden-effect-catalog-segments oracle",
+        "name": "install Python dependencies for agent",
         "command": [
           "bash",
-          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-catalog-segments"
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
         ],
         "timeout_seconds": 180
       }
+    ]
+  },
+  "verification": {
+    "commands": [
+      {
+        "name": "functional heldout oracle for hidden-effect-catalog-segments",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-segments",
+          "functional"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "functional"
+      },
+      {
+        "name": "generic schema style oracle for hidden-effect-catalog-segments",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-segments",
+          "schema"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
+      }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-hidden-heldout-10-answer-free",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "bare"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1"
     ]
   }
 }

@@ -23,7 +23,11 @@ def main(argv: list[str] | None = None) -> int:
             keep_runs=not args.delete_run_dir,
             default_command_timeout_seconds=args.command_timeout,
             max_attempts_override=args.max_attempts,
+            agent_timeout_override_seconds=args.agent_timeout_override,
             max_agent_timeout_seconds=args.max_agent_timeout,
+            agent_stall_timeout_seconds=args.agent_stall_timeout,
+            agent_idle_timeout_seconds=args.agent_idle_timeout,
+            agent_no_edit_timeout_seconds=args.agent_no_edit_timeout,
             max_cost_usd_override=args.max_cost_usd,
             repo_source_override=args.repo_source,
             repo_ref_override=args.repo_ref,
@@ -37,7 +41,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"run_id: {result['run_id']}")
             print(f"attempts: {len(results)}/{result['attempt']['limit']}")
             print(f"success: {scoring.get('success')}")
+            print(f"functional_success: {scoring.get('functional_success')}")
+            print(f"schema_contract_success: {scoring.get('schema_contract_success')}")
+            print(f"workflow_success: {scoring.get('workflow_success')}")
+            print(f"strict_success: {scoring.get('strict_success', scoring.get('success'))}")
+            print(f"preflight_passed: {scoring.get('preflight_passed')}")
             print(f"verification_passed: {scoring.get('verification_passed')}")
+            print(f"agent_stalled: {scoring.get('agent_stalled')}")
             print(f"wrong_file_edits: {scoring.get('wrong_file_edits')}")
             print(f"forbidden_file_edits: {scoring.get('forbidden_file_edits')}")
         return 0 if result["scoring"].get("success") is True else 1
@@ -88,6 +98,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-agent-timeout",
         type=positive_int_arg,
         help="cap the task agent timeout in seconds",
+    )
+    run_parser.add_argument(
+        "--agent-timeout-override",
+        type=positive_int_arg,
+        help="replace the task agent timeout in seconds before applying --max-agent-timeout",
+    )
+    run_parser.add_argument(
+        "--agent-stall-timeout",
+        type=positive_int_arg,
+        help="shorter pilot watchdog timeout; records agent_stalled when it fires",
+    )
+    run_parser.add_argument(
+        "--agent-idle-timeout",
+        type=positive_int_arg,
+        help="idle-output watchdog timeout for agent processes; records agent_stalled when it fires",
+    )
+    run_parser.add_argument(
+        "--agent-no-edit-timeout",
+        type=positive_int_arg,
+        help="no-repository-change watchdog timeout for agent processes; records agent_stalled when it fires",
     )
     run_parser.add_argument(
         "--max-cost-usd",

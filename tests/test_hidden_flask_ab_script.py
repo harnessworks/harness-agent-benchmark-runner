@@ -20,7 +20,22 @@ BALANCED_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-balanced"
 MEDIUM_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-medium"
 WORKFLOW_SMOKE_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-workflow-smoke"
 HELDOUT_10_TASK_DIR = REPO_ROOT / "benchmarks" / "tasks" / "flask-hidden-heldout-10"
-CLEAN_YES_HARNESS_REF = "91da156916e4cf924ded1fdc4d4db80338b19284"
+STABLE_HELDOUT_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-stable-8.json"
+)
+THREE_ARM_STABLE_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-three-arm-stable4.json"
+)
+THREE_ARM_V2_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-three-arm-v2.json"
+)
+BUNDLEQUOTE_QUARANTINE_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
+)
+BARE_REF = "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
+CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
+THREE_ARM_WORKFLOW_REF = "3933a09a74cfefbd8455eb3aecd1ff225d7a7457"
+MEMORY_HARNESS_REF = "87c12fb5e276e40272ceee86d497823e93def4e9"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -109,6 +124,15 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             if "POST " in prompt:
                 for phrase in ("Request JSON schema:", "unknown_sku", "invalid_quantity"):
                     self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+            if pair.task_id == "hidden-effect-cart-validation":
+                self.assertIn(
+                    "summary object must use exactly these quantity keys: requested, accepted, rejected",
+                    prompt,
+                )
+                self.assertIn(
+                    'summary object {"requested":7,"accepted":5,"rejected":2}',
+                    prompt,
+                )
 
     def test_medium_hidden_flask_task_set_plans_exactly_twenty_runs(self) -> None:
         pairs = hidden_ab.load_task_pairs(MEDIUM_TASK_DIR)
@@ -192,6 +216,15 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 "Do not update the root README",
             ):
                 self.assertIn(phrase, prompt, msg=f"{pair.task_id} missing {phrase!r}")
+            if pair.task_id == "hidden-effect-cart-validation":
+                self.assertIn(
+                    "summary object must use exactly these quantity keys: requested, accepted, rejected",
+                    prompt,
+                )
+                self.assertIn(
+                    'summary object {"requested":7,"accepted":5,"rejected":2}',
+                    prompt,
+                )
 
     def test_heldout_10_uses_clean_harness_ref_and_partial_prompts(self) -> None:
         pairs = hidden_ab.load_task_pairs(HELDOUT_10_TASK_DIR)
@@ -221,6 +254,50 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertNotIn("Treat this prompt as the task's source of truth", prompt)
             self.assertNotIn("Endpoint and method:", prompt)
 
+    def test_answer_free_task_sets_have_metadata_dimensions_and_leakage_audits(self) -> None:
+        for task_dir, prompt_variant in (
+            (HELDOUT_10_TASK_DIR, "partial-realistic"),
+            (WORKFLOW_SMOKE_TASK_DIR, "full-contract"),
+        ):
+            pairs = hidden_ab.load_task_pairs(task_dir)
+            for pair in pairs:
+                for target_arm, task_path in (
+                    ("bare", pair.no_harness),
+                    ("workflow-only", pair.yes_harness),
+                ):
+                    data = hidden_ab.read_json(task_path)
+                    benchmark = data.get("benchmark", {})
+                    self.assertEqual(benchmark.get("target_arm"), target_arm)
+                    self.assertEqual(benchmark.get("prompt_variant"), prompt_variant)
+                    self.assertIn("forbidden_text", data.get("leakage_audit", {}))
+                    self.assertIn("catalog-metrics-v1", data["leakage_audit"]["forbidden_text"])
+                    commands = data["verification"]["commands"]
+                    if target_arm == "workflow-only":
+                        self.assertTrue(
+                            any(
+                                command.get("name") == "harness gate"
+                                and command.get("dimension") == "workflow"
+                                for command in commands
+                            )
+                        )
+                    hidden_commands = [
+                        command for command in commands if command.get("name") != "harness gate"
+                    ]
+                    dimensions = [
+                        command.get("dimension") or command.get("dimensions")
+                        for command in hidden_commands
+                    ]
+                    if task_dir == HELDOUT_10_TASK_DIR:
+                        self.assertEqual(data.get("agent_excluded_paths"), ["benchmarks"])
+                        setup_commands = data.get("agent_setup", {}).get("commands", [])
+                        self.assertEqual(len(setup_commands), 1)
+                        self.assertIn("pip install", " ".join(setup_commands[0]["command"]))
+                        self.assertEqual(dimensions, ["functional", "schema"])
+                        self.assertIn("functional", hidden_commands[0]["command"])
+                        self.assertIn("schema", hidden_commands[1]["command"])
+                    else:
+                        self.assertEqual(dimensions, [["functional", "schema"]])
+
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task_dir = Path(tmp)
@@ -236,6 +313,205 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 [item.group for item in schedule],
                 ["A:no-harness", "B:yes-harness", "B:yes-harness", "A:no-harness"],
             )
+
+    def test_loads_three_arm_groups_and_rotates_schedule(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task_dir = Path(tmp)
+            write_hidden_task(task_dir / "alpha-bare.json", "alpha", "../flask-bare")
+            write_hidden_task(task_dir / "alpha-workflow-only.json", "alpha", "../flask-workflow-only")
+            write_hidden_task(task_dir / "alpha-memory-harness.json", "alpha", "../flask-memory-harness")
+
+            groups = hidden_ab.load_task_groups(task_dir)
+            hidden_ab.validate_task_groups(groups)
+            schedule = hidden_ab.build_group_schedule(groups, repeats=2, arm_order="rotate")
+
+            self.assertEqual([group.task_id for group in groups], ["alpha"])
+            self.assertEqual(list(groups[0].arms), ["bare", "workflow-only", "memory-harness"])
+            self.assertEqual(
+                [item.group for item in schedule],
+                [
+                    "A:bare",
+                    "B:workflow-only",
+                    "C:memory-harness",
+                    "A:workflow-only",
+                    "B:memory-harness",
+                    "C:bare",
+                ],
+            )
+
+    def test_filters_task_groups_by_task_id(self) -> None:
+        groups = [
+            hidden_ab.TaskGroup("alpha", {"bare": Path("alpha-bare.json")}),
+            hidden_ab.TaskGroup("beta", {"bare": Path("beta-bare.json")}),
+            hidden_ab.TaskGroup("gamma", {"bare": Path("gamma-bare.json")}),
+        ]
+
+        selected = hidden_ab.filter_task_groups(groups, ["gamma", "alpha", "gamma"])
+
+        self.assertEqual([group.task_id for group in selected], ["gamma", "alpha"])
+
+    def test_filter_task_groups_rejects_unknown_task_id(self) -> None:
+        groups = [hidden_ab.TaskGroup("alpha", {"bare": Path("alpha-bare.json")})]
+
+        with self.assertRaises(hidden_ab.BenchmarkPlanError):
+            hidden_ab.filter_task_groups(groups, ["missing"])
+
+    def test_loads_suite_manifest_with_relative_task_dir_arms_and_task_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            suite_dir = root / "suites"
+            task_dir.mkdir()
+            suite_dir.mkdir()
+            write_hidden_task(task_dir / "alpha-bare.json", "alpha", "../flask-bare")
+            write_hidden_task(task_dir / "alpha-workflow-only.json", "alpha", "../flask-workflow-only")
+            write_hidden_task(task_dir / "alpha-memory-harness.json", "alpha", "../flask-memory-harness")
+            suite_path = suite_dir / "fixture.json"
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "id": "fixture-suite",
+                        "task_dir": "../tasks",
+                        "arms": ["bare", "workflow-only", "memory-harness"],
+                        "task_ids": ["alpha"],
+                        "split": "heldout",
+                        "prompt_variant": "partial-realistic",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            suite = hidden_ab.load_suite(suite_path)
+            groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+
+            self.assertEqual(suite.suite_id, "fixture-suite")
+            self.assertEqual(suite.split, "heldout")
+            self.assertEqual(suite.prompt_variant, "partial-realistic")
+            self.assertEqual(suite.task_ids, ("alpha",))
+            self.assertEqual([group.task_id for group in groups], ["alpha"])
+
+    def test_stable_heldout_suite_quarantines_bundle_quote(self) -> None:
+        suite = hidden_ab.load_suite(STABLE_HELDOUT_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual(len(selected), 4)
+        self.assertEqual(len(schedule), 8)
+        self.assertNotIn("hidden-effect-bundle-quote", [group.task_id for group in selected])
+
+    def test_three_arm_stable_suite_adds_memory_harness_arm(self) -> None:
+        suite = hidden_ab.load_suite(THREE_ARM_STABLE_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual(suite.arms, ("bare", "workflow-only", "memory-harness"))
+        self.assertEqual(len(selected), 4)
+        self.assertEqual(len(schedule), 12)
+        self.assertNotIn("hidden-effect-bundle-quote", [group.task_id for group in selected])
+        self.assertEqual(
+            [label for label, _ in hidden_ab.ordered_group_arms(selected[0], 1, "rotate")],
+            ["A:bare", "B:workflow-only", "C:memory-harness"],
+        )
+
+        for group in selected:
+            prompts = {hidden_ab.read_json(path)["prompt"] for path in group.arms.values()}
+            self.assertEqual(len(prompts), 1, msg=f"{group.task_id} prompts differ across arms")
+            memory = hidden_ab.read_json(group.arms["memory-harness"])
+            self.assertEqual(memory["repo"]["source"], "../flask-memory-harness")
+            self.assertEqual(memory["repo"]["ref"], MEMORY_HARNESS_REF)
+            self.assertEqual(memory["benchmark"]["target_arm"], "memory-harness")
+            workflow = hidden_ab.read_json(group.arms["workflow-only"])
+            self.assertEqual(workflow["repo"]["source"], "../flask-yes-harness")
+            self.assertEqual(workflow["repo"]["ref"], THREE_ARM_WORKFLOW_REF)
+            self.assertEqual(workflow["benchmark"]["target_arm"], "workflow-only")
+
+    def test_three_arm_v2_suite_scaffolds_convention_transfer_tasks(self) -> None:
+        suite = hidden_ab.load_suite(THREE_ARM_V2_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual(suite.suite_id, "flask-hidden-three-arm-v2")
+        self.assertEqual(suite.arms, ("bare", "workflow-only", "memory-harness"))
+        self.assertEqual(
+            [group.task_id for group in selected],
+            [
+                "hidden-effect-replenishment-signals",
+                "hidden-effect-catalog-price-ladder",
+                "hidden-effect-catalog-value-snapshot",
+            ],
+        )
+        self.assertEqual(len(schedule), 9)
+
+        expected_refs = {
+            "bare": ("../flask-no-harness", BARE_REF),
+            "workflow-only": ("../flask-yes-harness", THREE_ARM_WORKFLOW_REF),
+            "memory-harness": ("../flask-memory-harness", MEMORY_HARNESS_REF),
+        }
+        expected_forbidden_text = (
+            "/catalog/replenishment-signals",
+            "/catalog/price-ladder",
+            "/catalog/value-snapshot",
+            "replenishment-signals-v1",
+            "price-ladder-v1",
+            "value-snapshot-v1",
+        )
+
+        for group in selected:
+            prompts = {hidden_ab.read_json(path)["prompt"] for path in group.arms.values()}
+            self.assertEqual(len(prompts), 1, msg=f"{group.task_id} v2 prompts differ across arms")
+            prompt = prompts.pop()
+            self.assertIn("Follow the repository's existing public API response style", prompt)
+            self.assertIn("documented docs location", prompt)
+            self.assertIn("Do not update the root README", prompt)
+            self.assertNotIn("Endpoint and method:", prompt)
+            self.assertNotIn("Expected current-catalog", prompt)
+            for product_name in ("desk-lamp", "notebook", "standing-mat"):
+                self.assertNotIn(product_name, prompt)
+
+            if group.task_id == "hidden-effect-replenishment-signals":
+                self.assertIn("recommended_order_quantity", prompt)
+            elif group.task_id == "hidden-effect-catalog-price-ladder":
+                self.assertIn("price_tier", prompt)
+            elif group.task_id == "hidden-effect-catalog-value-snapshot":
+                self.assertIn("total_inventory_value", prompt)
+
+            for arm, path in group.arms.items():
+                data = hidden_ab.read_json(path)
+                self.assertEqual((data["repo"]["source"], data["repo"]["ref"]), expected_refs[arm])
+                self.assertEqual(data["benchmark"]["suite"], "flask-hidden-three-arm-v2")
+                self.assertEqual(data["benchmark"]["target_arm"], arm)
+                self.assertEqual(data["benchmark"]["prompt_variant"], "partial-realistic")
+                self.assertEqual(data.get("agent_excluded_paths"), ["benchmarks"])
+                for forbidden_text in expected_forbidden_text:
+                    self.assertIn(forbidden_text, data["leakage_audit"]["forbidden_text"])
+                commands = data["verification"]["commands"]
+                hidden_commands = [
+                    command for command in commands if command.get("name") != "harness gate"
+                ]
+                self.assertEqual(
+                    [command.get("dimension") for command in hidden_commands],
+                    ["functional", "schema"],
+                )
+                if arm == "bare":
+                    self.assertFalse(any(command.get("name") == "harness gate" for command in commands))
+                else:
+                    self.assertTrue(any(command.get("name") == "harness gate" for command in commands))
+
+    def test_bundlequote_quarantine_suite_selects_only_bundle_quote(self) -> None:
+        suite = hidden_ab.load_suite(BUNDLEQUOTE_QUARANTINE_SUITE)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
+        selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
+        hidden_ab.validate_task_groups(selected)
+        schedule = hidden_ab.build_group_schedule(selected, repeats=1, arm_order="rotate")
+
+        self.assertEqual([group.task_id for group in selected], ["hidden-effect-bundle-quote"])
+        self.assertEqual(len(schedule), 2)
 
     def test_large_mode_requires_enough_task_pairs_by_default(self) -> None:
         pair = hidden_ab.TaskPair(
@@ -257,6 +533,156 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         args = Namespace(mode="large", large_min_task_pairs=8, allow_small_large=True)
 
         hidden_ab.validate_run_shape(args, [pair])
+
+    def test_promotion_run_requires_clean_results_and_watchdogs(self) -> None:
+        pair = hidden_ab.TaskPair(
+            task_id="alpha",
+            no_harness=Path("alpha-no-harness.json"),
+            yes_harness=Path("alpha-yes-harness.json"),
+        )
+        args = Namespace(
+            mode="pilot",
+            large_min_task_pairs=8,
+            allow_small_large=False,
+            promotion_run=True,
+            stop_on_abnormal=True,
+            jobs=1,
+            agent_idle_timeout=300,
+            agent_no_edit_timeout=240,
+            agent_timeout_override=900,
+            require_clean_results=None,
+            min_clean_rounds=2,
+        )
+
+        with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "--require-clean-results"):
+            hidden_ab.validate_run_shape(args, [pair])
+
+    def test_promotion_run_requires_at_least_two_clean_rounds(self) -> None:
+        pair = hidden_ab.TaskPair(
+            task_id="alpha",
+            no_harness=Path("alpha-no-harness.json"),
+            yes_harness=Path("alpha-yes-harness.json"),
+        )
+        args = Namespace(
+            mode="pilot",
+            large_min_task_pairs=8,
+            allow_small_large=False,
+            promotion_run=True,
+            stop_on_abnormal=True,
+            jobs=1,
+            agent_idle_timeout=300,
+            agent_no_edit_timeout=240,
+            agent_timeout_override=900,
+            require_clean_results=Path("results"),
+            min_clean_rounds=1,
+        )
+
+        with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "min-clean-rounds"):
+            hidden_ab.validate_run_shape(args, [pair])
+
+    def test_promotion_run_requires_no_edit_watchdog(self) -> None:
+        pair = hidden_ab.TaskPair(
+            task_id="alpha",
+            no_harness=Path("alpha-no-harness.json"),
+            yes_harness=Path("alpha-yes-harness.json"),
+        )
+        args = Namespace(
+            mode="pilot",
+            large_min_task_pairs=8,
+            allow_small_large=False,
+            promotion_run=True,
+            stop_on_abnormal=True,
+            jobs=1,
+            agent_idle_timeout=300,
+            agent_no_edit_timeout=None,
+            agent_timeout_override=900,
+            require_clean_results=Path("results"),
+            min_clean_rounds=2,
+        )
+
+        with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "--agent-no-edit-timeout"):
+            hidden_ab.validate_run_shape(args, [pair])
+
+    def test_clean_readiness_requires_each_selected_task_arm_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            results_dir = root / "results"
+            task_dir.mkdir()
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                benchmark_arm="bare",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                benchmark_arm="workflow-only",
+            )
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=hidden_ab.LEGACY_ARMS)
+            for _ in range(2):
+                write_jsonl_record(results_dir, clean_record("alpha", "bare"))
+                write_jsonl_record(results_dir, clean_record("alpha", "workflow-only"))
+
+            summary = hidden_ab.validate_clean_readiness_results(results_dir, groups, min_clean_rounds=2)
+
+            self.assertEqual(summary.records, 4)
+            self.assertEqual(summary.expected_pairs, 2)
+            self.assertEqual(summary.min_clean_rounds, 2)
+
+    def test_clean_readiness_rejects_missing_clean_rounds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            results_dir = root / "results"
+            task_dir.mkdir()
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                benchmark_arm="bare",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                benchmark_arm="workflow-only",
+            )
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=hidden_ab.LEGACY_ARMS)
+            write_jsonl_record(results_dir, clean_record("alpha", "bare"))
+            write_jsonl_record(results_dir, clean_record("alpha", "workflow-only"))
+
+            with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "at least 2"):
+                hidden_ab.validate_clean_readiness_results(results_dir, groups, min_clean_rounds=2)
+
+    def test_clean_readiness_rejects_abnormal_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            results_dir = root / "results"
+            task_dir.mkdir()
+            write_hidden_task(
+                task_dir / "alpha-no-harness.json",
+                "alpha",
+                "../flask-no-harness",
+                benchmark_arm="bare",
+            )
+            write_hidden_task(
+                task_dir / "alpha-yes-harness.json",
+                "alpha",
+                "../flask-yes-harness",
+                benchmark_arm="workflow-only",
+            )
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=hidden_ab.LEGACY_ARMS)
+            record = clean_record("alpha", "bare")
+            record["scoring"]["agent_stalled"] = True
+            record["agent"] = {"termination_reason": "idle_watchdog"}
+            write_jsonl_record(results_dir, record)
+
+            with self.assertRaisesRegex(hidden_ab.BenchmarkPlanError, "abnormal signals"):
+                hidden_ab.validate_clean_readiness_results(results_dir, groups, min_clean_rounds=1)
 
     def test_rejects_ambiguous_docs_prompt_when_root_readme_is_outside_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -288,8 +714,13 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                 reasoning_effort="medium",
                 service_tier="",
                 jobs=2,
+                stop_on_abnormal=False,
                 agent_command="fixture-agent",
                 max_agent_timeout=60,
+                agent_timeout_override=None,
+                agent_stall_timeout=None,
+                agent_idle_timeout=None,
+                agent_no_edit_timeout=None,
                 max_cost_usd=1.0,
             )
             schedule = [
@@ -322,12 +753,152 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(max_active, 2)
 
+    def test_stop_on_abnormal_stops_after_stalled_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=1,
+                stop_on_abnormal=True,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                agent_timeout_override=None,
+                agent_stall_timeout=5,
+                agent_idle_timeout=None,
+                agent_no_edit_timeout=None,
+                max_cost_usd=1.0,
+            )
+            schedule = [
+                hidden_ab.ScheduledRun(1, "task-1", "A:bare", Path("task-1.json")),
+                hidden_ab.ScheduledRun(1, "task-2", "A:bare", Path("task-2.json")),
+            ]
+            calls = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                run_id = f"run-{calls}"
+                write_jsonl_record(
+                    args.results,
+                    {
+                        "run_id": run_id,
+                        "task": {"id": f"task-{calls}"},
+                        "scoring": {
+                            "success": False,
+                            "preflight_passed": True,
+                            "agent_timed_out": True,
+                            "agent_stalled": True,
+                            "wrong_file_edits": 0,
+                            "forbidden_file_edits": 0,
+                        },
+                    },
+                )
+                return hidden_ab.subprocess.CompletedProcess(
+                    command,
+                    1,
+                    stdout=f"run_id: {run_id}\nsuccess: False\n",
+                    stderr="",
+                )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(calls, 1)
+            self.assertIn("Stopping schedule after abnormal signal", stdout.getvalue())
+            self.assertIn("agent stall watchdog fired", stdout.getvalue())
+
+    def test_abnormal_reasons_ignore_plain_oracle_failure(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "scoring": {
+                "success": False,
+                "preflight_passed": True,
+                "agent_timed_out": False,
+                "agent_stalled": False,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+                "functional_success": False,
+                "schema_contract_success": False,
+                "workflow_success": True,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), [])
+
+    def test_abnormal_reasons_distinguish_idle_watchdog(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "agent": {"termination_reason": "idle_watchdog"},
+            "scoring": {
+                "preflight_passed": True,
+                "agent_timed_out": True,
+                "agent_stalled": True,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent idle watchdog fired"])
+
+    def test_abnormal_reasons_distinguish_no_edit_watchdog(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "agent": {"termination_reason": "no_edit_watchdog"},
+            "scoring": {
+                "preflight_passed": True,
+                "agent_timed_out": True,
+                "agent_stalled": True,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent no-edit watchdog fired"])
+
+    def test_build_runner_command_forwards_agent_stall_timeout(self) -> None:
+        args = Namespace(
+            workspace=Path("runs"),
+            results=Path("results"),
+            agent_command="fixture-agent",
+            max_agent_timeout=60,
+            agent_timeout_override=90,
+            agent_stall_timeout=5,
+            agent_idle_timeout=7,
+            agent_no_edit_timeout=11,
+            max_cost_usd=1.0,
+        )
+        item = hidden_ab.ScheduledRun(1, "alpha", "A:bare", Path("alpha-bare.json"))
+
+        command = hidden_ab.build_runner_command(args, item)
+
+        self.assertIn("--agent-stall-timeout", command)
+        override_index = command.index("--agent-timeout-override")
+        self.assertEqual(command[override_index + 1], "90")
+        index = command.index("--agent-stall-timeout")
+        self.assertEqual(command[index + 1], "5")
+        self.assertIn("--agent-idle-timeout", command)
+        idle_index = command.index("--agent-idle-timeout")
+        self.assertEqual(command[idle_index + 1], "7")
+        self.assertIn("--agent-no-edit-timeout", command)
+        no_edit_index = command.index("--agent-no-edit-timeout")
+        self.assertEqual(command[no_edit_index + 1], "11")
+
 
 def write_hidden_task(
     path: Path,
     task_id: str,
     repo_source: str,
     prompt: str | None = None,
+    benchmark_arm: str | None = None,
 ) -> None:
     if prompt is None:
         prompt = (
@@ -335,31 +906,53 @@ def write_hidden_task(
             "repository's documented docs location. Do not update the root README "
             "unless the task explicitly asks for README changes."
         )
-    path.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "id": task_id,
-                "description": "fixture hidden task",
-                "repo": {"source": repo_source, "ref": "abc123"},
-                "prompt": prompt,
-                "timeout_seconds": 600,
-                "max_attempts": 1,
-                "max_cost_usd": 1.0,
-                "expected_files": ["app/**", "tests/**", "docs/**"],
-                "forbidden_files": ["benchmarks/**"],
-                "verification": {
-                    "commands": [
-                        {
-                            "name": "hidden oracle",
-                            "command": ["bash", "run_flask_hidden_checks.sh", task_id],
-                        }
-                    ]
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
+    data = {
+        "schema_version": 1,
+        "id": task_id,
+        "description": "fixture hidden task",
+        "repo": {"source": repo_source, "ref": "abc123"},
+        "prompt": prompt,
+        "timeout_seconds": 600,
+        "max_attempts": 1,
+        "max_cost_usd": 1.0,
+        "expected_files": ["app/**", "tests/**", "docs/**"],
+        "forbidden_files": ["benchmarks/**"],
+        "verification": {
+            "commands": [
+                {
+                    "name": "hidden oracle",
+                    "command": ["bash", "run_flask_hidden_checks.sh", task_id],
+                }
+            ]
+        },
+    }
+    if benchmark_arm:
+        data["benchmark"] = {"target_arm": benchmark_arm}
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def clean_record(task_id: str, target_arm: str) -> dict[str, object]:
+    return {
+        "run_id": f"{task_id}-{target_arm}",
+        "task": {
+            "id": task_id,
+            "benchmark": {"target_arm": target_arm},
+        },
+        "scoring": {
+            "success": False,
+            "preflight_passed": True,
+            "agent_timed_out": False,
+            "agent_stalled": False,
+            "wrong_file_edits": 0,
+            "forbidden_file_edits": 0,
+        },
+    }
+
+
+def write_jsonl_record(results_dir: Path, record: dict[str, object]) -> None:
+    results_dir.mkdir(parents=True, exist_ok=True)
+    with (results_dir / "2026-06-12.jsonl").open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record, sort_keys=True) + "\n")
 
 
 if __name__ == "__main__":
