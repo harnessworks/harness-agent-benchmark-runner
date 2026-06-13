@@ -82,6 +82,8 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
     def test_schema_money_key_detection_allows_band_labels(self) -> None:
         self.assertFalse(flask_hidden_oracle.is_money_key("price_band"))
         self.assertFalse(flask_hidden_oracle.is_money_key("price_bands"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("price_tier"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("price_tiers"))
         self.assertTrue(flask_hidden_oracle.is_money_key("unit_price"))
         self.assertTrue(flask_hidden_oracle.is_money_key("total_amount"))
 

@@ -8,9 +8,11 @@
     "memory-harness"
   ],
   "task_ids": [
-    "hidden-effect-replenishment-signals"
+    "hidden-effect-replenishment-signals",
+    "hidden-effect-catalog-price-ladder",
+    "hidden-effect-catalog-value-snapshot"
   ],
   "split": "heldout",
   "prompt_variant": "partial-realistic",
-  "notes": "V2 three-arm partial-realistic convention-transfer suite. Starts with a new catalog replenishment task that reuses general API, metadata, docs, and response-key conventions without adding task-specific answer strings to target repos."
+  "notes": "V2 three-arm partial-realistic convention-transfer suite. Uses new catalog routes that reuse general API, metadata, docs, money-formatting, ordering, and response-key conventions without adding task-specific answer strings to target repos."
 }

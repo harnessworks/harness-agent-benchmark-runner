@@ -429,7 +429,7 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertEqual(workflow["repo"]["ref"], THREE_ARM_WORKFLOW_REF)
             self.assertEqual(workflow["benchmark"]["target_arm"], "workflow-only")
 
-    def test_three_arm_v2_suite_scaffolds_replenishment_signals_task(self) -> None:
+    def test_three_arm_v2_suite_scaffolds_convention_transfer_tasks(self) -> None:
         suite = hidden_ab.load_suite(THREE_ARM_V2_SUITE)
         groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=suite.arms)
         selected = hidden_ab.filter_task_groups(groups, suite.task_ids, "suite task_ids")
@@ -438,54 +438,70 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         self.assertEqual(suite.suite_id, "flask-hidden-three-arm-v2")
         self.assertEqual(suite.arms, ("bare", "workflow-only", "memory-harness"))
-        self.assertEqual([group.task_id for group in selected], ["hidden-effect-replenishment-signals"])
-        self.assertEqual(len(schedule), 3)
-
-        group = selected[0]
-        prompts = {hidden_ab.read_json(path)["prompt"] for path in group.arms.values()}
-        self.assertEqual(len(prompts), 1, msg="v2 replenishment prompts differ across arms")
-        prompt = prompts.pop()
-        self.assertIn("Follow the repository's existing public API response style", prompt)
-        self.assertIn("documented docs location", prompt)
-        self.assertIn("Do not update the root README", prompt)
-        self.assertIn("recommended_order_quantity", prompt)
-        self.assertNotIn("Endpoint and method:", prompt)
-        self.assertNotIn("Expected current-catalog", prompt)
-        for product_name in ("desk-lamp", "notebook", "standing-mat"):
-            self.assertNotIn(product_name, prompt)
+        self.assertEqual(
+            [group.task_id for group in selected],
+            [
+                "hidden-effect-replenishment-signals",
+                "hidden-effect-catalog-price-ladder",
+                "hidden-effect-catalog-value-snapshot",
+            ],
+        )
+        self.assertEqual(len(schedule), 9)
 
         expected_refs = {
             "bare": ("../flask-no-harness", BARE_REF),
             "workflow-only": ("../flask-yes-harness", THREE_ARM_WORKFLOW_REF),
             "memory-harness": ("../flask-memory-harness", MEMORY_HARNESS_REF),
         }
-        for arm, path in group.arms.items():
-            data = hidden_ab.read_json(path)
-            self.assertEqual((data["repo"]["source"], data["repo"]["ref"]), expected_refs[arm])
-            self.assertEqual(data["benchmark"]["suite"], "flask-hidden-three-arm-v2")
-            self.assertEqual(data["benchmark"]["target_arm"], arm)
-            self.assertEqual(data["benchmark"]["prompt_variant"], "partial-realistic")
-            self.assertEqual(data.get("agent_excluded_paths"), ["benchmarks"])
-            self.assertIn(
-                "/catalog/replenishment-signals",
-                data["leakage_audit"]["forbidden_text"],
-            )
-            self.assertIn(
-                "replenishment-signals-v1",
-                data["leakage_audit"]["forbidden_text"],
-            )
-            commands = data["verification"]["commands"]
-            hidden_commands = [
-                command for command in commands if command.get("name") != "harness gate"
-            ]
-            self.assertEqual(
-                [command.get("dimension") for command in hidden_commands],
-                ["functional", "schema"],
-            )
-            if arm == "bare":
-                self.assertFalse(any(command.get("name") == "harness gate" for command in commands))
-            else:
-                self.assertTrue(any(command.get("name") == "harness gate" for command in commands))
+        expected_forbidden_text = (
+            "/catalog/replenishment-signals",
+            "/catalog/price-ladder",
+            "/catalog/value-snapshot",
+            "replenishment-signals-v1",
+            "price-ladder-v1",
+            "value-snapshot-v1",
+        )
+
+        for group in selected:
+            prompts = {hidden_ab.read_json(path)["prompt"] for path in group.arms.values()}
+            self.assertEqual(len(prompts), 1, msg=f"{group.task_id} v2 prompts differ across arms")
+            prompt = prompts.pop()
+            self.assertIn("Follow the repository's existing public API response style", prompt)
+            self.assertIn("documented docs location", prompt)
+            self.assertIn("Do not update the root README", prompt)
+            self.assertNotIn("Endpoint and method:", prompt)
+            self.assertNotIn("Expected current-catalog", prompt)
+            for product_name in ("desk-lamp", "notebook", "standing-mat"):
+                self.assertNotIn(product_name, prompt)
+
+            if group.task_id == "hidden-effect-replenishment-signals":
+                self.assertIn("recommended_order_quantity", prompt)
+            elif group.task_id == "hidden-effect-catalog-price-ladder":
+                self.assertIn("price_tier", prompt)
+            elif group.task_id == "hidden-effect-catalog-value-snapshot":
+                self.assertIn("total_inventory_value", prompt)
+
+            for arm, path in group.arms.items():
+                data = hidden_ab.read_json(path)
+                self.assertEqual((data["repo"]["source"], data["repo"]["ref"]), expected_refs[arm])
+                self.assertEqual(data["benchmark"]["suite"], "flask-hidden-three-arm-v2")
+                self.assertEqual(data["benchmark"]["target_arm"], arm)
+                self.assertEqual(data["benchmark"]["prompt_variant"], "partial-realistic")
+                self.assertEqual(data.get("agent_excluded_paths"), ["benchmarks"])
+                for forbidden_text in expected_forbidden_text:
+                    self.assertIn(forbidden_text, data["leakage_audit"]["forbidden_text"])
+                commands = data["verification"]["commands"]
+                hidden_commands = [
+                    command for command in commands if command.get("name") != "harness gate"
+                ]
+                self.assertEqual(
+                    [command.get("dimension") for command in hidden_commands],
+                    ["functional", "schema"],
+                )
+                if arm == "bare":
+                    self.assertFalse(any(command.get("name") == "harness gate" for command in commands))
+                else:
+                    self.assertTrue(any(command.get("name") == "harness gate" for command in commands))
 
     def test_bundlequote_quarantine_suite_selects_only_bundle_quote(self) -> None:
         suite = hidden_ab.load_suite(BUNDLEQUOTE_QUARANTINE_SUITE)

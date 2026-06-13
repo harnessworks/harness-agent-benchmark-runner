@@ -47,6 +47,8 @@ def strict_checks() -> dict[str, Any]:
         "hidden-effect-catalog-metrics": check_catalog_metrics,
         "hidden-effect-catalog-segments": check_catalog_segments,
         "hidden-effect-replenishment-signals": check_replenishment_signals,
+        "hidden-effect-catalog-price-ladder": check_catalog_price_ladder,
+        "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot,
         "hidden-effect-pick-list": check_pick_list,
         "hidden-effect-reservation-preview": check_reservation_preview,
         "hidden-effect-tax-preview": check_tax_preview,
@@ -61,6 +63,8 @@ def functional_checks() -> dict[str, Any]:
         "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
         "hidden-effect-catalog-segments": check_catalog_segments_functional,
         "hidden-effect-replenishment-signals": check_replenishment_signals_functional,
+        "hidden-effect-catalog-price-ladder": check_catalog_price_ladder_functional,
+        "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot_functional,
     }
 
 
@@ -83,6 +87,14 @@ def schema_checks() -> dict[str, Any]:
         "hidden-effect-replenishment-signals": lambda: check_get_schema_style(
             "/catalog/replenishment-signals",
             "catalog replenishment signals",
+        ),
+        "hidden-effect-catalog-price-ladder": lambda: check_get_schema_style(
+            "/catalog/price-ladder",
+            "catalog price ladder",
+        ),
+        "hidden-effect-catalog-value-snapshot": lambda: check_get_schema_style(
+            "/catalog/value-snapshot",
+            "catalog value snapshot",
         ),
     }
 
@@ -477,6 +489,72 @@ def check_replenishment_signals() -> None:
     )
 
 
+def check_catalog_price_ladder() -> None:
+    response = client().get("/catalog/price-ladder")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    ladder = payload.get("ladder")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(ladder, list), "price ladder must return ladder list")
+    expect(
+        [(item.get("sku"), item.get("price_tier")) for item in ladder]
+        == [
+            ("notebook", "economy"),
+            ("desk-lamp", "core"),
+            ("standing-mat", "premium"),
+        ],
+        "price ladder rows are wrong",
+    )
+    prices_by_sku = {item.get("sku"): item.get("price") for item in ladder}
+    expect_money(prices_by_sku.get("notebook"), Decimal("3.25"), "notebook price")
+    expect_money(prices_by_sku.get("desk-lamp"), Decimal("24.50"), "desk-lamp price")
+    expect_money(prices_by_sku.get("standing-mat"), Decimal("41.00"), "standing-mat price")
+    expect(
+        summary == {"economy": 1, "core": 1, "premium": 1},
+        "price ladder summary is wrong",
+    )
+    expect(isinstance(meta, dict), "price ladder must include meta object")
+    expect(meta.get("source") == "catalog", "price ladder meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "price ladder meta.service is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/price-ladder", "economy", "core", "premium"),
+        "glossary must document price ladder route and tiers",
+    )
+
+
+def check_catalog_value_snapshot() -> None:
+    response = client().get("/catalog/value-snapshot")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    snapshot = payload.get("snapshot")
+    summary = payload.get("summary")
+    meta = payload.get("meta")
+
+    expect(isinstance(snapshot, list), "value snapshot must return snapshot list")
+    rows = {item.get("sku"): item for item in snapshot}
+    expect_money(rows.get("desk-lamp", {}).get("inventory_value"), Decimal("294.00"), "desk-lamp inventory value")
+    expect_money(rows.get("notebook", {}).get("inventory_value"), Decimal("156.00"), "notebook inventory value")
+    expect_money(rows.get("standing-mat", {}).get("inventory_value"), Decimal("123.00"), "standing-mat inventory value")
+    expect(isinstance(summary, dict), "value snapshot must include summary object")
+    expect_money(summary.get("total_inventory_value"), Decimal("573.00"), "total inventory value")
+    expect(summary.get("highest_value_sku") == "desk-lamp", "highest value sku is wrong")
+    expect(isinstance(meta, dict), "value snapshot must include meta object")
+    expect(meta.get("source") == "catalog", "value snapshot meta.source is wrong")
+    expect(meta.get("service") == "flask-no-harness", "value snapshot meta.service is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/value-snapshot", "inventory value", "highest value"),
+        "glossary must document value snapshot route and concepts",
+    )
+
+
 def check_pick_list() -> None:
     response = client().post(
         "/warehouse/pick-list",
@@ -807,6 +885,64 @@ def check_replenishment_signals_functional() -> None:
     )
 
 
+def check_catalog_price_ladder_functional() -> None:
+    response = client().get("/catalog/price-ladder")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected = {
+        "notebook": ("economy", Decimal("3.25")),
+        "desk-lamp": ("core", Decimal("24.50")),
+        "standing-mat": ("premium", Decimal("41.00")),
+    }
+    for sku, (tier, price) in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"price ladder must include {sku} row")
+        expect(normalized_status(row, ("price_tier", "tier", "band")) == tier, f"{sku} price tier is wrong")
+        expect_money(first_present(row, ("price",)), price, f"{sku} price")
+
+    expect(first_present(payload, ("economy",)) == 1, "price ladder economy count is wrong")
+    expect(first_present(payload, ("core",)) == 1, "price ladder core count is wrong")
+    expect(first_present(payload, ("premium",)) == 1, "price ladder premium count is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/price-ladder", "economy", "core", "premium"),
+        "glossary must document price ladder route and tiers",
+    )
+
+
+def check_catalog_value_snapshot_functional() -> None:
+    response = client().get("/catalog/value-snapshot")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    expected_values = {
+        "desk-lamp": Decimal("294.00"),
+        "notebook": Decimal("156.00"),
+        "standing-mat": Decimal("123.00"),
+    }
+    for sku, expected_value in expected_values.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"value snapshot must include {sku} row")
+        expect_money(first_present(row, ("inventory_value", "value")), expected_value, f"{sku} inventory value")
+
+    expect_money(
+        first_present(payload, ("total_inventory_value", "inventory_value_total")),
+        Decimal("573.00"),
+        "total inventory value",
+    )
+    expect(first_present(payload, ("highest_value_sku", "top_value_sku")) == "desk-lamp", "highest value sku is wrong")
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/value-snapshot", "inventory value", "highest value"),
+        "glossary must document value snapshot route and concepts",
+    )
+
+
 def check_bundle_quote_schema() -> None:
     response, request_key = first_successful_post(
         "/catalog/bundle-quote",
@@ -967,7 +1103,7 @@ def expect_money_like_values(value: Any, label: str, path: str = "$", key: str =
 
 
 def is_money_key(key: str) -> bool:
-    if key.endswith("_band") or key.endswith("_bands"):
+    if key.endswith(("_band", "_bands", "_tier", "_tiers")):
         return False
     return any(term in key for term in MONEY_KEY_TERMS)
 

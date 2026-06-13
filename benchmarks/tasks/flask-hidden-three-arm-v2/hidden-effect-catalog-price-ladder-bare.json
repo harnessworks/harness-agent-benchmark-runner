@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "id": "hidden-effect-replenishment-signals",
-  "description": "V2 held-out convention-transfer task: new catalog replenishment API with partial-realistic prompt and deterministic hidden oracle.",
+  "id": "hidden-effect-catalog-price-ladder",
+  "description": "V2 held-out convention-transfer task: new catalog price ladder API with partial-realistic prompt and deterministic hidden oracle.",
   "repo": {
     "source": "../flask-no-harness",
     "ref": "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
   },
-  "prompt": "Add a catalog replenishment signals endpoint.\n\nAdd GET /catalog/replenishment-signals. It should return per-product replenishment signals for the current in-memory catalog. Use signal `reorder_now` when stock is below 5, `watch` when stock is 5 up to but not including 15, and `healthy` when stock is 15 or higher. Use target stock 25. For each row include the prompt-named concepts `signal` and `recommended_order_quantity`; items at or above target stock should recommend 0. Sort rows deterministically by SKU. Include a compact summary with counts by signal and total recommended order quantity.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog replenishment signals. Update companion documentation in the repository's documented docs location so future maintainers can find the signal definitions and target stock rule. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
-  "prompt_ref": "benchmarks/tasks/flask-hidden-three-arm-v2/hidden-effect-replenishment-signals-bare.json",
+  "prompt": "Add a catalog price ladder endpoint.\n\nAdd GET /catalog/price-ladder. It should classify each catalog product into a price tier. Use tier `economy` for prices below 10, `core` for prices from 10 up to but not including 30, and `premium` for prices 30 or higher. For each row include the prompt-named concepts `price_tier` and `price`. Sort rows deterministically by price ascending, then SKU. Include a compact summary with counts by tier.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog price ladder. Update companion documentation in the repository's documented docs location so future maintainers can find the tier definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-hidden-three-arm-v2/hidden-effect-catalog-price-ladder-bare.json",
   "timeout_seconds": 600,
   "max_attempts": 1,
   "max_cost_usd": 1.0,
@@ -43,22 +43,22 @@
   "verification": {
     "commands": [
       {
-        "name": "functional heldout oracle for hidden-effect-replenishment-signals",
+        "name": "functional heldout oracle for hidden-effect-catalog-price-ladder",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-replenishment-signals",
+          "hidden-effect-catalog-price-ladder",
           "functional"
         ],
         "timeout_seconds": 180,
         "dimension": "functional"
       },
       {
-        "name": "generic schema style oracle for hidden-effect-replenishment-signals",
+        "name": "generic schema style oracle for hidden-effect-catalog-price-ladder",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-replenishment-signals",
+          "hidden-effect-catalog-price-ladder",
           "schema"
         ],
         "timeout_seconds": 180,

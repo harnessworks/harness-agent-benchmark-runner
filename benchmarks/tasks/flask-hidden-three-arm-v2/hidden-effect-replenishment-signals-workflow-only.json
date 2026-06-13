@@ -97,13 +97,17 @@
       "/catalog/metrics",
       "/catalog/segments",
       "/catalog/replenishment-signals",
+      "/catalog/price-ladder",
+      "/catalog/value-snapshot",
       "/warehouse/pick-list",
       "/inventory/reservations/preview",
       "/tax/preview",
       "stock-risk-v1",
       "catalog-metrics-v1",
       "segments-v1",
-      "replenishment-signals-v1"
+      "replenishment-signals-v1",
+      "price-ladder-v1",
+      "value-snapshot-v1"
     ]
   }
 }
