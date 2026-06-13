@@ -60,6 +60,21 @@ class HiddenABSummaryScriptTests(unittest.TestCase):
         self.assertIn("| `flask-yes-harness` | 1 | 0 | 0.0% | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |", markdown)
         self.assertIn("| `flask-no-harness` | 1 | 0 | 0.0% | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |", markdown)
 
+    def test_formats_memory_specific_metrics_when_present(self) -> None:
+        item = record("../flask-yes-harness", "alpha", False, False, 20)
+        scoring = item["scoring"]
+        assert isinstance(scoring, dict)
+        scoring["record_consistent_success"] = True
+        scoring["mistake_prevention_success"] = False
+        scoring["repeated_documented_mistake"] = True
+
+        markdown = hidden_summary.format_markdown([item])
+
+        self.assertIn("Record consistency", markdown)
+        self.assertIn("Mistake prevention", markdown)
+        self.assertIn("Repeated documented mistakes", markdown)
+        self.assertIn("| 1/1 | 0/1 | 1 |", markdown)
+
 
 def record(
     source: str,

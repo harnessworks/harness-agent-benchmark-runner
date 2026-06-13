@@ -1,0 +1,21 @@
+{
+  "id": "flask-full-harness-memory-pilot",
+  "task_dir": "../tasks/flask-full-harness-memory-pilot",
+  "arms": [
+    "bare",
+    "workflow-only",
+    "decision-only",
+    "failure-only",
+    "full-harness"
+  ],
+  "task_ids": [
+    "hidden-effect-availability-badge",
+    "hidden-effect-catalog-price-policy",
+    "hidden-effect-catalog-metrics",
+    "hidden-effect-catalog-segments",
+    "hidden-effect-replenishment-signals"
+  ],
+  "split": "heldout",
+  "prompt_variant": "partial-realistic",
+  "notes": "Five-arm pre-execution pilot scaffold for measuring failure-memory transfer and direct H1 decision-memory behavior beyond workflow-only harness guidance. The catalog price-policy task is tagged with record_consistency because the required price-band policy exists only in decision-bearing arms. Schema oracles on API convention-transfer tasks are tagged as mistake_prevention because the visible failure records target response-key and metadata-envelope drift. Measurement pilots should run without --stop-on-abnormal so abnormal events are measured rather than censored."
+}

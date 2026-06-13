@@ -21,6 +21,7 @@ DEFAULT_AGENT = f"{sys.executable} {REPO_ROOT / 'examples' / 'agents' / 'codex_e
 LEGACY_ARMS = ("no-harness", "yes-harness")
 THREE_ARMS = ("bare", "workflow-only", "memory-harness")
 KNOWN_ARM_SUFFIXES = THREE_ARMS + LEGACY_ARMS
+ARM_NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
 @dataclass(frozen=True)
@@ -81,7 +82,8 @@ def main(argv: list[str] | None = None) -> int:
             args.arms = ",".join(suite.arms)
     args.task_dir = args.task_dir.resolve()
     args.repeats = args.repeats or default_repeats(args.mode)
-    args.task_limit = default_task_limit(args.mode) if args.task_limit is None else args.task_limit
+    if args.task_limit is None:
+        args.task_limit = None if suite is not None and suite.task_ids else default_task_limit(args.mode)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     if args.results is None:
         args.results = REPO_ROOT / "results" / f"hidden-flask-ab-{args.mode}-{stamp}"
@@ -280,9 +282,10 @@ def parse_arms(value: str | None) -> tuple[str, ...] | None:
     if not arms:
         raise BenchmarkPlanError("--arms must name at least one arm")
     for arm in arms:
-        if arm not in KNOWN_ARM_SUFFIXES:
-            allowed = ", ".join(KNOWN_ARM_SUFFIXES)
-            raise BenchmarkPlanError(f"unknown arm {arm!r}; allowed arms: {allowed}")
+        if not ARM_NAME_RE.fullmatch(arm):
+            raise BenchmarkPlanError(
+                f"invalid arm {arm!r}; use lowercase letters, digits, and hyphens"
+            )
     if len(set(arms)) != len(arms):
         raise BenchmarkPlanError("--arms must not repeat an arm")
     return arms
@@ -294,7 +297,7 @@ def load_task_groups(task_dir: Path, required_arms: tuple[str, ...] | None = Non
 
     grouped: dict[str, dict[str, Path]] = {}
     for path in sorted(task_dir.glob("*.json")):
-        arm = arm_suffix(path)
+        arm = arm_suffix(path, required_arms)
         if arm is None:
             continue
         data = read_json(path)
@@ -337,8 +340,9 @@ def filter_task_groups(
     return [by_id[task_id] for task_id in wanted]
 
 
-def arm_suffix(path: Path) -> str | None:
-    for suffix in sorted(KNOWN_ARM_SUFFIXES, key=len, reverse=True):
+def arm_suffix(path: Path, required_arms: tuple[str, ...] | None = None) -> str | None:
+    suffixes = required_arms or KNOWN_ARM_SUFFIXES
+    for suffix in sorted(suffixes, key=len, reverse=True):
         if path.name.endswith(f"-{suffix}.json"):
             return suffix
     return None

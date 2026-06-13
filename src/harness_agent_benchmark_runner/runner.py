@@ -212,6 +212,9 @@ def run_task(
                 "functional_success": dimension_scoring["functional_success"],
                 "schema_contract_success": dimension_scoring["schema_contract_success"],
                 "workflow_success": dimension_scoring["workflow_success"],
+                "record_consistent_success": dimension_scoring["record_consistent_success"],
+                "mistake_prevention_success": dimension_scoring["mistake_prevention_success"],
+                "repeated_documented_mistake": dimension_scoring["repeated_documented_mistake"],
                 "boundary_success": dimension_scoring["boundary_success"],
                 "execution_success": dimension_scoring["execution_success"],
                 "preflight_passed": preflight["passed"],
@@ -595,7 +598,7 @@ def calculate_dimension_scoring(
     verification_passed: bool,
     wrong_files: list[str],
     forbidden_files: list[str],
-) -> dict[str, bool]:
+) -> dict[str, bool | None]:
     execution_success = agent_result.exit_code == 0 and not agent_result.timed_out
     boundary_success = not wrong_files and not forbidden_files
     diff_success = diff_check.exit_code == 0
@@ -616,6 +619,19 @@ def calculate_dimension_scoring(
         and boundary_success
         and verification_dimension_success(verification_results, "workflow", verification_passed)
     )
+    record_consistent_success = optional_verification_dimension_success(
+        verification_results,
+        "record_consistency",
+        preflight_passed,
+    )
+    mistake_prevention_success = optional_verification_dimension_success(
+        verification_results,
+        "mistake_prevention",
+        preflight_passed,
+    )
+    repeated_documented_mistake = (
+        None if mistake_prevention_success is None else not mistake_prevention_success
+    )
     strict_success = (
         preflight_passed
         and execution_success
@@ -627,6 +643,9 @@ def calculate_dimension_scoring(
         "functional_success": functional_success,
         "schema_contract_success": schema_contract_success,
         "workflow_success": workflow_success,
+        "record_consistent_success": record_consistent_success,
+        "mistake_prevention_success": mistake_prevention_success,
+        "repeated_documented_mistake": repeated_documented_mistake,
         "boundary_success": boundary_success,
         "execution_success": execution_success,
         "strict_success": strict_success,
@@ -646,11 +665,25 @@ def verification_dimension_success(
     return legacy_fallback
 
 
+def optional_verification_dimension_success(
+    verification_results: list[ProcessResult],
+    dimension: str,
+    preflight_passed: bool,
+) -> bool | None:
+    selected = [result for result in verification_results if dimension in result.dimensions]
+    if not selected:
+        return None
+    return preflight_passed and all(result.exit_code == 0 for result in selected)
+
+
 def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
     dimensions = {
         "functional_success": False,
         "schema_contract_success": False,
         "workflow_success": False,
+        "record_consistent_success": None,
+        "mistake_prevention_success": None,
+        "repeated_documented_mistake": None,
         "boundary_success": False,
         "execution_success": False,
         "strict_success": False,
@@ -661,6 +694,9 @@ def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
         "functional_success": False,
         "schema_contract_success": False,
         "workflow_success": False,
+        "record_consistent_success": None,
+        "mistake_prevention_success": None,
+        "repeated_documented_mistake": None,
         "boundary_success": False,
         "execution_success": False,
         "preflight_passed": False,

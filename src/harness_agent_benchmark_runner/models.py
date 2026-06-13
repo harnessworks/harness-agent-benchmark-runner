@@ -5,7 +5,15 @@ from pathlib import Path
 from typing import Any
 
 
-ALLOWED_COMMAND_DIMENSIONS = frozenset({"functional", "schema", "workflow"})
+ALLOWED_COMMAND_DIMENSIONS = frozenset(
+    {
+        "functional",
+        "mistake_prevention",
+        "record_consistency",
+        "schema",
+        "workflow",
+    }
+)
 
 
 @dataclass(frozen=True)

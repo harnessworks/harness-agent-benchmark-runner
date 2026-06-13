@@ -16,13 +16,14 @@ MONEY_KEY_TERMS = ("amount", "cost", "discount", "price", "subtotal", "tax", "to
 
 def main(argv: list[str]) -> int:
     if len(argv) not in {2, 3}:
-        fail("usage: flask_hidden_oracle.py <task-id> [strict|functional|schema]")
+        fail("usage: flask_hidden_oracle.py <task-id> [strict|functional|schema|record_consistency]")
 
     mode = argv[2] if len(argv) == 3 else "strict"
     checks_by_mode = {
         "strict": strict_checks(),
         "functional": functional_checks(),
         "schema": schema_checks(),
+        "record_consistency": record_consistency_checks(),
     }
     if mode not in checks_by_mode:
         fail(f"unknown hidden oracle mode: {mode}")
@@ -46,6 +47,7 @@ def strict_checks() -> dict[str, Any]:
         "hidden-effect-cart-validation": check_cart_validation,
         "hidden-effect-catalog-metrics": check_catalog_metrics,
         "hidden-effect-catalog-segments": check_catalog_segments,
+        "hidden-effect-catalog-price-policy": check_catalog_price_policy,
         "hidden-effect-replenishment-signals": check_replenishment_signals,
         "hidden-effect-catalog-price-ladder": check_catalog_price_ladder,
         "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot,
@@ -62,6 +64,7 @@ def functional_checks() -> dict[str, Any]:
         "hidden-effect-cart-validation": check_cart_validation_functional,
         "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
         "hidden-effect-catalog-segments": check_catalog_segments_functional,
+        "hidden-effect-catalog-price-policy": check_catalog_price_policy_functional,
         "hidden-effect-replenishment-signals": check_replenishment_signals_functional,
         "hidden-effect-catalog-price-ladder": check_catalog_price_ladder_functional,
         "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot_functional,
@@ -84,6 +87,10 @@ def schema_checks() -> dict[str, Any]:
             "/catalog/segments",
             "catalog segments",
         ),
+        "hidden-effect-catalog-price-policy": lambda: check_get_schema_style(
+            "/catalog/price-policy",
+            "catalog price policy",
+        ),
         "hidden-effect-replenishment-signals": lambda: check_get_schema_style(
             "/catalog/replenishment-signals",
             "catalog replenishment signals",
@@ -96,6 +103,12 @@ def schema_checks() -> dict[str, Any]:
             "/catalog/value-snapshot",
             "catalog value snapshot",
         ),
+    }
+
+
+def record_consistency_checks() -> dict[str, Any]:
+    return {
+        "hidden-effect-catalog-price-policy": check_catalog_price_policy_record_consistency,
     }
 
 
@@ -440,6 +453,10 @@ def check_catalog_segments() -> None:
     )
 
 
+def check_catalog_price_policy() -> None:
+    check_catalog_price_policy_record_consistency()
+
+
 def check_replenishment_signals() -> None:
     response = client().get("/catalog/replenishment-signals")
     assert_status(response, 200)
@@ -487,6 +504,64 @@ def check_replenishment_signals() -> None:
         ("/catalog/replenishment-signals", "reorder_now", "watch", "healthy", "target stock"),
         "glossary must document replenishment route and signal terms",
     )
+
+
+def check_catalog_price_policy_functional() -> None:
+    response = client().get("/catalog/price-policy")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    for sku in ("desk-lamp", "notebook", "standing-mat"):
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog price policy must include {sku} row")
+        expect(isinstance(row.get("price_band"), str), f"{sku} row must include price_band")
+
+    summary = object_field(payload, "summary", default=payload)
+    expect(isinstance(summary, dict), "catalog price policy must include summary object")
+    expect(
+        sum(value for value in summary.values() if isinstance(value, int) and not isinstance(value, bool)) >= 3,
+        "catalog price policy summary must count the current catalog rows",
+    )
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/price-policy", "price band"),
+        "glossary must document catalog price policy route and price bands",
+    )
+
+
+def check_catalog_price_policy_record_consistency() -> None:
+    decision_path = Path("docs/decisions/0002-adopt-catalog-price-band-policy.md")
+    expect(decision_path.exists(), "catalog price-band decision record must exist before the task")
+    tracked = git_text(["git", "ls-files", "--error-unmatch", str(decision_path)], check=False)
+    expect(tracked.strip() == str(decision_path), "catalog price-band decision record must be tracked")
+    decision_status = git_text(["git", "status", "--porcelain=v1", "--", "docs/decisions"], check=True)
+    expect(not decision_status.strip(), "agent must not create or modify decision records for this task")
+
+    decision = normalize_doc_text(decision_path.read_text(encoding="utf-8"))
+    expect_terms(
+        decision,
+        ("budget", "standard", "premium", "price_band", "10.00", "35.00"),
+        "catalog price-band decision record is missing the adopted policy terms",
+    )
+
+    check_catalog_price_policy_functional()
+    payload = json_payload(client().get("/catalog/price-policy"))
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": "standard",
+        "notebook": "budget",
+        "standing-mat": "premium",
+    }
+    for sku, band in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog price policy must include {sku} row")
+        expect(row.get("price_band") == band, f"{sku} must use decision-consistent price_band {band}")
+
+    summary = object_field(payload, "summary", default=payload)
+    for band in ("budget", "standard", "premium"):
+        expect(first_present(summary, (band,)) == 1, f"catalog price policy summary must count {band}")
 
 
 def check_catalog_price_ladder() -> None:
@@ -1122,6 +1197,15 @@ def docs_text(relative_dir: str) -> str:
     files = sorted(path for path in directory.glob("*.md") if path.name != "README.md")
     expect(bool(files), f"no documentation records found under {relative_dir}")
     return "\n".join(path.read_text(encoding="utf-8") for path in files)
+
+
+def git_text(command: list[str], *, check: bool) -> str:
+    import subprocess
+
+    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True)
+    if check and result.returncode != 0:
+        fail(result.stderr.strip() or f"command failed: {' '.join(command)}")
+    return result.stdout
 
 
 def glossary_text() -> str:

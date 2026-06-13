@@ -24,6 +24,11 @@ class Aggregate:
     functional_successes: int = 0
     schema_contract_successes: int = 0
     workflow_successes: int = 0
+    record_consistency_evaluated: int = 0
+    record_consistent_successes: int = 0
+    mistake_prevention_evaluated: int = 0
+    mistake_prevention_successes: int = 0
+    repeated_documented_mistakes: int = 0
     boundary_successes: int = 0
     preflight_failures: int = 0
     verification_passed: int = 0
@@ -45,6 +50,16 @@ class Aggregate:
             self.schema_contract_successes += 1
         if scoring.get("workflow_success", scoring.get("success")) is True:
             self.workflow_successes += 1
+        if scoring.get("record_consistent_success") is not None:
+            self.record_consistency_evaluated += 1
+        if scoring.get("record_consistent_success") is True:
+            self.record_consistent_successes += 1
+        if scoring.get("mistake_prevention_success") is not None:
+            self.mistake_prevention_evaluated += 1
+        if scoring.get("mistake_prevention_success") is True:
+            self.mistake_prevention_successes += 1
+        if scoring.get("repeated_documented_mistake") is True:
+            self.repeated_documented_mistakes += 1
         if scoring.get("boundary_success", self.boundary_fallback(scoring)) is True:
             self.boundary_successes += 1
         if scoring.get("preflight_passed") is False:
@@ -93,8 +108,8 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
     lines = [
         "## Headline",
         "",
-        "| Target | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Target | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration | Record consistency | Mistake prevention | Repeated documented mistakes |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for target, values in sorted(by_target.items()):
         lines.append(headline_row(target, values))
@@ -104,8 +119,8 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
             "",
             "## Per-Task Results",
             "",
-            "| Target | Task | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Target | Task | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration | Record consistency | Mistake prevention | Repeated documented mistakes |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for (target, task_id), values in sorted(by_target_task.items()):
@@ -121,7 +136,10 @@ def headline_row(target: str, values: Aggregate) -> str:
         f"{values.preflight_failures} | {values.wrong_file_edits} | {values.forbidden_file_edits} | "
         f"{values.hidden_accesses} | {values.stalls} | {values.timeouts} | "
         f"{duration(percentile(values.durations, 50))} | "
-        f"{duration(percentile(values.durations, 95))} |"
+        f"{duration(percentile(values.durations, 95))} | "
+        f"{evaluated(values.record_consistent_successes, values.record_consistency_evaluated)} | "
+        f"{evaluated(values.mistake_prevention_successes, values.mistake_prevention_evaluated)} | "
+        f"{values.repeated_documented_mistakes} |"
     )
 
 
@@ -134,7 +152,10 @@ def task_row(target: str, task_id: str, values: Aggregate) -> str:
         f"{values.preflight_failures} | {values.wrong_file_edits} | "
         f"{values.forbidden_file_edits} | {values.hidden_accesses} | "
         f"{values.stalls} | {values.timeouts} | "
-        f"{duration(percentile(values.durations, 50))} | {duration(percentile(values.durations, 95))} |"
+        f"{duration(percentile(values.durations, 50))} | {duration(percentile(values.durations, 95))} | "
+        f"{evaluated(values.record_consistent_successes, values.record_consistency_evaluated)} | "
+        f"{evaluated(values.mistake_prevention_successes, values.mistake_prevention_evaluated)} | "
+        f"{values.repeated_documented_mistakes} |"
     )
 
 
@@ -171,6 +192,12 @@ def rate(numerator: int, denominator: int) -> str:
     if denominator == 0:
         return "-"
     return f"{(numerator / denominator) * 100:.1f}%"
+
+
+def evaluated(successes: int, evaluated_count: int) -> str:
+    if evaluated_count == 0:
+        return "-"
+    return f"{successes}/{evaluated_count}"
 
 
 def percentile(values: list[float], percentile_value: int) -> float | None:

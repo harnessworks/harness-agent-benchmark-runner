@@ -29,6 +29,9 @@ THREE_ARM_STABLE_SUITE = (
 THREE_ARM_V2_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-three-arm-v2.json"
 )
+FULL_HARNESS_MEMORY_PILOT_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-full-harness-memory-pilot.json"
+)
 BUNDLEQUOTE_QUARANTINE_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
 )
@@ -298,6 +301,34 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                     else:
                         self.assertEqual(dimensions, [["functional", "schema"]])
 
+    def test_full_harness_memory_pilot_has_direct_h1_record_consistency_task(self) -> None:
+        suite = hidden_ab.load_suite(FULL_HARNESS_MEMORY_PILOT_SUITE)
+        arms = suite.arms
+        self.assertIsNotNone(arms)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=arms)
+        hidden_ab.validate_task_groups(groups)
+
+        self.assertIn("hidden-effect-catalog-price-policy", suite.task_ids)
+        price_policy_group = next(
+            group for group in groups if group.task_id == "hidden-effect-catalog-price-policy"
+        )
+        self.assertEqual(list(price_policy_group.arms), list(arms or ()))
+        for arm, task_path in price_policy_group.arms.items():
+            data = hidden_ab.read_json(task_path)
+            self.assertEqual(data["benchmark"]["memory_hypothesis"], "H1")
+            self.assertEqual(data["benchmark"]["target_arm"], arm)
+            self.assertEqual(data["expected_files"], ["app/**", "tests/**", "docs/domain/**"])
+            self.assertIn("docs/decisions/**", data["forbidden_files"])
+            commands = data["verification"]["commands"]
+            self.assertTrue(
+                any(command.get("dimension") == "record_consistency" for command in commands)
+            )
+            record_command = next(
+                command for command in commands if command.get("dimension") == "record_consistency"
+            )
+            self.assertIn("record_consistency", record_command["command"])
+            self.assertIn("/catalog/price-policy", data["leakage_audit"]["forbidden_text"])
+
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task_dir = Path(tmp)
@@ -337,6 +368,25 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                     "B:memory-harness",
                     "C:bare",
                 ],
+            )
+
+    def test_loads_suite_declared_custom_arm_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task_dir = Path(tmp)
+            write_hidden_task(task_dir / "alpha-workflow-only.json", "alpha", "../workflow")
+            write_hidden_task(task_dir / "alpha-failure-only.json", "alpha", "../failure")
+            write_hidden_task(task_dir / "alpha-full-harness.json", "alpha", "../full")
+
+            arms = hidden_ab.parse_arms("workflow-only,failure-only,full-harness")
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=arms)
+            hidden_ab.validate_task_groups(groups)
+            schedule = hidden_ab.build_group_schedule(groups, repeats=1, arm_order="listed")
+
+            self.assertEqual(arms, ("workflow-only", "failure-only", "full-harness"))
+            self.assertEqual(list(groups[0].arms), ["workflow-only", "failure-only", "full-harness"])
+            self.assertEqual(
+                [item.group for item in schedule],
+                ["A:workflow-only", "B:failure-only", "C:full-harness"],
             )
 
     def test_filters_task_groups_by_task_id(self) -> None:
@@ -389,6 +439,42 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertEqual(suite.prompt_variant, "partial-realistic")
             self.assertEqual(suite.task_ids, ("alpha",))
             self.assertEqual([group.task_id for group in groups], ["alpha"])
+
+    def test_suite_task_ids_are_not_truncated_by_default_pilot_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            suite_dir = root / "suites"
+            task_dir.mkdir()
+            suite_dir.mkdir()
+            task_ids = [f"task-{index}" for index in range(5)]
+            for task_id in task_ids:
+                write_hidden_task(task_dir / f"{task_id}-bare.json", task_id, "../flask-bare")
+                write_hidden_task(
+                    task_dir / f"{task_id}-workflow-only.json",
+                    task_id,
+                    "../flask-workflow-only",
+                )
+            suite_path = suite_dir / "fixture.json"
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "id": "fixture-suite",
+                        "task_dir": "../tasks",
+                        "arms": ["bare", "workflow-only"],
+                        "task_ids": task_ids,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = hidden_ab.main(["--suite", str(suite_path), "--repeats", "1"])
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Task groups: 5", stdout.getvalue())
+            self.assertIn("Planned runs: 10", stdout.getvalue())
 
     def test_stable_heldout_suite_quarantines_bundle_quote(self) -> None:
         suite = hidden_ab.load_suite(STABLE_HELDOUT_SUITE)
