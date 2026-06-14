@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Focused H1 clean gate aborted on no-edit watchdog. |
+| Latest execution | Focused H1 clean gate rerun completed 12/12 with 0 stalls/timeouts. |
 
 ## Representative Result
 
@@ -74,14 +74,15 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-h1-clean-gate-aborted.md`](2026-06-14-flask-price-policy-h1-clean-gate-aborted.md).
+[`2026-06-14-flask-price-policy-h1-clean-gate-rerun.md`](2026-06-14-flask-price-policy-h1-clean-gate-rerun.md).
 
-The non-bare price-policy H1 clean gate stopped after 8/12 planned records
-because a `workflow-only` record hit the no-edit watchdog. `decision-only` and
-`full-harness` were both 2/2 record-consistent before the stop, while
-non-decision arms stayed 0/2. This is useful triage evidence, not a replacement
-for the 96-record representative result, and it argues against running a
-100-record promotion immediately.
+The non-bare price-policy H1 clean gate rerun completed 12/12 planned records
+with 0 stalls, 0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits.
+`decision-only` and `full-harness` were both 3/3 strict and record-consistent,
+while `workflow-only` and `failure-only` stayed 0/3 record-consistent. This is
+strong focused H1 evidence, but it is still one task and should not replace the
+96-record representative result or justify jumping straight to a 100-record
+promotion.
 
 ## Controls And Prior Evidence
 
@@ -90,6 +91,7 @@ for the 96-record representative result, and it argues against running a
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Price-policy H1 | non-bare clean gate rerun | 12 | 6 | 6 | 0 | 0 | Completed focused H1 gate; decision memory arms separated cleanly from controls. |
 | Price-policy H1 | non-bare clean gate | 8/12 | 4 | 4 | 1 | 0 | H1 signal held, but gate aborted on no-edit watchdog. |
 | Three-arm v2 | replenishment smoke | 3 | 2 | 2 | 0 | 0 | Scaffold check only. |
 | Balanced Flask A/B | 100-run `jobs=2` full-contract control | 100 | 94 | 95 | 3 | 0 | Useful control, but parallel timeout stability remains unresolved. |
@@ -106,8 +108,14 @@ hidden-oracle rows are the relevant harness-effect evidence.
 ## Next Step
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
-semantics change. The next useful experiment is a fresh 9-record v2 pilot using
-the current three-task suite:
+semantics change. Do not jump directly from one focused H1 clean rerun to a
+100-record promotion. The next useful H1 step is a broader small stability
+pilot, such as 24 records across the same four arms and two H1 task/ref
+conditions, keeping `--jobs 1`, `--stop-on-abnormal`, and both watchdogs
+enabled.
+
+The next useful v2 experiment remains a fresh 9-record pilot using the current
+three-task suite:
 
 - `hidden-effect-replenishment-signals`
 - `hidden-effect-catalog-price-ladder`
@@ -119,6 +127,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-clean-gate-rerun.md`](2026-06-14-flask-price-policy-h1-clean-gate-rerun.md) (focused H1 clean gate rerun)
 - [`2026-06-14-flask-price-policy-h1-clean-gate-aborted.md`](2026-06-14-flask-price-policy-h1-clean-gate-aborted.md) (focused H1 clean gate, aborted)
 - [`2026-06-14-flask-price-policy-h1-discoverability-3x.md`](2026-06-14-flask-price-policy-h1-discoverability-3x.md) (focused H1 discoverability triage)
 - [`2026-06-14-flask-price-policy-h1-rerun-3x.md`](2026-06-14-flask-price-policy-h1-rerun-3x.md) (focused H1 triage)

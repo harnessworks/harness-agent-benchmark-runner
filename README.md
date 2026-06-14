@@ -81,12 +81,13 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-clean-gate-aborted.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-clean-gate-aborted.md).
-The non-bare H1 clean gate stopped after 8/12 planned records because
-`workflow-only` hit the no-edit watchdog. `decision-only` and `full-harness`
-were both 2/2 record-consistent before the stop, but the gate did not clear
-operationally. Do not run a 100-record promotion until this stall pattern is
-understood.
+[`docs/benchmarks/2026-06-14-flask-price-policy-h1-clean-gate-rerun.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-clean-gate-rerun.md).
+The non-bare H1 clean gate rerun completed 12/12 planned records with 0 stalls,
+0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only`
+and `full-harness` were both 3/3 strict and record-consistent, while
+`workflow-only` and `failure-only` stayed 0/3 record-consistent. This is strong
+focused H1 evidence, but still not enough to jump directly to a 100-record
+promotion.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
