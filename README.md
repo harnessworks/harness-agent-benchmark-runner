@@ -81,11 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-rerun-3x.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-rerun-3x.md).
-The focused H1 rerun completed 15/15 records with 0 stalls, 0 timeouts,
-0 hidden-access findings, and 0 forbidden-file edits. Decision-bearing arms
-passed record consistency 1/3 each; non-decision arms stayed 0/3. Treat this as
-targeted H1 triage evidence, not as the representative result.
+[`docs/benchmarks/2026-06-14-flask-price-policy-h1-discoverability-3x.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-discoverability-3x.md).
+After adding narrow decision-record discovery guidance, the focused H1 rerun
+completed 15/15 records but had 2 stalls/timeouts. `decision-only` passed
+record consistency 3/3 and `full-harness` passed 2/3; non-decision arms stayed
+0/3. Treat this as targeted H1 triage evidence, not as the representative
+result.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

@@ -1,6 +1,6 @@
 # Latest Benchmark Status
 
-Updated: 2026-06-13
+Updated: 2026-06-14
 
 ## At A Glance
 
@@ -11,7 +11,7 @@ Updated: 2026-06-13
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Focused H1 price-policy rerun, useful as triage evidence only. |
+| Latest execution | Focused H1 discoverability rerun, useful as triage evidence only. |
 
 ## Representative Result
 
@@ -74,13 +74,13 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-h1-rerun-3x.md`](2026-06-14-flask-price-policy-h1-rerun-3x.md).
+[`2026-06-14-flask-price-policy-h1-discoverability-3x.md`](2026-06-14-flask-price-policy-h1-discoverability-3x.md).
 
-The price-policy H1 rerun completed 15/15 records cleanly from an operations
-perspective: 0 stalls, 0 timeouts, 0 hidden-access findings, and
-0 forbidden-file edits. Decision-bearing arms passed record consistency 1/3
-each, while non-decision arms stayed 0/3. This is useful H1 triage evidence,
-not a replacement for the 96-record representative result.
+The price-policy H1 discoverability rerun completed 15/15 records, but it had
+2 stalls/timeouts. Decision-bearing arms improved: `decision-only` passed
+record consistency 3/3 and `full-harness` passed 2/3, while non-decision arms
+stayed 0/3. This is useful H1 triage evidence, not a replacement for the
+96-record representative result.
 
 ## Controls And Prior Evidence
 
@@ -89,7 +89,7 @@ not a replacement for the 96-record representative result.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
-| Price-policy H1 | focused 3x rerun | 15 | 2 | 2 | 0 | 3 | H1 triage only; decision-bearing arms 1/3 each. |
+| Price-policy H1 | discoverability 3x rerun | 15 | 5 | 5 | 2 | 2 | H1 triage only; decision-bearing arms improved, but run had stalls. |
 | Three-arm v2 | replenishment smoke | 3 | 2 | 2 | 0 | 0 | Scaffold check only. |
 | Balanced Flask A/B | 100-run `jobs=2` full-contract control | 100 | 94 | 95 | 3 | 0 | Useful control, but parallel timeout stability remains unresolved. |
 | Hidden-oracle Flask A/B | 3x convention-dependent tasks | 24 | 11 | 11 | 3 | 11 | Historical strong signal, but older and less balanced than the representative three-arm run. |
@@ -118,6 +118,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-discoverability-3x.md`](2026-06-14-flask-price-policy-h1-discoverability-3x.md) (focused H1 discoverability triage)
 - [`2026-06-14-flask-price-policy-h1-rerun-3x.md`](2026-06-14-flask-price-policy-h1-rerun-3x.md) (focused H1 triage)
 - [`2026-06-13-hidden-flask-three-arm-v2-smoke.md`](2026-06-13-hidden-flask-three-arm-v2-smoke.md) (latest v2 scaffold check)
 - [`2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md) (full-contract control)

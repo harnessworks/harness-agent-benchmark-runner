@@ -272,6 +272,10 @@ Post-run H1 oracle triage:
   rule: when a prompt refers to an adopted or repository policy that is not
   fully specified, agents should search `docs/decisions/` by prompt domain
   terms and apply the accepted decision without editing decision records.
+- A follow-up H1-only 3x rerun improved record consistency from 1/3 to 3/3 in
+  `decision-only` and from 1/3 to 2/3 in `full-harness`, while non-decision
+  arms stayed 0/3. The rerun also had 2 stalls/timeouts, so it is triage
+  evidence rather than a promotable clean result.
 
 Pre-execution checks completed:
 
@@ -329,12 +333,13 @@ accuracy lift.
 
 ## Minimum Next Implementation Steps
 
-1. Rerun a small multi-repeat H1/H2 pilot under the revised price-policy
-   oracle before promoting the 50-record plan.
-2. Classify every abnormal result after the run: hidden access, wrong-file
+1. Investigate the H1 rerun stall pattern before promoting the 50-record plan.
+2. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
+   surfaced decision-record guidance.
+3. Classify every abnormal result after the run: hidden access, wrong-file
    edits, forbidden-file edits, preflight failures, stalls, and timeouts.
-3. Summarize public-safe pilot evidence under `docs/benchmarks/`.
-4. Add another harness-structure `record_consistency` task before claiming
+4. Summarize public-safe pilot evidence under `docs/benchmarks/`.
+5. Add another harness-structure `record_consistency` task before claiming
    broad decision-memory value or promoting to the 120-record factorial run.
-5. Keep `docs/benchmarks/latest.md` unchanged unless the pilot becomes the most
+6. Keep `docs/benchmarks/latest.md` unchanged unless the pilot becomes the most
    recent representative report.
