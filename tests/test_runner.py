@@ -500,6 +500,12 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["limits"]["agent_no_edit_timeout_seconds"], 1)
             self.assertLess(result["agent"]["duration_seconds"], 5)
             self.assertIn("tick", result["agent"]["stdout_tail"])
+            watchdog = result["agent"]["watchdog"]
+            self.assertEqual(watchdog["no_edit_timeout_seconds"], 1)
+            self.assertFalse(watchdog["observed_repo_changes"])
+            self.assertGreaterEqual(watchdog["no_edit_checks"], 1)
+            self.assertGreaterEqual(watchdog["seconds_without_observed_repo_changes"], 1)
+            self.assertLess(watchdog["seconds_since_last_output"], 1)
 
     def test_agent_no_edit_watchdog_allows_observed_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -552,6 +558,10 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse(result["scoring"]["agent_stalled"])
             self.assertIsNone(result["agent"].get("termination_reason"))
             self.assertEqual(result["git"]["changed_files"], ["README.md"])
+            watchdog = result["agent"]["watchdog"]
+            self.assertTrue(watchdog["observed_repo_changes"])
+            self.assertEqual(watchdog["no_edit_timeout_seconds"], 1)
+            self.assertIn("seconds_until_repo_change_observed", watchdog)
 
     def test_runner_records_dimension_scoring_and_benchmark_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -247,6 +247,7 @@ class ProcessResult:
     stdout_tail: str = ""
     stderr_tail: str = ""
     dimensions: tuple[str, ...] = ()
+    watchdog: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = {
@@ -263,6 +264,8 @@ class ProcessResult:
         }
         if self.termination_reason is not None:
             data["termination_reason"] = self.termination_reason
+        if self.watchdog is not None:
+            data["watchdog"] = self.watchdog
         return data
 
 

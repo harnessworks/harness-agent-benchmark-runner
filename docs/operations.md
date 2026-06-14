@@ -247,7 +247,11 @@ for the configured interval. The no-edit watchdog stops active-output attempts
 only if no visible repository changes have appeared by the configured interval.
 All three watchdogs record `scoring.agent_stalled=true`; use
 `agent.termination_reason` to distinguish `stall_watchdog`, `idle_watchdog`,
-and `no_edit_watchdog`.
+and `no_edit_watchdog`. When idle or no-edit watchdogs are enabled, the agent
+result also includes `agent.watchdog`, with fields such as
+`seconds_since_last_output`, `observed_repo_changes`, and
+`seconds_without_observed_repo_changes` to separate silent stalls from
+active-output attempts that never touched the repository.
 
 Use `--agent-timeout-override` when a promotion run intentionally needs a
 different effective task timeout than the task JSON. The runner applies that

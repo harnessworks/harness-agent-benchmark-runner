@@ -153,8 +153,24 @@ def run_process_with_idle_watchdog(
     exit_code: int | None = None
     last_activity = started
     no_edit_observed = False
+    no_edit_checks = 0
+    last_no_edit_check_elapsed: float | None = None
+    first_repo_change_observed_at: float | None = None
     next_no_edit_check = started
     timeout_message = ""
+
+    def observe_repo_changes(now: float) -> bool:
+        nonlocal no_edit_observed
+        nonlocal no_edit_checks
+        nonlocal last_no_edit_check_elapsed
+        nonlocal first_repo_change_observed_at
+
+        no_edit_observed = bool(no_edit_has_changes and no_edit_has_changes())
+        no_edit_checks += 1
+        last_no_edit_check_elapsed = now - started
+        if no_edit_observed and first_repo_change_observed_at is None:
+            first_repo_change_observed_at = last_no_edit_check_elapsed
+        return no_edit_observed
 
     try:
         while True:
@@ -162,6 +178,8 @@ def run_process_with_idle_watchdog(
             if process.poll() is not None:
                 exit_code = process.returncode
                 drain_ready_streams(selector, streams)
+                if no_edit_timeout_seconds is not None and not no_edit_observed:
+                    observe_repo_changes(now)
                 break
 
             elapsed = now - started
@@ -192,12 +210,12 @@ def run_process_with_idle_watchdog(
 
             if no_edit_timeout_seconds is not None and not no_edit_observed:
                 if now >= next_no_edit_check:
-                    no_edit_observed = bool(no_edit_has_changes and no_edit_has_changes())
+                    observe_repo_changes(now)
                     next_no_edit_check = now + 1.0
                 if not no_edit_observed:
                     no_edit_remaining = no_edit_timeout_seconds - elapsed
                     if no_edit_remaining <= 0:
-                        no_edit_observed = bool(no_edit_has_changes and no_edit_has_changes())
+                        observe_repo_changes(now)
                     if not no_edit_observed and no_edit_remaining <= 0:
                         timed_out = True
                         termination_reason = no_edit_timeout_reason
@@ -227,6 +245,16 @@ def run_process_with_idle_watchdog(
                 pipe.close()
 
     duration = time.monotonic() - started
+    watchdog = build_watchdog_details(
+        duration_seconds=duration,
+        seconds_since_last_output=duration - (last_activity - started),
+        idle_timeout_seconds=idle_timeout_seconds,
+        no_edit_timeout_seconds=no_edit_timeout_seconds,
+        no_edit_observed=no_edit_observed,
+        no_edit_checks=no_edit_checks,
+        last_no_edit_check_elapsed=last_no_edit_check_elapsed,
+        first_repo_change_observed_at=first_repo_change_observed_at,
+    )
     stdout = decode_output(b"".join(stdout_chunks))
     stderr = decode_output(b"".join(stderr_chunks))
     if timeout_message:
@@ -251,7 +279,42 @@ def run_process_with_idle_watchdog(
         termination_reason=termination_reason,
         stdout_tail=stdout[-tail_chars:],
         stderr_tail=stderr[-tail_chars:],
+        watchdog=watchdog,
     )
+
+
+def build_watchdog_details(
+    *,
+    duration_seconds: float,
+    seconds_since_last_output: float,
+    idle_timeout_seconds: int | None,
+    no_edit_timeout_seconds: int | None,
+    no_edit_observed: bool,
+    no_edit_checks: int,
+    last_no_edit_check_elapsed: float | None,
+    first_repo_change_observed_at: float | None,
+) -> dict[str, object] | None:
+    if idle_timeout_seconds is None and no_edit_timeout_seconds is None:
+        return None
+
+    details: dict[str, object] = {
+        "seconds_since_last_output": round(max(0.0, seconds_since_last_output), 3),
+    }
+    if idle_timeout_seconds is not None:
+        details["idle_timeout_seconds"] = idle_timeout_seconds
+
+    if no_edit_timeout_seconds is not None:
+        details["no_edit_timeout_seconds"] = no_edit_timeout_seconds
+        details["observed_repo_changes"] = no_edit_observed
+        details["no_edit_checks"] = no_edit_checks
+        if last_no_edit_check_elapsed is not None:
+            details["last_no_edit_check_seconds"] = round(last_no_edit_check_elapsed, 3)
+        if first_repo_change_observed_at is None:
+            details["seconds_without_observed_repo_changes"] = round(duration_seconds, 3)
+        else:
+            details["seconds_until_repo_change_observed"] = round(first_repo_change_observed_at, 3)
+
+    return details
 
 
 def timeout_message_for(timeout_reason: str, timeout_seconds: int) -> str:
