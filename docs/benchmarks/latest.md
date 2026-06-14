@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | H1 24-record stability expansion aborted on `decision-only` no-edit watchdog. |
+| Latest execution | Guarded `decision-only` H1 diagnostic completed 2/2 with 0 stalls/timeouts. |
 
 ## Representative Result
 
@@ -73,16 +73,15 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-h1-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-stability24-aborted.md).
+Latest executed focused H1 diagnostic:
+[`2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md`](2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md).
 
-The non-bare price-policy H1 stability expansion used the prior clean
-12-record gate as readiness evidence, then planned 24 records by increasing
-the same four arms to six repeats. It stopped after 2/24 planned records when
-the first `decision-only` record hit the no-edit watchdog. The new
-`agent.watchdog` fields showed `observed_repo_changes=false` for 360.035s and
-`seconds_since_last_output=110.863`. This argues strongly against a
-100-record promotion now.
+After the non-bare price-policy H1 stability expansion stopped on a
+`decision-only` no-edit watchdog, a guarded `decision-only` diagnostic ran
+2 records with `CODEX_PROMPT_GUARD=1`. Both records were strict and
+record-consistent, with 0 stalls, 0 timeouts, and visible repository changes
+after 24.0s and 43.1s. This is an operational mitigation signal, not a
+replacement for the prior unguarded H1 evidence.
 
 ## Controls And Prior Evidence
 
@@ -91,6 +90,7 @@ the first `decision-only` record hit the no-edit watchdog. The new
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Price-policy H1 | guarded decision-only diagnostic | 2 | 2 | 2 | 0 | 0 | Prompt guard coincided with quick repo edits; mitigation signal only. |
 | Price-policy H1 | stability24 expansion | 2/24 | 0 | 0 | 1 | 0 | Aborted on `decision-only` no-edit watchdog despite prior clean readiness. |
 | Price-policy H1 | non-bare clean gate rerun | 12 | 6 | 6 | 0 | 0 | Completed focused H1 gate; decision memory arms separated cleanly from controls. |
 | Price-policy H1 | non-bare clean gate | 8/12 | 4 | 4 | 1 | 0 | H1 signal held, but gate aborted on no-edit watchdog. |
@@ -110,9 +110,8 @@ hidden-oracle rows are the relevant harness-effect evidence.
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
 semantics change. Do not run a 100-record H1 promotion now. The next useful H1
-step is to diagnose the `decision-only` no-edit stall pattern, because it
-reproduced immediately in the 24-record stability expansion after a clean
-12-record gate.
+step is a guarded four-arm clean gate using `CODEX_PROMPT_GUARD=1`, while
+keeping guarded and unguarded evidence separate.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -127,6 +126,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md`](2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md) (guarded H1 decision-only diagnostic)
 - [`2026-06-14-flask-price-policy-h1-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-stability24-aborted.md) (focused H1 stability expansion, aborted)
 - [`2026-06-14-flask-price-policy-h1-clean-gate-rerun.md`](2026-06-14-flask-price-policy-h1-clean-gate-rerun.md) (focused H1 clean gate rerun)
 - [`2026-06-14-flask-price-policy-h1-clean-gate-aborted.md`](2026-06-14-flask-price-policy-h1-clean-gate-aborted.md) (focused H1 clean gate, aborted)
