@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Focused `full-harness` price-policy no-edit diagnostic completed 5/5 strict with 0 no-edit watchdogs. |
+| Latest execution | Second scoped H1 promotion stopped after 13/96 on a `decision-only` replenishment-policy no-edit watchdog. |
 
 ## Representative Result
 
@@ -73,19 +73,21 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md).
+Latest executed H1 promotion attempt:
+[`2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md).
 
-After the scoped 96-record H1 promotion stopped on a `full-harness`
-`hidden-effect-catalog-price-policy` no-edit watchdog, a focused diagnostic
-reran that exact task/arm pair for 5 repeats without `--stop-on-abnormal`.
-It completed 5/5 strict and record-consistent with 0 stalls, 0 timeouts,
-0 wrong-file edits, and 0 forbidden-file edits. First repository changes were
-observed within 23.0-36.0s.
+The second scoped 96-record H1 promotion attempt stopped after 13/96 records
+because a `decision-only` `hidden-effect-catalog-replenishment-policy` record
+hit the no-edit watchdog. The stopped agent announced that it would look for
+the adopted replenishment policy before editing, then made no repository
+changes for 240 seconds.
 
-This means the no-edit failure is intermittent, not deterministic. The H1
-promotion is still not achieved because the prior 96-record run stopped after
-11/96 records.
+This is the second promotion-scale no-edit stop. The prior promotion stopped
+after 11/96 records on a different `full-harness` price-policy record. The
+partial H1 signal remains useful: decision-bearing arms were 6/7
+record-consistent before the latest stop, while controls were 0/6. It is not
+promotable evidence because promotion-scale execution is not operationally
+stable.
 
 ## Controls And Prior Evidence
 
@@ -94,6 +96,7 @@ promotion is still not achieved because the prior 96-record run stopped after
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | promotion96 rerun aborted | 13/96 | 6 | 6 | 1 | 0 | Second promotion-scale no-edit stop, this time on `decision-only` replenishment. |
 | Price-policy H1 | full-harness no-edit diagnostic | 5 | 5 | 5 | 0 | 0 | Did not reproduce the promotion no-edit failure. |
 | Two-family H1 | promotion96 aborted | 11/96 | 5 | 5 | 1 | 0 | Stopped on `full-harness` price-policy no-edit after decision lookup. |
 | Two-family H1 | revised-oracle four-arm gate | 16 | 8 | 8 | 0 | 0 | Decision-bearing arms 8/8 record-consistent; controls 0/8. |
@@ -122,18 +125,17 @@ hidden-oracle rows are the relevant harness-effect evidence.
 ## Next Step
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
-semantics change. For H1, another scoped 96-record promotion attempt is now
-reasonable because the focused no-edit diagnostic did not reproduce the
-promotion blocker.
+semantics change. For H1, do not run another blind 96/100-record promotion
+now. Two promotion-scale attempts have stopped on no-edit watchdogs across
+different task/arm pairs.
 
-- Keep the same two direct H1 tasks.
-- Keep `workflow-only`, `decision-only`, `failure-only`, and `full-harness`.
-- Keep 12 repeats for the balanced 96-record matrix.
-- Keep `CODEX_PROMPT_GUARD=1`, `--promotion-run`, clean-readiness results,
-  sequential execution, and `--stop-on-abnormal`.
+The next useful H1 step is operational, not larger-sample scoring:
 
-If the same full-harness price-policy no-edit pattern recurs, classify it as
-repeated operational instability and do not keep rerunning blind promotions.
+- add or test a mitigation that makes agents start a minimal scoped
+  implementation edit shortly after relevant record discovery;
+- or run a small no-edit-focused diagnostic matrix that measures
+  time-to-first-edit across the decision-bearing arms and both H1 tasks;
+- keep `CODEX_PROMPT_GUARD=1`, sequential execution, and watchdog reporting.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -148,6 +150,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md) (latest scoped H1 promotion rerun, aborted on no-edit)
 - [`2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md) (focused no-edit diagnostic)
 - [`2026-06-14-flask-h1-promotion96-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-aborted-noedit.md) (scoped H1 promotion, aborted on no-edit)
 - [`2026-06-14-flask-h1-revised-oracle-two-family-gate.md`](2026-06-14-flask-h1-revised-oracle-two-family-gate.md) (latest revised-oracle two-family H1 gate)

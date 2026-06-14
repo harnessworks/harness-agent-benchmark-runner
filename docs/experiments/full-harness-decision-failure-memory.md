@@ -349,6 +349,13 @@ Post-run H1 oracle triage:
   of the scoped 96-record promotion is reasonable with the same safeguards, but
   a repeated stop on the same pattern should be treated as operational
   instability.
+- The scoped 96-record H1 promotion rerun then stopped after 13/96 planned
+  records on a `decision-only` replenishment-policy no-edit watchdog. This is a
+  second promotion-scale no-edit stop, on a different task/arm pair than the
+  prior stop. The partial signal still separated decision-bearing arms from
+  controls, but blind 96/100-record H1 promotion reruns are no longer a good
+  use of budget until time-to-first-edit behavior is mitigated or explicitly
+  studied.
 
 Pre-execution checks completed:
 
@@ -361,57 +368,58 @@ Pre-execution checks completed:
 Scope of this pilot line: it directly measures failure-memory transfer through
 `mistake_prevention` and direct decision-memory behavior through
 `record_consistency`. The H1 signal now has two scaffolded catalog decision
-families: price bands and replenishment statuses. Only price-policy has clean
-live stability evidence so far; replenishment-policy still needs a pilot.
+families: price bands and replenishment statuses. Both have clean gate evidence
+and positive promotion partials, but promotion-scale execution has now stopped
+twice on no-edit watchdogs.
 
 ### Remaining Gaps Before Promotion
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 stability is now clean for this task. | The guarded four-arm 24-record rerun completed 24/24 with zero stalls/timeouts and decision-bearing arms at 12/12 record-consistent. | Treat larger H1 work as operationally defensible for this task family, not as broad decision-memory proof. |
-| H1 coverage is broader but not yet exercised. | A second catalog replenishment decision task is scaffolded, but live evidence still exists only for the price-policy decision. | Run a guarded small H1 pilot over both decision families before a broad promotion. |
+| H1 promotion-scale stability is not clean. | Two scoped 96-record promotion attempts stopped on no-edit watchdogs across different task/arm pairs. | Mitigate or directly measure time-to-first-edit behavior before another blind 96/100-record promotion. |
+| H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
-| Live Codex runs cost time and budget. | A larger H1 run is now less likely to be wasted on immediate no-edit stalls, but the new replenishment task has not been exercised. | Spend the next live budget on a guarded two-family H1 pilot. |
+| Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |
 
-Feasibility verdict: the scoring surface and price-policy guarded stability are
-ready, and a second H1 task family is now scaffolded. A larger run is
-operationally defensible only after the replenishment-policy task clears a
-small guarded pilot.
+Feasibility verdict: the scoring surface and two-family H1 gate are strong
+enough to justify the claim as worth studying, but larger blind promotion runs
+are not operationally defensible until the repeated no-edit path is mitigated
+or made the explicit object of a diagnostic run.
 
 ## Direction Review
 
 Recommended direction:
 
-1. Run a guarded small H1 pilot over `hidden-effect-catalog-price-policy` and
-   `hidden-effect-catalog-replenishment-policy`.
+1. Stop blind H1 promotion reruns until no-edit behavior is mitigated or
+   directly measured.
 2. Prefer failure-memory tasks next. They have clearer behavioral oracles:
    "did the known mistake recur?"
 3. Add decision-memory tasks second. Their oracles need careful concept checks
    so they measure structural choice rather than preferred prose.
-4. Promote only after the pilot has no abnormal signals: no hidden-access
-   findings, no wrong-file edits, no forbidden-file edits, no stalls, and no
-   unexplained timeouts.
+4. Promote only after a mitigation or diagnostic gate has no abnormal signals:
+   no hidden-access findings, no wrong-file edits, no forbidden-file edits, no
+   stalls, and no unexplained timeouts.
 
-If the pilot produces a positive result, the first meaningful product claim
-should be phrased conservatively:
+If the H1 line later produces a clean promotion result, the first meaningful
+product claim should be phrased conservatively:
 
 > In record-sensitive held-out Flask API tasks, failure memory reduced specific
 > repeated response-contract mistakes relative to workflow-only harness
 > guidance, while preserving the runner's safety and boundary guarantees.
 
-If the pilot ties `workflow-only`, the result is still useful. It would mean
-the current records are not yet carrying measurable extra behavior, and the
-next step should be to improve record quality, task selection, or the agent's
-record-discovery path instead of promoting full-harness memory as a proven
-accuracy lift.
+If a future clean run ties `workflow-only`, the result is still useful. It
+would mean the current records are not yet carrying measurable extra behavior,
+and the next step should be to improve record quality, task selection, or the
+agent's record-discovery path instead of promoting full-harness memory as a
+proven accuracy lift.
 
 ## Minimum Next Implementation Steps
 
 1. Keep guarded and unguarded H1 evidence separate in reports.
-2. Keep `scripts/triage_no_edit_stalls.py` ready for any stopped no-edit
+2. Treat another blind 96/100-record H1 promotion as low-value until no-edit
+   behavior is mitigated or explicitly measured.
+3. Keep `scripts/triage_no_edit_stalls.py` ready for any stopped no-edit
    records in larger runs.
-3. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
-   surfaced decision-record guidance.
 4. Classify every abnormal result after the run: hidden access, wrong-file
    edits, forbidden-file edits, preflight failures, stalls, and timeouts.
 5. Summarize public-safe pilot evidence under `docs/benchmarks/`.

@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: triage the new replenishment H1 task before any 100-run
-  decision-memory promotion.
+- Next step: do not run another blind 96/100-record H1 promotion until the
+  repeated no-edit watchdog path is mitigated or explicitly studied.
 
 Safe claims:
 
@@ -81,12 +81,13 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](docs/benchmarks/2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md).
-After the scoped 96-record H1 promotion stopped on a `full-harness`
-price-policy no-edit watchdog, a focused 5-record diagnostic for that exact
-task/arm completed 5/5 strict with 0 no-edit watchdogs. The promotion is still
-not achieved, but the no-edit blocker is intermittent rather than
-deterministic.
+[`docs/benchmarks/2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](docs/benchmarks/2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md).
+The second scoped 96-record H1 promotion stopped after 13/96 records on a
+`decision-only` replenishment-policy no-edit watchdog. This followed an
+earlier promotion stop on a different `full-harness` price-policy no-edit
+record. The H1 partial signal still separated decision-bearing arms from
+controls, but promotion-scale execution is not operationally stable enough for
+another blind 96/100-record run.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
