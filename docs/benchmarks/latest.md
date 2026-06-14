@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Prompt-guard mitigation diagnostic completed 7/8 strict; one `decision-only` replenishment no-edit recurred. |
+| Latest execution | Strengthened prompt-guard diagnostic completed 8/8 strict with 0 no-edit watchdogs. |
 
 ## Representative Result
 
@@ -74,20 +74,20 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed H1 diagnostic:
-[`2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md).
+[`2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md`](2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md).
 
-After adding a generic no-edit mitigation to the Codex prompt guard, a small
+After strengthening the answer-free Codex prompt guard, a small
 decision-bearing diagnostic covered both direct H1 task families across
-`decision-only` and `full-harness`, with two repeats each. It completed 7/8
-strict and record-consistent. One `decision-only`
-`hidden-effect-catalog-replenishment-policy` record hit the no-edit watchdog.
+`decision-only` and `full-harness`, with two repeats each. It completed 8/8
+strict and record-consistent with 0 no-edit watchdogs, 0 timeouts,
+0 wrong-file edits, and 0 forbidden-file edits. First observed repository
+changes landed within 29.1-39.1 seconds.
 
-The stopped agent had already found the accepted replenishment policy and
-announced the intended implementation direction, but no repository changes
-were observed for 240 seconds. This shows the generic prompt-guard mitigation
-is not enough. The earlier clean 8-record time-to-first-edit diagnostic still
-shows the failure is intermittent, but another blind 96/100-record H1 run
-remains low-value.
+This is a positive mitigation signal because the prior generic prompt-guard
+diagnostic reproduced a `decision-only` replenishment no-edit watchdog. It is
+not promotion-scale proof because the no-edit path has been intermittent in
+small batches. The next useful step is a bounded 16/24-record decision-bearing
+gate, not a blind 96/100-record H1 run.
 
 ## Controls And Prior Evidence
 
@@ -96,6 +96,7 @@ remains low-value.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | strengthened prompt-guard diagnostic | 8 | 8 | 8 | 0 | 0 | Stronger edit-before-plan guard cleared the small decision-bearing matrix. |
 | Two-family H1 | prompt-guard mitigation diagnostic | 8 | 7 | 7 | 1 | 0 | Generic edit-start guard did not prevent `decision-only` replenishment no-edit. |
 | Two-family H1 | decision-arms time-to-first-edit diagnostic | 8 | 8 | 8 | 0 | 0 | Decision-bearing arms started edits within 22.0-38.1s; no no-edit reproduction in small batch. |
 | Two-family H1 | promotion96 rerun aborted | 13/96 | 6 | 6 | 1 | 0 | Second promotion-scale no-edit stop, this time on `decision-only` replenishment. |
@@ -131,15 +132,16 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The latest small diagnostic tested a generic prompt-guard mitigation and still
-reproduced the no-edit stop. The next useful H1 step is still operational, not
-larger-sample scoring:
+The latest small diagnostic tested a stronger prompt-guard mitigation and
+cleared the small decision-bearing matrix. The next useful H1 step is still
+operationally bounded, not a blind promotion:
 
-- reduce the `decision-only` replenishment planning surface without adding
-  task-specific answers;
-- or add a stronger answer-free adapter progress constraint before narrating an
-  implementation plan;
-- rerun a small diagnostic before any larger promotion attempt;
+- run a 16-record or 24-record decision-bearing gate under the strengthened
+  guard;
+- keep controls out of that immediate gate unless the question changes back to
+  H1 effect size rather than no-edit mitigation;
+- only consider a scoped 96-record H1 promotion after the bounded gate is
+  clean;
 - keep `CODEX_PROMPT_GUARD=1`, sequential execution, and watchdog reporting.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
@@ -155,7 +157,8 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
-- [`2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md) (latest H1 prompt-guard mitigation diagnostic)
+- [`2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md`](2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md) (latest H1 prompt-guard mitigation diagnostic)
+- [`2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md) (prior H1 prompt-guard mitigation diagnostic)
 - [`2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md) (prior H1 decision-bearing no-edit diagnostic)
 - [`2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md) (latest scoped H1 promotion rerun, aborted on no-edit)
 - [`2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md) (focused no-edit diagnostic)

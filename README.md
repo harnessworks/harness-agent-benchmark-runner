@@ -81,12 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](docs/benchmarks/2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md).
-After adding a generic no-edit mitigation to the Codex prompt guard, the small
-decision-bearing diagnostic completed 7/8 strict. One `decision-only`
-replenishment record still hit the no-edit watchdog after finding the accepted
-policy and describing the intended implementation. The generic guardrail is
-not enough; another blind 96/100-record H1 run remains low-value.
+[`docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md`](docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md).
+After strengthening the answer-free Codex prompt guard to prevent stopping
+after a narrated plan, the small decision-bearing diagnostic completed 8/8
+strict with 0 no-edit watchdogs. This is a positive mitigation signal, but not
+promotion-scale proof; the next useful H1 step is a bounded 16/24-record
+decision-bearing gate, not a blind 96/100-record run.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
