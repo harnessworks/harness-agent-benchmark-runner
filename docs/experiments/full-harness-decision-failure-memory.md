@@ -374,6 +374,11 @@ Post-run H1 oracle triage:
   completed 8/8 strict and record-consistent with zero no-edit watchdogs and
   first repository changes within 29.1-39.1 seconds. Treat this as a positive
   mitigation signal, not promotion-scale proof.
+- A bounded 16-record decision-bearing gate under the strengthened prompt guard
+  then completed 16/16 strict and record-consistent with zero no-edit
+  watchdogs. The previously recurring `decision-only` replenishment path was
+  4/4 strict and record-consistent. This makes a scoped guarded H1 promotion
+  attempt defensible again, but it is not itself promotion-scale evidence.
 
 Pre-execution checks completed:
 
@@ -394,7 +399,7 @@ twice on no-edit watchdogs.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 promotion-scale stability is not clean. | Two scoped 96-record promotion attempts stopped on no-edit watchdogs across different task/arm pairs; the strengthened prompt-guard diagnostic cleared the latest 8-record decision-bearing matrix. | Run a bounded 16/24-record decision-bearing gate before another blind 96/100-record promotion. |
+| H1 promotion-scale stability is not clean. | Two scoped 96-record promotion attempts stopped on no-edit watchdogs across different task/arm pairs; the strengthened prompt-guard decision-bearing gate then completed 16/16 clean. | A scoped guarded 96-record H1 promotion is defensible again, but it should stop on abnormal events and not be called a broad 100-run. |
 | H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
 | Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |

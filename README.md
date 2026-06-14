@@ -81,12 +81,11 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md`](docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md).
-After strengthening the answer-free Codex prompt guard to prevent stopping
-after a narrated plan, the small decision-bearing diagnostic completed 8/8
-strict with 0 no-edit watchdogs. This is a positive mitigation signal, but not
-promotion-scale proof; the next useful H1 step is a bounded 16/24-record
-decision-bearing gate, not a blind 96/100-record run.
+[`docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md).
+After strengthening the answer-free Codex prompt guard, a bounded
+decision-bearing H1 gate completed 16/16 strict with 0 no-edit watchdogs.
+This makes a scoped guarded H1 promotion attempt defensible again, but it is
+not itself a 96/100-run result.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
