@@ -289,6 +289,13 @@ changes, no changed files, and output silence for almost the full agent
 duration. Do not use it for `post-planning` no-edit records; those remain real
 abnormal results.
 
+Known agent quota/session-limit messages are recorded separately from watchdog
+stalls. For example, when an agent exits non-zero with `You've hit your session
+limit` in stdout or stderr, the runner records
+`scoring.agent_quota_exhausted=true`. The Flask A/B wrapper treats that as an
+abnormal signal under `--stop-on-abnormal`, because quota exhaustion
+contaminates the scheduled comparison rather than measuring task behavior.
+
 Use `--agent-timeout-override` when a promotion run intentionally needs a
 different effective task timeout than the task JSON. The runner applies that
 override before `--max-agent-timeout`, so `--max-agent-timeout` remains a cap.

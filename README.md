@@ -250,6 +250,7 @@ design task: all arms scored 0/8 strict and 0/8 schema.
 
 ## Reports
 
+- [`docs/benchmarks/index.md`](docs/benchmarks/index.md)
 - [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md)

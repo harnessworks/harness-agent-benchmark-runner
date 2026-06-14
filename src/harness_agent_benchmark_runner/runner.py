@@ -21,6 +21,12 @@ except ImportError:  # pragma: no cover - fcntl is unavailable on Windows.
     fcntl = None
 
 
+KNOWN_AGENT_QUOTA_MESSAGES = (
+    "you've hit your session limit",
+    "you have hit your session limit",
+)
+
+
 def run_task(
     task: TaskSpec,
     config: RunnerConfig,
@@ -149,6 +155,7 @@ def run_task(
         wrong_files = classify_wrong_files(changed_files_for_scoring, task.expected_files)
         forbidden_files = matching_files(changed_files_for_scoring, task.forbidden_files)
         verification_passed = all(result.exit_code == 0 for result in verification_results)
+        agent_quota_exhausted_value = agent_quota_exhausted(agent_result)
         dimension_scoring = calculate_dimension_scoring(
             preflight_passed=preflight["passed"],
             agent_result=agent_result,
@@ -222,6 +229,7 @@ def run_task(
                 "agent_exit_code": agent_result.exit_code,
                 "agent_timed_out": agent_result.timed_out,
                 "agent_stalled": agent_stalled(agent_result),
+                "agent_quota_exhausted": agent_quota_exhausted_value,
                 "verification_passed": verification_passed,
                 "first_pass_verification": attempt_number == 1 and verification_passed,
                 "wrong_file_edits": len(wrong_files),
@@ -705,6 +713,7 @@ def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
         "agent_exit_code": None,
         "agent_timed_out": False,
         "agent_stalled": False,
+        "agent_quota_exhausted": False,
         "verification_passed": False,
         "first_pass_verification": False,
         "wrong_file_edits": 0,
@@ -726,6 +735,13 @@ def agent_stalled(agent_result: ProcessResult) -> bool:
         "idle_watchdog",
         "no_edit_watchdog",
     }
+
+
+def agent_quota_exhausted(agent_result: ProcessResult) -> bool:
+    if agent_result.exit_code == 0:
+        return False
+    output = f"{agent_result.stdout_tail}\n{agent_result.stderr_tail}".lower()
+    return any(message in output for message in KNOWN_AGENT_QUOTA_MESSAGES)
 
 
 def run_verification_commands(

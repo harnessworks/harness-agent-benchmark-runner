@@ -160,6 +160,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 
 ## Detailed Reports
 
+- [`index.md`](index.md) (curated report index)
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
 - [`2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md) (latest patched-oracle H1 Claude gate, contaminated by Claude session limit)
 - [`2026-06-14-flask-h1-claude-four-arm-gate.md`](2026-06-14-flask-h1-claude-four-arm-gate.md) (prior H1 four-arm Claude gate)

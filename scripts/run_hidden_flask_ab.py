@@ -1008,6 +1008,8 @@ def abnormal_reasons(record: dict[str, Any]) -> list[str]:
             reasons.append("agent stall watchdog fired")
     elif scoring.get("agent_timed_out") is True:
         reasons.append("agent timed out")
+    if scoring.get("agent_quota_exhausted") is True or agent_has_known_quota_message(record):
+        reasons.append("agent quota/session limit reached")
     if int(scoring.get("wrong_file_edits") or 0):
         reasons.append(f"wrong-file edits: {scoring.get('wrong_file_edits')}")
     if int(scoring.get("forbidden_file_edits") or 0):
@@ -1022,6 +1024,14 @@ def abnormal_reasons(record: dict[str, Any]) -> list[str]:
     if agent_log_has_hidden_access(record):
         reasons.append("agent log contains hidden benchmark access pattern")
     return reasons
+
+
+def agent_has_known_quota_message(record: dict[str, Any]) -> bool:
+    agent = record.get("agent", {})
+    if not isinstance(agent, dict):
+        return False
+    output = f"{agent.get('stdout_tail') or ''}\n{agent.get('stderr_tail') or ''}".lower()
+    return "you've hit your session limit" in output or "you have hit your session limit" in output
 
 
 def agent_log_has_hidden_access(record: dict[str, Any]) -> bool:

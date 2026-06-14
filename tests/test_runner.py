@@ -108,6 +108,45 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["scoring"]["wrong_file_edits"], 1)
             self.assertEqual(result["scoring"]["wrong_files"], ["unexpected.txt"])
 
+    def test_runner_classifies_agent_session_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_repo = create_git_repo(root / "source")
+            agent = root / "agent.py"
+            agent.write_text(
+                "\n".join(
+                    [
+                        "import sys",
+                        "print(\"You've hit your session limit · resets 11:30pm\")",
+                        "sys.exit(1)",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            task_path = write_task(
+                root,
+                source_repo,
+                expected_files=["README.md"],
+                verification_commands=[
+                    {"name": "always passes", "command": [sys.executable, "-c", "pass"]}
+                ],
+            )
+
+            result = run_task(
+                load_task(task_path),
+                RunnerConfig(
+                    agent_command=f"{sys.executable} {agent}",
+                    workspace_root=root / "runs",
+                    results_dir=root / "results",
+                ),
+            )
+
+            self.assertFalse(result["scoring"]["success"])
+            self.assertFalse(result["scoring"]["agent_timed_out"])
+            self.assertFalse(result["scoring"]["agent_stalled"])
+            self.assertTrue(result["scoring"]["agent_quota_exhausted"])
+            self.assertIn("session limit", result["agent"]["stdout_tail"])
+
     def test_runner_retries_until_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

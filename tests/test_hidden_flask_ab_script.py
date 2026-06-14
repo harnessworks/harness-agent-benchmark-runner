@@ -1058,6 +1058,22 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent no-edit watchdog fired"])
 
+    def test_abnormal_reasons_include_agent_session_limit(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "agent": {"stdout_tail": "You've hit your session limit · resets 11:30pm"},
+            "scoring": {
+                "preflight_passed": True,
+                "agent_timed_out": False,
+                "agent_stalled": False,
+                "agent_quota_exhausted": True,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent quota/session limit reached"])
+
     def test_retryable_startup_no_output_no_edit_requires_no_changed_files(self) -> None:
         record = startup_no_output_no_edit_record("fixture")
 
