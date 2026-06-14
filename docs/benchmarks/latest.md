@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Guarded H1 decision-bearing no-edit triage completed 8/8 clean records. |
+| Latest execution | Guarded H1 four-arm stability rerun completed 24/24 clean records. |
 
 ## Representative Result
 
@@ -74,21 +74,19 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md).
+[`2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md).
 
-The guarded price-policy H1 decision-bearing no-edit triage used
+The guarded price-policy H1 four-arm stability rerun used
 `CODEX_PROMPT_GUARD=1`, required the prior guarded clean gate as readiness
-evidence, and ran only `decision-only` and `full-harness` for 8 records. It
-completed 8/8 strict and record-consistent records with 0 stalls, 0 timeouts,
-and first repository changes within 27.0-39.1s. This shows the prior
-post-planning no-edit stall is intermittent rather than deterministic, but it
-does not clear the four-arm H1 stability gate.
+evidence, and completed 24/24 planned records with 0 stalls, 0 timeouts,
+0 wrong-file edits, and 0 forbidden-file edits. `decision-only` and
+`full-harness` were both 6/6 strict and record-consistent, while
+`workflow-only` and `failure-only` stayed 0/6 record-consistent. No no-edit
+watchdog records were produced.
 
-The previous guarded 24-record four-arm H1 expansion remains the promotion
-blocker: it stopped after 4/24 planned records when `full-harness` hit the
-no-edit watchdog after reading the accepted decision record and announcing the
-correct implementation direction. Do not run a 100-record H1 promotion until a
-guarded four-arm 24-record rerun completes cleanly.
+This clears the immediate H1 operational blocker from the previous guarded
+24-record abort. It does not by itself justify a broad decision-memory claim:
+the current H1 evidence still covers one catalog price-policy decision family.
 
 ## Controls And Prior Evidence
 
@@ -97,6 +95,7 @@ guarded four-arm 24-record rerun completes cleanly.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Price-policy H1 | guarded stability24 rerun | 24 | 12 | 12 | 0 | 0 | Completed four-arm stability gate; decision-bearing arms 12/12 record-consistent, controls 0/12. |
 | Price-policy H1 | guarded decision-arms no-edit triage | 8 | 8 | 8 | 0 | 0 | Decision-bearing arms completed cleanly; no-edit stall did not immediately reproduce. |
 | Price-policy H1 | guarded stability24 expansion | 4/24 | 1 | 1 | 1 | 0 | Aborted on `full-harness` no-edit watchdog after decision-record discovery. |
 | Price-policy H1 | guarded clean gate | 12 | 6 | 6 | 0 | 0 | Guarded four-arm H1 gate completed; decision memory arms separated cleanly from controls. |
@@ -119,9 +118,10 @@ hidden-oracle rows are the relevant harness-effect evidence.
 ## Next Step
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
-semantics change. Do not run a 100-record H1 promotion now. The next useful H1
-step is a guarded four-arm 24-record rerun; if any no-edit watchdog fires, run
-`scripts/triage_no_edit_stalls.py` on the stopped result before retrying.
+semantics change. For H1, a larger run is now operationally more defensible
+than it was after the abort, but its value depends on scope. Either keep the
+larger run explicitly scoped to the catalog price-policy decision, or add a
+second decision-memory task family before making a broader promotion claim.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -136,6 +136,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md) (guarded H1 stability rerun)
 - [`2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md) (guarded H1 decision-bearing no-edit triage)
 - [`2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md) (guarded H1 stability expansion, aborted)
 - [`2026-06-14-flask-price-policy-h1-guarded-clean-gate.md`](2026-06-14-flask-price-policy-h1-guarded-clean-gate.md) (guarded H1 clean gate)

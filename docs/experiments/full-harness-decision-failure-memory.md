@@ -308,6 +308,11 @@ Post-run H1 oracle triage:
   repository changes within 27.0-39.1 seconds. This means the no-edit stall is
   intermittent, not deterministic, but the four-arm H1 stability gate still
   needs to be rerun before any promotion-sized matrix.
+- The guarded four-arm 24-record H1 stability rerun then completed 24/24
+  records with zero stalls/timeouts, zero wrong-file edits, and zero
+  forbidden-file edits. `decision-only` and `full-harness` were both 6/6
+  strict and record-consistent, while `workflow-only` and `failure-only` stayed
+  0/6 record-consistent.
 
 Pre-execution checks completed:
 
@@ -327,24 +332,22 @@ records.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 stability is not promotion-ready. | A guarded 12-record gate passed and a decision-bearing 8-record triage completed cleanly, but the guarded four-arm 24-record expansion reproduced a `post-planning` no-edit stall in `full-harness` after only 4 records. | Rerun the guarded four-arm 24-record gate before any promotion-sized run. |
+| H1 stability is now clean for this task. | The guarded four-arm 24-record rerun completed 24/24 with zero stalls/timeouts and decision-bearing arms at 12/12 record-consistent. | Treat larger H1 work as operationally defensible for this task family, not as broad decision-memory proof. |
 | H1 coverage is narrow. | The current pilot directly tests one catalog policy decision, not every structural decision-memory family. | Add at least one harness-structure `record_consistency` task before making a broad decision-memory claim. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
-| Live Codex runs cost time and budget. | Promotion run may be expensive, and the latest four-arm 24-record expansion stopped after 4 records. | Spend the next live budget on a guarded four-arm 24-record rerun, not a promotion matrix. |
+| Live Codex runs cost time and budget. | A larger H1 run is now less likely to be wasted on immediate no-edit stalls, but it still measures one decision family. | Either scope the larger run narrowly to price-policy H1 or add a second H1 task family first. |
 
-Feasibility verdict: the scoring surface is ready, but live promotion is not.
-The H1 correctness signal reproduced in a clean 12-record gate and an 8-record
-decision-bearing triage, but the latest four-arm 24-record stability expansion
-still reproduced the no-edit stall. A clean factorial promotion still needs
-both broader H1 task coverage and operational stability.
+Feasibility verdict: the scoring surface and this task's guarded stability are
+ready. A larger run is now operationally defensible if the claim is scoped to
+the catalog price-policy decision. A broad decision-memory promotion still
+needs at least one additional H1 task family.
 
 ## Direction Review
 
 Recommended direction:
 
-1. Rerun the guarded four-arm 24-record H1 gate before spending effort on a
-   promotion matrix; use `scripts/triage_no_edit_stalls.py` to classify any
-   stopped no-edit records.
+1. Decide whether the next larger H1 run is a narrow price-policy promotion or
+   whether to add a second decision-memory task family first.
 2. Prefer failure-memory tasks next. They have clearer behavioral oracles:
    "did the known mistake recur?"
 3. Add decision-memory tasks second. Their oracles need careful concept checks
@@ -369,8 +372,8 @@ accuracy lift.
 ## Minimum Next Implementation Steps
 
 1. Keep guarded and unguarded H1 evidence separate in reports.
-2. Rerun the guarded four-arm 24-record H1 gate with no-edit triage ready for
-   any abnormal stop.
+2. Keep `scripts/triage_no_edit_stalls.py` ready for any stopped no-edit
+   records in larger runs.
 3. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
    surfaced decision-record guidance.
 4. Classify every abnormal result after the run: hidden access, wrong-file

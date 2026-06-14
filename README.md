@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: rerun the guarded four-arm H1 stability gate before any
-  100-record promotion attempt.
+- Next step: either scope a larger H1 run to the catalog price-policy decision
+  or add a second decision-memory task family before broad promotion.
 
 Safe claims:
 
@@ -81,13 +81,13 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md).
-The guarded decision-bearing H1 no-edit triage completed 8/8 records with
-8/8 strict and record-consistent success, 0 stalls, and first repository
-changes within 27.0-39.1s. This shows the post-planning no-edit stall is
-intermittent rather than deterministic, but it does not clear the four-arm H1
-stability gate. Do not run a 100-record H1 promotion until a guarded four-arm
-24-record rerun completes cleanly.
+[`docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md).
+The guarded four-arm H1 stability rerun completed 24/24 records with 0 stalls,
+0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only` and
+`full-harness` were both 6/6 strict and record-consistent, while
+`workflow-only` and `failure-only` stayed 0/6 record-consistent. A larger H1 run
+is now operationally more defensible, but the claim is still narrow because the
+current H1 suite measures one catalog price-policy decision family.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
