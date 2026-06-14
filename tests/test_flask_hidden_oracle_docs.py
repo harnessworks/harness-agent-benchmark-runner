@@ -139,6 +139,28 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
                     }
                 )
 
+    def test_catalog_replenishment_glossary_accepts_snake_case_status_key(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog replenishment policy endpoint: `GET /catalog/replenishment-policy`,
+              returns `sku`, `stock`, and `replenishment_status`.
+            - `replenishment_status`: Stable stock replenishment classification.
+            """
+        )
+
+        flask_hidden_oracle.expect_catalog_replenishment_glossary_terms(glossary)
+
+    def test_catalog_replenishment_glossary_requires_route_and_status_concept(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Replenishment endpoint: returns stock counts by stable labels.
+            """
+        )
+
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.expect_catalog_replenishment_glossary_terms(glossary)
+
     def test_cart_functional_summary_prefers_summary_object_over_item_rows(self) -> None:
         class Response:
             def __init__(self, status_code: int, payload: dict[str, object]) -> None:

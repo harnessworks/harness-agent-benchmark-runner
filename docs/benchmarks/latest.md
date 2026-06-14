@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Guarded two-family H1 pilot completed 8/8 operationally clean records, with mixed replenishment results. |
+| Latest execution | Guarded replenishment H1 triage completed 10/10 operationally clean records; revised oracle replay is 10/10. |
 
 ## Representative Result
 
@@ -74,27 +74,26 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-h1-two-family-guarded-pilot.md`](2026-06-14-flask-h1-two-family-guarded-pilot.md).
+[`2026-06-14-flask-replenishment-h1-guarded-triage.md`](2026-06-14-flask-replenishment-h1-guarded-triage.md).
 
-The guarded two-family H1 pilot used `CODEX_PROMPT_GUARD=1` and ran
-`hidden-effect-catalog-price-policy` plus
-`hidden-effect-catalog-replenishment-policy` across `workflow-only`,
-`decision-only`, `failure-only`, and `full-harness`. It completed 8/8 planned
-records with 0 stalls, 0 timeouts, 0 wrong-file edits, and 0 forbidden-file
-edits. No no-edit watchdog records were produced.
+The guarded replenishment H1 triage used `CODEX_PROMPT_GUARD=1` and ran
+`hidden-effect-catalog-replenishment-policy` across `decision-only` and
+`full-harness` for 5 repeats. It completed 10/10 planned records with 0
+stalls, 0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. No no-edit
+watchdog records were produced.
 
-The result is mixed. The price-policy family reproduced the expected H1
-separation: `decision-only` and `full-harness` passed strict and
-record-consistency checks, while `workflow-only` and `failure-only` failed
-record consistency. The new replenishment family passed only in
-`full-harness`; `decision-only` failed functional and record-consistency
-checks because the glossary used the code-style token `replenishment_status`
-instead of the normalized prose phrase `replenishment status`.
+Live scoring was 8/10 strict: both decision-bearing arms were 4/5. The two
+failures had the same cause: the glossary documented the API key
+`replenishment_status`, while the oracle required the prose phrase
+`replenishment status`. The oracle now treats those as concept-equivalent for
+this route while still requiring the route, status counts, tracked decision
+record, and hidden stock 5/20 edge behavior. Saved worktree replay under the
+revised oracle is 10/10 functional and record-consistent.
 
-This means the immediate operational blocker remains cleared, but the
-two-family H1 measurement is not yet promotable. A 100-run decision-memory
-promotion would mostly amplify an unresolved replenishment task/oracle
-ambiguity.
+This clears the immediate replenishment oracle-brittleness ambiguity. It does
+not yet justify a 100-run decision-memory promotion because controls were not
+rerun under the revised oracle and one `decision-only` pass had a 493.3s
+duration tail.
 
 ## Controls And Prior Evidence
 
@@ -103,6 +102,7 @@ ambiguity.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Replenishment H1 | guarded decision-bearing triage | 10 | 8 live / 10 revised | 8 live / 10 revised | 0 | 0 | Oracle wording brittleness fixed; controls still need revised-oracle rerun. |
 | Two-family H1 | guarded pilot | 8 | 3 | 3 | 0 | 0 | Operationally clean, but replenishment passed only in `full-harness`; not promotion-ready. |
 | Price-policy H1 | guarded stability24 rerun | 24 | 12 | 12 | 0 | 0 | Completed four-arm stability gate; decision-bearing arms 12/12 record-consistent, controls 0/12. |
 | Price-policy H1 | guarded decision-arms no-edit triage | 8 | 8 | 8 | 0 | 0 | Decision-bearing arms completed cleanly; no-edit stall did not immediately reproduce. |
@@ -128,17 +128,15 @@ hidden-oracle rows are the relevant harness-effect evidence.
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
 semantics change. For H1, do not run a 100-record promotion yet. The next
-useful step is a guarded replenishment triage:
+useful step is a revised-oracle two-family four-arm gate:
 
+- `hidden-effect-catalog-price-policy`
 - `hidden-effect-catalog-replenishment-policy`
-- `decision-only` and `full-harness` for 3-5 repeats
-- optional one-repeat controls for `workflow-only` and `failure-only`
+- arms: `workflow-only`, `decision-only`, `failure-only`, `full-harness`
+- start with 1-2 repeats before any 60- or 100-record promotion
 
-Use that run to decide whether the replenishment glossary oracle should accept
-`replenishment_status` as concept-equivalent to `replenishment status`, or
-whether the stricter prose-documentation expectation should remain. If the
-triage is clean, rerun the two-family four-arm gate before any larger H1
-promotion.
+If controls remain negative, decision-bearing arms stay positive, and watchdogs
+remain clean, a larger H1 promotion becomes much more valuable.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -153,7 +151,8 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
-- [`2026-06-14-flask-h1-two-family-guarded-pilot.md`](2026-06-14-flask-h1-two-family-guarded-pilot.md) (latest guarded two-family H1 pilot)
+- [`2026-06-14-flask-replenishment-h1-guarded-triage.md`](2026-06-14-flask-replenishment-h1-guarded-triage.md) (latest guarded replenishment H1 triage)
+- [`2026-06-14-flask-h1-two-family-guarded-pilot.md`](2026-06-14-flask-h1-two-family-guarded-pilot.md) (prior guarded two-family H1 pilot)
 - [`2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md) (guarded H1 stability rerun)
 - [`2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md) (guarded H1 decision-bearing no-edit triage)
 - [`2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md) (guarded H1 stability expansion, aborted)

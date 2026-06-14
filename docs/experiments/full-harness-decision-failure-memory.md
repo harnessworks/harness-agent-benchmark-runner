@@ -322,6 +322,14 @@ Post-run H1 oracle triage:
   its glossary used `replenishment_status` rather than the normalized prose
   phrase `replenishment status`. Treat this as task/oracle/discoverability
   triage evidence, not as a green light for a 100-run H1 promotion.
+- A focused guarded replenishment triage over `decision-only` and
+  `full-harness` completed 10/10 records with zero stalls/timeouts and zero
+  file-boundary issues. Live scoring was 8/10 strict because two records used
+  `replenishment_status` where the oracle required `replenishment status`.
+  The oracle now accepts those as concept-equivalent for this route, and saved
+  worktree replay is 10/10 functional and record-consistent. The next gate is
+  a revised-oracle two-family four-arm run, not an immediate 100-record
+  promotion.
 
 Pre-execution checks completed:
 

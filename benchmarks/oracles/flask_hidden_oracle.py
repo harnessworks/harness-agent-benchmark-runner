@@ -651,11 +651,7 @@ def check_catalog_replenishment_policy_functional() -> None:
     catalog_replenishment_status_counts(summary)
 
     glossary = glossary_text()
-    expect_terms(
-        glossary,
-        ("/catalog/replenishment-policy", "replenishment status"),
-        "glossary must document catalog replenishment policy route and statuses",
-    )
+    expect_catalog_replenishment_glossary_terms(glossary)
 
 
 def check_catalog_replenishment_policy_record_consistency() -> None:
@@ -726,6 +722,12 @@ def catalog_replenishment_status_counts(summary: dict[str, Any]) -> dict[str, in
             return counts
 
     fail("catalog replenishment policy summary must count reorder_now, monitor, and healthy statuses")
+
+
+def expect_catalog_replenishment_glossary_terms(glossary: str) -> None:
+    label = "glossary must document catalog replenishment policy route and statuses"
+    expect_terms(glossary, ("/catalog/replenishment-policy",), label)
+    expect_any_term(glossary, ("replenishment status", "replenishment_status"), label)
 
 
 def check_catalog_replenishment_policy_hidden_decision_edges() -> None:
@@ -1431,6 +1433,11 @@ def normalize_doc_text(text: str) -> str:
 def expect_terms(text: str, terms: tuple[str, ...], label: str) -> None:
     missing = [term for term in terms if term.lower() not in text]
     expect(not missing, f"{label}; missing: {', '.join(missing)}")
+
+
+def expect_any_term(text: str, terms: tuple[str, ...], label: str) -> None:
+    if not any(term.lower() in text for term in terms):
+        expect(False, f"{label}; missing one of: {', '.join(terms)}")
 
 
 def money(value: Decimal) -> Decimal:

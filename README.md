@@ -81,13 +81,14 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-two-family-guarded-pilot.md`](docs/benchmarks/2026-06-14-flask-h1-two-family-guarded-pilot.md).
-The guarded two-family H1 pilot completed 8/8 records with 0 stalls,
-0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. The price-policy
-family reproduced the expected H1 separation, but the new replenishment-policy
-family passed only in `full-harness`; `decision-only` failed functional and
-record-consistency checks on documentation wording. Do not spend on a 100-run
-H1 promotion until the replenishment task is triaged.
+[`docs/benchmarks/2026-06-14-flask-replenishment-h1-guarded-triage.md`](docs/benchmarks/2026-06-14-flask-replenishment-h1-guarded-triage.md).
+The guarded replenishment H1 triage completed 10/10 records with 0 stalls,
+0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. Live scoring was
+8/10 strict because two records documented `replenishment_status` instead of
+the prose phrase `replenishment status`; saved worktree replay under the
+revised oracle is 10/10 functional and record-consistent. Next gate: rerun the
+two-family four-arm H1 matrix under the revised oracle before any 100-run
+promotion.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
