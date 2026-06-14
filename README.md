@@ -81,13 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](docs/benchmarks/2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md).
-The second scoped 96-record H1 promotion stopped after 13/96 records on a
-`decision-only` replenishment-policy no-edit watchdog. This followed an
-earlier promotion stop on a different `full-harness` price-policy no-edit
-record. The H1 partial signal still separated decision-bearing arms from
-controls, but promotion-scale execution is not operationally stable enough for
-another blind 96/100-record run.
+[`docs/benchmarks/2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](docs/benchmarks/2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md).
+After two scoped H1 promotions stopped on no-edit watchdogs, a small
+decision-bearing time-to-first-edit diagnostic completed 8/8 strict with
+0 no-edit watchdogs. First repository changes appeared within 22.0-38.1s.
+This narrows the blocker to intermittent promotion-scale behavior; it does not
+make another blind 96/100-record H1 run valuable yet.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

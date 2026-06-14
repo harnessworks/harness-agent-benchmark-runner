@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Second scoped H1 promotion stopped after 13/96 on a `decision-only` replenishment-policy no-edit watchdog. |
+| Latest execution | Small H1 decision-bearing time-to-first-edit diagnostic completed 8/8 strict with 0 no-edit watchdogs. |
 
 ## Representative Result
 
@@ -73,21 +73,20 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed H1 promotion attempt:
-[`2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md).
+Latest executed H1 diagnostic:
+[`2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md).
 
-The second scoped 96-record H1 promotion attempt stopped after 13/96 records
-because a `decision-only` `hidden-effect-catalog-replenishment-policy` record
-hit the no-edit watchdog. The stopped agent announced that it would look for
-the adopted replenishment policy before editing, then made no repository
-changes for 240 seconds.
+After two scoped H1 promotion attempts stopped on no-edit watchdogs, a small
+decision-bearing diagnostic covered both direct H1 task families across
+`decision-only` and `full-harness`, with two repeats each. It completed 8/8
+strict and record-consistent with 0 stalls, 0 timeouts, 0 wrong-file edits, and
+0 forbidden-file edits. First observed repository changes landed within
+22.0-38.1 seconds.
 
-This is the second promotion-scale no-edit stop. The prior promotion stopped
-after 11/96 records on a different `full-harness` price-policy record. The
-partial H1 signal remains useful: decision-bearing arms were 6/7
-record-consistent before the latest stop, while controls were 0/6. It is not
-promotable evidence because promotion-scale execution is not operationally
-stable.
+This is useful operational evidence, not promotion evidence. It shows the
+no-edit path is intermittent and not deterministic for the selected pairs in a
+small batch. The two aborted promotion attempts still block another blind
+96/100-record H1 run.
 
 ## Controls And Prior Evidence
 
@@ -96,6 +95,7 @@ stable.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | decision-arms time-to-first-edit diagnostic | 8 | 8 | 8 | 0 | 0 | Decision-bearing arms started edits within 22.0-38.1s; no no-edit reproduction in small batch. |
 | Two-family H1 | promotion96 rerun aborted | 13/96 | 6 | 6 | 1 | 0 | Second promotion-scale no-edit stop, this time on `decision-only` replenishment. |
 | Price-policy H1 | full-harness no-edit diagnostic | 5 | 5 | 5 | 0 | 0 | Did not reproduce the promotion no-edit failure. |
 | Two-family H1 | promotion96 aborted | 11/96 | 5 | 5 | 1 | 0 | Stopped on `full-harness` price-policy no-edit after decision lookup. |
@@ -129,12 +129,14 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The next useful H1 step is operational, not larger-sample scoring:
+The latest small diagnostic executed the time-to-first-edit option and did not
+reproduce the no-edit stop. The next useful H1 step is still operational, not
+larger-sample scoring:
 
 - add or test a mitigation that makes agents start a minimal scoped
   implementation edit shortly after relevant record discovery;
-- or run a small no-edit-focused diagnostic matrix that measures
-  time-to-first-edit across the decision-bearing arms and both H1 tasks;
+- or run another explicitly no-edit-focused diagnostic with a different
+  controlled variable;
 - keep `CODEX_PROMPT_GUARD=1`, sequential execution, and watchdog reporting.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
@@ -150,6 +152,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md) (latest H1 decision-bearing no-edit diagnostic)
 - [`2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md) (latest scoped H1 promotion rerun, aborted on no-edit)
 - [`2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md) (focused no-edit diagnostic)
 - [`2026-06-14-flask-h1-promotion96-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-aborted-noedit.md) (scoped H1 promotion, aborted on no-edit)

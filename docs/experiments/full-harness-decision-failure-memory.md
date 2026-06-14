@@ -356,6 +356,12 @@ Post-run H1 oracle triage:
   controls, but blind 96/100-record H1 promotion reruns are no longer a good
   use of budget until time-to-first-edit behavior is mitigated or explicitly
   studied.
+- A small decision-bearing time-to-first-edit diagnostic then completed 8/8
+  strict and record-consistent across the two direct H1 task families and both
+  decision-bearing arms. It had zero no-edit watchdogs, and first observed
+  repository changes landed within 22.0-38.1 seconds. This narrows the no-edit
+  issue to intermittent promotion-scale behavior; it does not make another
+  blind 96/100-record H1 promotion valuable yet.
 
 Pre-execution checks completed:
 
@@ -376,7 +382,7 @@ twice on no-edit watchdogs.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 promotion-scale stability is not clean. | Two scoped 96-record promotion attempts stopped on no-edit watchdogs across different task/arm pairs. | Mitigate or directly measure time-to-first-edit behavior before another blind 96/100-record promotion. |
+| H1 promotion-scale stability is not clean. | Two scoped 96-record promotion attempts stopped on no-edit watchdogs across different task/arm pairs; a later 8-record diagnostic did not reproduce them. | Mitigate or directly measure the promotion-scale no-edit path before another blind 96/100-record promotion. |
 | H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
 | Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |
