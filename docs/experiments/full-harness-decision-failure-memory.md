@@ -330,6 +330,13 @@ Post-run H1 oracle triage:
   worktree replay is 10/10 functional and record-consistent. The next gate is
   a revised-oracle two-family four-arm run, not an immediate 100-record
   promotion.
+- The revised-oracle two-family four-arm gate then completed 16/16 records
+  with zero stalls/timeouts and zero file-boundary issues. `decision-only` and
+  `full-harness` were 8/8 strict and record-consistent across the two direct
+  H1 families, while `workflow-only` and `failure-only` stayed 0/8
+  record-consistent. A scoped 96-record H1 promotion is now valuable, but
+  should keep sequential execution and watchdog reporting because one
+  `full-harness` replenishment pass took 405.9 seconds.
 
 Pre-execution checks completed:
 
