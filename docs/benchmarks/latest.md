@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Claude two-family H1 gate completed 4/4 with 0 no-edit watchdogs and 3/4 strict. |
+| Latest execution | Claude four-arm H1 gate completed 8/8 with 0 no-edit watchdogs; replenishment separated cleanly. |
 
 ## Representative Result
 
@@ -74,19 +74,19 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed H1 diagnostic:
-[`2026-06-14-flask-h1-claude-adapter-control-two-family.md`](2026-06-14-flask-h1-claude-adapter-control-two-family.md).
+[`2026-06-14-flask-h1-claude-four-arm-gate.md`](2026-06-14-flask-h1-claude-four-arm-gate.md).
 
 After the Codex startup-retry pilot exposed a post-output no-edit blocker, a
-Claude adapter-control ran both direct H1 task families over `decision-only`
-and `full-harness`.
+Claude four-arm gate ran both direct H1 task families across `workflow-only`,
+`decision-only`, `failure-only`, and `full-harness`.
 
-The Claude gate completed 4/4 records with 0 no-edit watchdogs, 0 timeouts,
-0 wrong-file edits, and 0 forbidden-file edits. Strict success was 3/4.
-`decision-only` passed 2/2 strict and record-consistent. `full-harness` passed
-replenishment strict but missed price-policy because the glossary omitted the
-hidden oracle's `price band` concept wording. This strengthens the reading
-that the no-edit bottleneck is Codex-path-specific, not a required
-runner/task failure mode.
+The Claude gate completed 8/8 records with 0 no-edit watchdogs, 0 timeouts,
+0 wrong-file edits, and 0 forbidden-file edits. Strict success was 2/8. The
+replenishment family separated cleanly: decision-bearing arms were 2/2 strict
+and record-consistent, while controls stayed 0/2 record-consistent. The
+price-policy family stayed noisy because decision-bearing arms missed hidden
+glossary concept wording. This strengthens the reading that the no-edit
+bottleneck is Codex-path-specific, not a required runner/task failure mode.
 
 ## Controls And Prior Evidence
 
@@ -95,6 +95,7 @@ runner/task failure mode.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | Claude four-arm gate | 8 | 2 | 2 | 0 | 0 | No operational abnormal events; replenishment separated cleanly, price-policy wording remained noisy. |
 | Two-family H1 | Claude adapter-control | 4 | 3 | 3 | 0 | 0 | Decision-bearing arms completed with no no-edit stalls; one `full-harness` glossary wording miss. |
 | Price-policy H1 | Claude adapter-control | 2 | 1 | 1 | 0 | 0 | Completed with no no-edit stalls; `full-harness` strict, `decision-only` glossary wording miss. |
 | Two-family H1 | startup-retry pilot aborted | 1/8 | 0 | 0 | 1 | 0 | Startup retry correctly did not apply; stopped on post-output no-edit after decision discovery. |
@@ -136,11 +137,12 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The latest Claude two-family gate suggests the repeated no-edit blocker is
+The latest Claude four-arm gate suggests the repeated no-edit blocker is
 specific to the Codex execution path rather than the runner, target refs, or
 watchdog mechanics. Do not keep rerunning blind Codex H1 promotions. The next
-useful H1 step is a four-arm Claude gate with controls, while keeping Codex H1
-promotion blocked until post-output no-edit is mitigated.
+useful H1 step is either a repeated Claude four-arm gate or price-policy
+oracle/wording triage, while keeping Codex H1 promotion blocked until
+post-output no-edit is mitigated.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -155,6 +157,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-claude-four-arm-gate.md`](2026-06-14-flask-h1-claude-four-arm-gate.md) (latest H1 four-arm Claude gate)
 - [`2026-06-14-flask-h1-claude-adapter-control-two-family.md`](2026-06-14-flask-h1-claude-adapter-control-two-family.md) (latest H1 adapter-control, Claude two-family gate)
 - [`2026-06-14-flask-h1-claude-adapter-control-price-policy.md`](2026-06-14-flask-h1-claude-adapter-control-price-policy.md) (latest H1 adapter-control, Claude completed with 0 no-edit stalls)
 - [`2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md`](2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md) (latest H1 startup-retry diagnostic, aborted on post-output no-edit)
