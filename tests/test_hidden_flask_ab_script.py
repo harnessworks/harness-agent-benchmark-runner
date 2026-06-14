@@ -906,6 +906,110 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertIn("Stopping schedule after abnormal signal", stdout.getvalue())
             self.assertIn("agent stall watchdog fired", stdout.getvalue())
 
+    def test_stop_on_abnormal_retries_startup_no_output_no_edit_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=1,
+                stop_on_abnormal=True,
+                retry_startup_no_output_once=True,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                agent_timeout_override=None,
+                agent_stall_timeout=None,
+                agent_idle_timeout=30,
+                agent_no_edit_timeout=20,
+                max_cost_usd=1.0,
+            )
+            schedule = [hidden_ab.ScheduledRun(1, "task-1", "A:bare", Path("task-1.json"))]
+            calls = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                run_id = f"run-{calls}"
+                if calls == 1:
+                    write_jsonl_record(args.results, startup_no_output_no_edit_record(run_id))
+                    return hidden_ab.subprocess.CompletedProcess(
+                        command,
+                        1,
+                        stdout=f"run_id: {run_id}\nsuccess: False\n",
+                        stderr="",
+                    )
+                write_jsonl_record(args.results, clean_success_record(run_id))
+                return hidden_ab.subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=f"run_id: {run_id}\nsuccess: True\n",
+                    stderr="",
+                )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(calls, 2)
+            self.assertIn("retry startup/no-output no-edit once", stdout.getvalue())
+
+    def test_stop_on_abnormal_does_not_retry_post_planning_no_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=1,
+                stop_on_abnormal=True,
+                retry_startup_no_output_once=True,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                agent_timeout_override=None,
+                agent_stall_timeout=None,
+                agent_idle_timeout=30,
+                agent_no_edit_timeout=20,
+                max_cost_usd=1.0,
+            )
+            schedule = [hidden_ab.ScheduledRun(1, "task-1", "A:bare", Path("task-1.json"))]
+            calls = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                run_id = f"run-{calls}"
+                record = startup_no_output_no_edit_record(run_id)
+                record["agent"]["stdout_tail"] = "I will add the endpoint and tests."
+                record["agent"]["watchdog"]["seconds_since_last_output"] = 4.0
+                write_jsonl_record(args.results, record)
+                return hidden_ab.subprocess.CompletedProcess(
+                    command,
+                    1,
+                    stdout=f"run_id: {run_id}\nsuccess: False\n",
+                    stderr="",
+                )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(calls, 1)
+            self.assertNotIn("retry startup/no-output no-edit once", stdout.getvalue())
+            self.assertIn("Stopping schedule after abnormal signal", stdout.getvalue())
+
     def test_abnormal_reasons_ignore_plain_oracle_failure(self) -> None:
         record = {
             "run_id": "fixture",
@@ -953,6 +1057,14 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         }
 
         self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent no-edit watchdog fired"])
+
+    def test_retryable_startup_no_output_no_edit_requires_no_changed_files(self) -> None:
+        record = startup_no_output_no_edit_record("fixture")
+
+        self.assertTrue(hidden_ab.retryable_startup_no_output_no_edit(record))
+
+        record["git"]["changed_files"] = ["app.py"]
+        self.assertFalse(hidden_ab.retryable_startup_no_output_no_edit(record))
 
     def test_build_runner_command_forwards_agent_stall_timeout(self) -> None:
         args = Namespace(
@@ -1030,6 +1142,50 @@ def clean_record(task_id: str, target_arm: str) -> dict[str, object]:
         },
         "scoring": {
             "success": False,
+            "preflight_passed": True,
+            "agent_timed_out": False,
+            "agent_stalled": False,
+            "wrong_file_edits": 0,
+            "forbidden_file_edits": 0,
+        },
+    }
+
+
+def startup_no_output_no_edit_record(run_id: str) -> dict[str, object]:
+    return {
+        "run_id": run_id,
+        "agent": {
+            "duration_seconds": 20.05,
+            "stdout_tail": "",
+            "termination_reason": "no_edit_watchdog",
+            "watchdog": {
+                "observed_repo_changes": False,
+                "seconds_since_last_output": 19.8,
+                "seconds_without_observed_repo_changes": 20.05,
+            },
+        },
+        "git": {"changed_files": []},
+        "scoring": {
+            "success": False,
+            "preflight_passed": True,
+            "agent_timed_out": True,
+            "agent_stalled": True,
+            "wrong_file_edits": 0,
+            "forbidden_file_edits": 0,
+        },
+    }
+
+
+def clean_success_record(run_id: str) -> dict[str, object]:
+    return {
+        "run_id": run_id,
+        "agent": {
+            "duration_seconds": 1.0,
+            "stdout_tail": "done",
+        },
+        "git": {"changed_files": ["app.py"]},
+        "scoring": {
+            "success": True,
             "preflight_passed": True,
             "agent_timed_out": False,
             "agent_stalled": False,

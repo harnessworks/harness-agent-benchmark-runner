@@ -172,6 +172,14 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="stop a sequential live run after timeout, stall, boundary, preflight, or hidden-access signals",
     )
     parser.add_argument(
+        "--retry-startup-no-output-once",
+        action="store_true",
+        help=(
+            "with --stop-on-abnormal and --jobs 1, retry one record once only when "
+            "it stopped as startup/no-output no-edit with no observed repository changes"
+        ),
+    )
+    parser.add_argument(
         "--promotion-run",
         action="store_true",
         help="require production promotion safeguards before live execution",
@@ -431,6 +439,13 @@ def validate_run_shape(args: argparse.Namespace, groups: list[TaskGroup] | list[
         raise BenchmarkPlanError("no task groups selected")
     if getattr(args, "stop_on_abnormal", False) and args.jobs != 1:
         raise BenchmarkPlanError("--stop-on-abnormal requires --jobs 1")
+    if getattr(args, "retry_startup_no_output_once", False):
+        if args.jobs != 1:
+            raise BenchmarkPlanError("--retry-startup-no-output-once requires --jobs 1")
+        if not getattr(args, "stop_on_abnormal", False):
+            raise BenchmarkPlanError("--retry-startup-no-output-once requires --stop-on-abnormal")
+        if not args.agent_no_edit_timeout:
+            raise BenchmarkPlanError("--retry-startup-no-output-once requires --agent-no-edit-timeout")
     validate_promotion_controls(args)
     if args.mode == "large" and len(groups) < args.large_min_task_pairs and not args.allow_small_large:
         raise BenchmarkPlanError(
@@ -638,6 +653,7 @@ def print_plan(
     print(f"Planned runs: {len(schedule)}")
     print(f"Jobs: {args.jobs}")
     print(f"Stop on abnormal: {args.stop_on_abnormal}")
+    print(f"Retry startup/no-output once: {args.retry_startup_no_output_once}")
     print(f"Promotion run: {args.promotion_run}")
     print(f"Arm order: {args.arm_order or arm_order_from_pair_order(args.pair_order)}")
     print(f"Model: {args.model}")
@@ -737,16 +753,28 @@ def execute_schedule(args: argparse.Namespace, schedule: list[ScheduledRun]) -> 
 
     for index, item in enumerate(schedule, start=1):
         print_start(index, len(schedule), item)
-        result = run_scheduled_command(args, item, index, len(schedule), env)
-        print_run_output(result)
-        if result.returncode != 0:
-            nonzero_commands += 1
-            print_nonzero_exit(result.returncode)
-        if args.stop_on_abnormal:
+        retry_used = False
+        while True:
+            result = run_scheduled_command(args, item, index, len(schedule), env)
+            print_run_output(result)
+            if result.returncode != 0:
+                nonzero_commands += 1
+                print_nonzero_exit(result.returncode)
+            if not args.stop_on_abnormal:
+                break
             reasons = abnormal_reasons_for_command(args.results, result)
-            if reasons:
-                print_stop_on_abnormal(reasons)
-                return 1
+            if not reasons:
+                break
+            if (
+                getattr(args, "retry_startup_no_output_once", False)
+                and not retry_used
+                and retryable_startup_no_output_no_edit_for_command(args.results, result)
+            ):
+                retry_used = True
+                print_retry_start(index, len(schedule), item)
+                continue
+            print_stop_on_abnormal(reasons)
+            return 1
     if nonzero_commands:
         print(f"\nCompleted schedule with {nonzero_commands} non-zero runner exits.")
     else:
@@ -832,6 +860,14 @@ def print_start(index: int, total: int, item: ScheduledRun) -> None:
     )
 
 
+def print_retry_start(index: int, total: int, item: ScheduledRun) -> None:
+    print(
+        f"\n[{index}/{total}] retry startup/no-output no-edit once "
+        f"round={item.round_number} task={item.task_id} group={item.group}",
+        flush=True,
+    )
+
+
 def print_completion(result: ScheduledRunResult) -> None:
     print(
         f"\n[{result.index}/{result.total}] finish round={result.item.round_number} "
@@ -878,6 +914,62 @@ def abnormal_reasons_for_command(results_dir: Path, result: ScheduledRunResult) 
     if record is None:
         return [f"result record not found for {run_id}"]
     return abnormal_reasons(record)
+
+
+def retryable_startup_no_output_no_edit_for_command(
+    results_dir: Path,
+    result: ScheduledRunResult,
+) -> bool:
+    run_id = run_id_from_stdout(result.stdout)
+    if run_id is None:
+        return False
+    record = load_result_record(results_dir, run_id)
+    if record is None:
+        return False
+    return retryable_startup_no_output_no_edit(record)
+
+
+def retryable_startup_no_output_no_edit(record: dict[str, Any]) -> bool:
+    agent = record.get("agent", {})
+    scoring = record.get("scoring", {})
+    git = record.get("git", {})
+    if not isinstance(agent, dict) or not isinstance(scoring, dict) or not isinstance(git, dict):
+        return False
+    watchdog = agent.get("watchdog", {})
+    if not isinstance(watchdog, dict):
+        return False
+    if agent.get("termination_reason") != "no_edit_watchdog":
+        return False
+    if scoring.get("agent_stalled") is not True:
+        return False
+    if str(agent.get("stdout_tail") or "").strip():
+        return False
+    if watchdog.get("observed_repo_changes") is not False:
+        return False
+    if git.get("changed_files"):
+        return False
+    duration = as_number(agent.get("duration_seconds"))
+    seconds_since_output = as_number(watchdog.get("seconds_since_last_output"))
+    return output_silent_for_most_of_run(
+        duration_seconds=duration,
+        seconds_since_last_output=seconds_since_output,
+    )
+
+
+def output_silent_for_most_of_run(
+    *, duration_seconds: float | None, seconds_since_last_output: float | None
+) -> bool:
+    if seconds_since_last_output is None:
+        return False
+    if duration_seconds is None:
+        return True
+    return seconds_since_last_output >= max(5.0, duration_seconds - 5.0)
+
+
+def as_number(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
 
 
 def run_id_from_stdout(stdout: str) -> str | None:
