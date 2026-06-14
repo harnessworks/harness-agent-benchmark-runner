@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: run a guarded H1 clean gate before any 100-record promotion
-  attempt.
+- Next step: run a guarded 24-record H1 stability expansion before any
+  100-record promotion attempt.
 
 Safe claims:
 
@@ -81,12 +81,14 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md).
-After the 24-record H1 stability expansion stopped on a `decision-only`
-no-edit watchdog, a guarded `decision-only` diagnostic completed 2/2 strict and
-record-consistent with 0 stalls/timeouts. Treat this as an operational
-mitigation signal, not as comparable H1 score evidence. Do not run a
-100-record H1 promotion until a guarded four-arm clean gate passes.
+[`docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-clean-gate.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-clean-gate.md).
+The guarded non-bare H1 clean gate completed 12/12 planned records with
+0 stalls, 0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits.
+`decision-only` and `full-harness` were both 3/3 strict and record-consistent,
+while `workflow-only` and `failure-only` stayed 0/3 record-consistent. This
+supports `CODEX_PROMPT_GUARD=1` as the next H1 operating condition, but the
+352.9s `workflow-only` tail still argues against jumping directly to 100
+records.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

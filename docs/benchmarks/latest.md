@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Guarded `decision-only` H1 diagnostic completed 2/2 with 0 stalls/timeouts. |
+| Latest execution | Guarded H1 clean gate completed 12/12 with 0 stalls/timeouts. |
 
 ## Representative Result
 
@@ -73,15 +73,16 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed focused H1 diagnostic:
-[`2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md`](2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md).
+Latest executed focused H1 check:
+[`2026-06-14-flask-price-policy-h1-guarded-clean-gate.md`](2026-06-14-flask-price-policy-h1-guarded-clean-gate.md).
 
-After the non-bare price-policy H1 stability expansion stopped on a
-`decision-only` no-edit watchdog, a guarded `decision-only` diagnostic ran
-2 records with `CODEX_PROMPT_GUARD=1`. Both records were strict and
-record-consistent, with 0 stalls, 0 timeouts, and visible repository changes
-after 24.0s and 43.1s. This is an operational mitigation signal, not a
-replacement for the prior unguarded H1 evidence.
+The guarded non-bare price-policy H1 clean gate used
+`CODEX_PROMPT_GUARD=1` and completed 12/12 planned records with 0 stalls,
+0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only`
+and `full-harness` were both 3/3 strict and record-consistent, while
+`workflow-only` and `failure-only` stayed 0/3 record-consistent. This supports
+the prompt guard as the next H1 operating condition, but one `workflow-only`
+record still took 352.9s, so a 100-record promotion remains premature.
 
 ## Controls And Prior Evidence
 
@@ -90,6 +91,7 @@ replacement for the prior unguarded H1 evidence.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Price-policy H1 | guarded clean gate | 12 | 6 | 6 | 0 | 0 | Guarded four-arm H1 gate completed; decision memory arms separated cleanly from controls. |
 | Price-policy H1 | guarded decision-only diagnostic | 2 | 2 | 2 | 0 | 0 | Prompt guard coincided with quick repo edits; mitigation signal only. |
 | Price-policy H1 | stability24 expansion | 2/24 | 0 | 0 | 1 | 0 | Aborted on `decision-only` no-edit watchdog despite prior clean readiness. |
 | Price-policy H1 | non-bare clean gate rerun | 12 | 6 | 6 | 0 | 0 | Completed focused H1 gate; decision memory arms separated cleanly from controls. |
@@ -110,8 +112,8 @@ hidden-oracle rows are the relevant harness-effect evidence.
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
 semantics change. Do not run a 100-record H1 promotion now. The next useful H1
-step is a guarded four-arm clean gate using `CODEX_PROMPT_GUARD=1`, while
-keeping guarded and unguarded evidence separate.
+step is a guarded 24-record stability expansion using `CODEX_PROMPT_GUARD=1`,
+while keeping guarded and unguarded evidence separate.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -126,6 +128,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-guarded-clean-gate.md`](2026-06-14-flask-price-policy-h1-guarded-clean-gate.md) (guarded H1 clean gate)
 - [`2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md`](2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md) (guarded H1 decision-only diagnostic)
 - [`2026-06-14-flask-price-policy-h1-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-stability24-aborted.md) (focused H1 stability expansion, aborted)
 - [`2026-06-14-flask-price-policy-h1-clean-gate-rerun.md`](2026-06-14-flask-price-policy-h1-clean-gate-rerun.md) (focused H1 clean gate rerun)
