@@ -393,6 +393,13 @@ Post-run H1 oracle triage:
   first scoped edit, and then made no repository changes for 240 seconds.
   This moves the bottleneck back to post-output pre-edit stalls rather than
   startup/no-output alone.
+- A minimal Claude adapter-control over the price-policy H1 task then
+  completed 2/2 records with zero no-edit watchdogs. `full-harness` passed
+  strict and record-consistent; `decision-only` reached real edits and passed
+  schema/workflow, but failed hidden functional and record-consistency checks
+  because its glossary omitted the hidden oracle's `price band` concept
+  wording. This suggests the repeated no-edit blocker is specific to the Codex
+  execution path rather than the runner, watchdog, or task shape.
 
 Pre-execution checks completed:
 
@@ -413,7 +420,7 @@ twice on no-edit watchdogs.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 promotion-scale stability is not clean. | Three scoped 96-record promotion attempts stopped on no-edit watchdogs, and the startup-retry pilot then stopped after 1/8 on post-output no-edit. | Pause H1 promotion reruns; diagnose adapter/model edit-command initiation after decision discovery. |
+| H1 promotion-scale stability is not clean for Codex. | Three scoped Codex 96-record promotion attempts stopped on no-edit watchdogs, and the Codex startup-retry pilot then stopped after 1/8 on post-output no-edit. The Claude adapter-control completed 2/2 with no no-edit stalls. | Pause Codex H1 promotion reruns; use a small multi-task Claude adapter-control gate to separate H1 signal from Codex execution instability. |
 | H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
 | Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |
@@ -453,7 +460,7 @@ proven accuracy lift.
 ## Minimum Next Implementation Steps
 
 1. Keep guarded and unguarded H1 evidence separate in reports.
-2. Treat another blind 96/100-record H1 promotion as low-value until
+2. Treat another blind Codex 96/100-record H1 promotion as low-value until
    post-output no-edit behavior is mitigated or directly measured.
 3. Keep `scripts/triage_no_edit_stalls.py` ready for any stopped no-edit
    records in larger runs, including the `startup/no-output` distinction.

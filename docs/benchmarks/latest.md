@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Startup-retry H1 pilot stopped after 1/8 on a post-output no-edit watchdog. |
+| Latest execution | Claude adapter-control completed 2/2 with 0 no-edit watchdogs; `full-harness` passed strict. |
 
 ## Representative Result
 
@@ -74,17 +74,18 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed H1 diagnostic:
-[`2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md`](2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md).
+[`2026-06-14-flask-h1-claude-adapter-control-price-policy.md`](2026-06-14-flask-h1-claude-adapter-control-price-policy.md).
 
-After adding `--retry-startup-no-output-once`, a small 8-record
-decision-bearing H1 pilot stopped after 1/8 records on a `decision-only`
-`hidden-effect-catalog-price-policy` no-edit watchdog.
+After the Codex startup-retry pilot exposed a post-output no-edit blocker, a
+minimal Claude adapter-control ran the same price-policy H1 task over
+`decision-only` and `full-harness`.
 
-This was not startup/no-output. The agent found the accepted price-band
-decision, restated the correct thresholds, and announced an immediate scoped
-edit, but made no repository changes for 240 seconds. Startup-only retry
-correctly did not apply. H1 promotion-scale execution remains blocked by
-post-output pre-edit stalls.
+The Claude control completed 2/2 records with 0 no-edit watchdogs, 0 timeouts,
+0 wrong-file edits, and 0 forbidden-file edits. `full-harness` passed strict.
+`decision-only` reached real edits and passed schema/workflow, but failed
+functional and record-consistency checks because the glossary missed the hidden
+oracle's `price band` concept wording. This is evidence that the no-edit
+bottleneck is Codex-path-specific, not a required runner/task failure mode.
 
 ## Controls And Prior Evidence
 
@@ -93,6 +94,7 @@ post-output pre-edit stalls.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Price-policy H1 | Claude adapter-control | 2 | 1 | 1 | 0 | 0 | Completed with no no-edit stalls; `full-harness` strict, `decision-only` glossary wording miss. |
 | Two-family H1 | startup-retry pilot aborted | 1/8 | 0 | 0 | 1 | 0 | Startup retry correctly did not apply; stopped on post-output no-edit after decision discovery. |
 | Two-family H1 | strengthened promotion96 aborted | 8/96 | 3 | 3 | 1 | 0 | Stopped on `full-harness` replenishment startup/no-output no-edit. |
 | Two-family H1 | strengthened prompt-guard decision gate16 | 16 | 16 | 16 | 0 | 0 | Decision-bearing arms 16/16 strict and record-consistent; no no-edit recurrence. |
@@ -132,11 +134,11 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The latest startup-retry diagnostic stopped on post-output no-edit after the
-agent found the relevant decision record and announced the first edit. Do not
-keep rerunning blind H1 promotions. The next useful H1 step is adapter or agent
-diagnosis of edit-command initiation after policy discovery. Keep startup-only
-retry narrow; do not broaden it to hide post-output no-edit.
+The latest Claude adapter-control suggests the repeated no-edit blocker is
+specific to the Codex execution path rather than the runner, target refs, or
+watchdog mechanics. Do not keep rerunning blind Codex H1 promotions. The next
+useful H1 step is a small multi-task Claude adapter-control gate, while keeping
+Codex H1 promotion blocked until post-output no-edit is mitigated.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -151,6 +153,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-claude-adapter-control-price-policy.md`](2026-06-14-flask-h1-claude-adapter-control-price-policy.md) (latest H1 adapter-control, Claude completed with 0 no-edit stalls)
 - [`2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md`](2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md) (latest H1 startup-retry diagnostic, aborted on post-output no-edit)
 - [`2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md) (latest scoped H1 promotion, aborted on startup/no-output no-edit)
 - [`2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md) (latest H1 strengthened prompt-guard decision-bearing gate)
