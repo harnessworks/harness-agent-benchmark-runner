@@ -149,6 +149,9 @@ answer catalogs for the task being scored.
   checks, verification, and file-boundary checks.
 - `Functional success`: hidden-oracle behavior for endpoint semantics, status
   codes, calculations, mutations, and edge cases.
+  Companion-doc glossary checks should require the documented route and domain
+  concept, but may accept equivalent prose or code-token spellings such as
+  `price band`, `price-band`, and `price_band`.
 - `Schema contract success`: response envelope, key naming, metadata, and
   API-style checks.
 - `Workflow success`: agent exit, diff check, local workflow/gate commands, and

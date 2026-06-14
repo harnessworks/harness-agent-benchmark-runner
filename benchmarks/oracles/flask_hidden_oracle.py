@@ -533,11 +533,7 @@ def check_catalog_price_policy_functional() -> None:
     catalog_price_band_counts(summary)
 
     glossary = glossary_text()
-    expect_terms(
-        glossary,
-        ("/catalog/price-policy", "price band"),
-        "glossary must document catalog price policy route and price bands",
-    )
+    expect_catalog_price_policy_glossary_terms(glossary)
 
 
 def check_catalog_price_policy_record_consistency() -> None:
@@ -599,6 +595,16 @@ def catalog_price_band_counts(summary: dict[str, Any]) -> dict[str, int]:
             return counts
 
     fail("catalog price policy summary must count budget, standard, and premium bands")
+
+
+def expect_catalog_price_policy_glossary_terms(glossary: str) -> None:
+    label = "glossary must document catalog price policy route and price bands"
+    expect_terms(glossary, ("/catalog/price-policy",), label)
+    expect_any_term(
+        glossary,
+        ("price band", "price bands", "price-band", "price-bands", "price_band", "price_bands"),
+        label,
+    )
 
 
 def check_catalog_price_policy_hidden_decision_edge() -> None:

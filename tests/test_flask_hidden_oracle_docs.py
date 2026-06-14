@@ -114,6 +114,28 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
                     }
                 )
 
+    def test_catalog_price_policy_glossary_accepts_hyphenated_price_band_concept(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog price-policy endpoint: `GET /catalog/price-policy`,
+              returns per-SKU `price_band` labels and summary counts.
+            - Price-Band Policy: stable budget, standard, and premium labels.
+            """
+        )
+
+        flask_hidden_oracle.expect_catalog_price_policy_glossary_terms(glossary)
+
+    def test_catalog_price_policy_glossary_requires_route_and_price_band_concept(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog policy endpoint: returns product pricing details.
+            """
+        )
+
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.expect_catalog_price_policy_glossary_terms(glossary)
+
     def test_catalog_replenishment_policy_summary_accepts_nested_status_counts(self) -> None:
         counts = flask_hidden_oracle.catalog_replenishment_status_counts(
             {
