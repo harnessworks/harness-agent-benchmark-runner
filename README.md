@@ -16,7 +16,7 @@ they succeed or fail.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
 - Next step: do not run another blind 96/100-record H1 promotion; the latest
-  Claude adapter-control suggests the no-edit blocker is Codex-path-specific.
+  Claude two-family gate suggests the no-edit blocker is Codex-path-specific.
 
 Safe claims:
 
@@ -81,11 +81,11 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-claude-adapter-control-price-policy.md`](docs/benchmarks/2026-06-14-flask-h1-claude-adapter-control-price-policy.md).
-The Claude adapter-control completed 2/2 price-policy records with 0 no-edit
-watchdogs and 0 file-boundary issues. `full-harness` passed strict; the
-`decision-only` record edited real files but missed a glossary concept wording
-checked by the hidden oracle.
+[`docs/benchmarks/2026-06-14-flask-h1-claude-adapter-control-two-family.md`](docs/benchmarks/2026-06-14-flask-h1-claude-adapter-control-two-family.md).
+The Claude two-family H1 gate completed 4/4 records with 0 no-edit watchdogs,
+0 timeouts, and 0 file-boundary issues. Strict success was 3/4; the lone miss
+was a `full-harness` price-policy glossary concept wording failure after real
+repository edits.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
