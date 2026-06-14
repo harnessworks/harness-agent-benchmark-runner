@@ -29,6 +29,9 @@ THREE_ARM_STABLE_SUITE = (
 THREE_ARM_V2_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-three-arm-v2.json"
 )
+FULL_HARNESS_MEMORY_PILOT_SUITE = (
+    REPO_ROOT / "benchmarks" / "suites" / "flask-full-harness-memory-pilot.json"
+)
 BUNDLEQUOTE_QUARANTINE_SUITE = (
     REPO_ROOT / "benchmarks" / "suites" / "flask-hidden-heldout-bundlequote-quarantine.json"
 )
@@ -298,6 +301,38 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                     else:
                         self.assertEqual(dimensions, [["functional", "schema"]])
 
+    def test_full_harness_memory_pilot_has_direct_h1_record_consistency_task(self) -> None:
+        suite = hidden_ab.load_suite(FULL_HARNESS_MEMORY_PILOT_SUITE)
+        arms = suite.arms
+        self.assertIsNotNone(arms)
+        groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=arms)
+        hidden_ab.validate_task_groups(groups)
+
+        h1_routes = {
+            "hidden-effect-catalog-price-policy": "/catalog/price-policy",
+            "hidden-effect-catalog-replenishment-policy": "/catalog/replenishment-policy",
+        }
+        for task_id, route in h1_routes.items():
+            self.assertIn(task_id, suite.task_ids)
+            group = next(group for group in groups if group.task_id == task_id)
+            self.assertEqual(list(group.arms), list(arms or ()))
+            for arm, task_path in group.arms.items():
+                data = hidden_ab.read_json(task_path)
+                self.assertEqual(data["benchmark"]["memory_hypothesis"], "H1")
+                self.assertEqual(data["benchmark"]["target_arm"], arm)
+                self.assertEqual(data["expected_files"], ["app/**", "tests/**", "docs/domain/**"])
+                self.assertIn("docs/decisions/**", data["forbidden_files"])
+                commands = data["verification"]["commands"]
+                self.assertTrue(
+                    any(command.get("dimension") == "record_consistency" for command in commands)
+                )
+                record_command = next(
+                    command for command in commands if command.get("dimension") == "record_consistency"
+                )
+                self.assertIn("record_consistency", record_command["command"])
+                self.assertIn(task_id, record_command["command"])
+                self.assertIn(route, data["leakage_audit"]["forbidden_text"])
+
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task_dir = Path(tmp)
@@ -337,6 +372,25 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
                     "B:memory-harness",
                     "C:bare",
                 ],
+            )
+
+    def test_loads_suite_declared_custom_arm_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task_dir = Path(tmp)
+            write_hidden_task(task_dir / "alpha-workflow-only.json", "alpha", "../workflow")
+            write_hidden_task(task_dir / "alpha-failure-only.json", "alpha", "../failure")
+            write_hidden_task(task_dir / "alpha-full-harness.json", "alpha", "../full")
+
+            arms = hidden_ab.parse_arms("workflow-only,failure-only,full-harness")
+            groups = hidden_ab.load_task_groups(task_dir, required_arms=arms)
+            hidden_ab.validate_task_groups(groups)
+            schedule = hidden_ab.build_group_schedule(groups, repeats=1, arm_order="listed")
+
+            self.assertEqual(arms, ("workflow-only", "failure-only", "full-harness"))
+            self.assertEqual(list(groups[0].arms), ["workflow-only", "failure-only", "full-harness"])
+            self.assertEqual(
+                [item.group for item in schedule],
+                ["A:workflow-only", "B:failure-only", "C:full-harness"],
             )
 
     def test_filters_task_groups_by_task_id(self) -> None:
@@ -389,6 +443,42 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertEqual(suite.prompt_variant, "partial-realistic")
             self.assertEqual(suite.task_ids, ("alpha",))
             self.assertEqual([group.task_id for group in groups], ["alpha"])
+
+    def test_suite_task_ids_are_not_truncated_by_default_pilot_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = root / "tasks"
+            suite_dir = root / "suites"
+            task_dir.mkdir()
+            suite_dir.mkdir()
+            task_ids = [f"task-{index}" for index in range(5)]
+            for task_id in task_ids:
+                write_hidden_task(task_dir / f"{task_id}-bare.json", task_id, "../flask-bare")
+                write_hidden_task(
+                    task_dir / f"{task_id}-workflow-only.json",
+                    task_id,
+                    "../flask-workflow-only",
+                )
+            suite_path = suite_dir / "fixture.json"
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "id": "fixture-suite",
+                        "task_dir": "../tasks",
+                        "arms": ["bare", "workflow-only"],
+                        "task_ids": task_ids,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = hidden_ab.main(["--suite", str(suite_path), "--repeats", "1"])
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Task groups: 5", stdout.getvalue())
+            self.assertIn("Planned runs: 10", stdout.getvalue())
 
     def test_stable_heldout_suite_quarantines_bundle_quote(self) -> None:
         suite = hidden_ab.load_suite(STABLE_HELDOUT_SUITE)
@@ -816,6 +906,110 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
             self.assertIn("Stopping schedule after abnormal signal", stdout.getvalue())
             self.assertIn("agent stall watchdog fired", stdout.getvalue())
 
+    def test_stop_on_abnormal_retries_startup_no_output_no_edit_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=1,
+                stop_on_abnormal=True,
+                retry_startup_no_output_once=True,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                agent_timeout_override=None,
+                agent_stall_timeout=None,
+                agent_idle_timeout=30,
+                agent_no_edit_timeout=20,
+                max_cost_usd=1.0,
+            )
+            schedule = [hidden_ab.ScheduledRun(1, "task-1", "A:bare", Path("task-1.json"))]
+            calls = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                run_id = f"run-{calls}"
+                if calls == 1:
+                    write_jsonl_record(args.results, startup_no_output_no_edit_record(run_id))
+                    return hidden_ab.subprocess.CompletedProcess(
+                        command,
+                        1,
+                        stdout=f"run_id: {run_id}\nsuccess: False\n",
+                        stderr="",
+                    )
+                write_jsonl_record(args.results, clean_success_record(run_id))
+                return hidden_ab.subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=f"run_id: {run_id}\nsuccess: True\n",
+                    stderr="",
+                )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(calls, 2)
+            self.assertIn("retry startup/no-output no-edit once", stdout.getvalue())
+
+    def test_stop_on_abnormal_does_not_retry_post_planning_no_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            args = Namespace(
+                workspace=root / "runs",
+                results=root / "results",
+                model="fixture-model",
+                reasoning_effort="medium",
+                service_tier="",
+                jobs=1,
+                stop_on_abnormal=True,
+                retry_startup_no_output_once=True,
+                agent_command="fixture-agent",
+                max_agent_timeout=60,
+                agent_timeout_override=None,
+                agent_stall_timeout=None,
+                agent_idle_timeout=30,
+                agent_no_edit_timeout=20,
+                max_cost_usd=1.0,
+            )
+            schedule = [hidden_ab.ScheduledRun(1, "task-1", "A:bare", Path("task-1.json"))]
+            calls = 0
+
+            def fake_run(command: list[str], **kwargs: object) -> hidden_ab.subprocess.CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                run_id = f"run-{calls}"
+                record = startup_no_output_no_edit_record(run_id)
+                record["agent"]["stdout_tail"] = "I will add the endpoint and tests."
+                record["agent"]["watchdog"]["seconds_since_last_output"] = 4.0
+                write_jsonl_record(args.results, record)
+                return hidden_ab.subprocess.CompletedProcess(
+                    command,
+                    1,
+                    stdout=f"run_id: {run_id}\nsuccess: False\n",
+                    stderr="",
+                )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(hidden_ab.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                exit_code = hidden_ab.execute_schedule(args, schedule)
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(calls, 1)
+            self.assertNotIn("retry startup/no-output no-edit once", stdout.getvalue())
+            self.assertIn("Stopping schedule after abnormal signal", stdout.getvalue())
+
     def test_abnormal_reasons_ignore_plain_oracle_failure(self) -> None:
         record = {
             "run_id": "fixture",
@@ -863,6 +1057,30 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         }
 
         self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent no-edit watchdog fired"])
+
+    def test_abnormal_reasons_include_agent_session_limit(self) -> None:
+        record = {
+            "run_id": "fixture",
+            "agent": {"stdout_tail": "You've hit your session limit · resets 11:30pm"},
+            "scoring": {
+                "preflight_passed": True,
+                "agent_timed_out": False,
+                "agent_stalled": False,
+                "agent_quota_exhausted": True,
+                "wrong_file_edits": 0,
+                "forbidden_file_edits": 0,
+            },
+        }
+
+        self.assertEqual(hidden_ab.abnormal_reasons(record), ["agent quota/session limit reached"])
+
+    def test_retryable_startup_no_output_no_edit_requires_no_changed_files(self) -> None:
+        record = startup_no_output_no_edit_record("fixture")
+
+        self.assertTrue(hidden_ab.retryable_startup_no_output_no_edit(record))
+
+        record["git"]["changed_files"] = ["app.py"]
+        self.assertFalse(hidden_ab.retryable_startup_no_output_no_edit(record))
 
     def test_build_runner_command_forwards_agent_stall_timeout(self) -> None:
         args = Namespace(
@@ -940,6 +1158,50 @@ def clean_record(task_id: str, target_arm: str) -> dict[str, object]:
         },
         "scoring": {
             "success": False,
+            "preflight_passed": True,
+            "agent_timed_out": False,
+            "agent_stalled": False,
+            "wrong_file_edits": 0,
+            "forbidden_file_edits": 0,
+        },
+    }
+
+
+def startup_no_output_no_edit_record(run_id: str) -> dict[str, object]:
+    return {
+        "run_id": run_id,
+        "agent": {
+            "duration_seconds": 20.05,
+            "stdout_tail": "",
+            "termination_reason": "no_edit_watchdog",
+            "watchdog": {
+                "observed_repo_changes": False,
+                "seconds_since_last_output": 19.8,
+                "seconds_without_observed_repo_changes": 20.05,
+            },
+        },
+        "git": {"changed_files": []},
+        "scoring": {
+            "success": False,
+            "preflight_passed": True,
+            "agent_timed_out": True,
+            "agent_stalled": True,
+            "wrong_file_edits": 0,
+            "forbidden_file_edits": 0,
+        },
+    }
+
+
+def clean_success_record(run_id: str) -> dict[str, object]:
+    return {
+        "run_id": run_id,
+        "agent": {
+            "duration_seconds": 1.0,
+            "stdout_tail": "done",
+        },
+        "git": {"changed_files": ["app.py"]},
+        "scoring": {
+            "success": True,
             "preflight_passed": True,
             "agent_timed_out": False,
             "agent_stalled": False,

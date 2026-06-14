@@ -163,6 +163,8 @@ class CodexExecAgentTests(unittest.TestCase):
 
         self.assertIn("isolated repository clone", prompt)
         self.assertIn("Do not inspect benchmark task specs", prompt)
+        self.assertIn("do not stop after narrating a plan", prompt)
+        self.assertIn("make the first small scoped app/test/docs edit", prompt)
         self.assertTrue(prompt.endswith("Do the task.\n\nReturn when done.\n"))
 
 

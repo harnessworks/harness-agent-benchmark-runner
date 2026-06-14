@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-catalog-price-policy",
+  "description": "H1 decision-memory task: use a pre-existing catalog price-band decision omitted from the prompt details.",
+  "repo": {
+    "source": "../flask-workflow-only",
+    "ref": "1a79d8cf9e0799789b3da8029dbbb5a572b3133e"
+  },
+  "prompt": "Add a catalog price policy endpoint.\n\nAdd GET /catalog/price-policy. It should classify the current in-memory catalog using the repository's adopted catalog price-band policy. Return one row per SKU in a top-level `products` list with `sku`, `price`, and `price_band`, sorted deterministically by SKU. Include a compact summary with counts by price band.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog price policy rows. Update companion documentation in the repository's documented domain docs location so future maintainers can find the route and stable price-band terms. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, decision records, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-full-harness-memory-pilot/hidden-effect-catalog-price-policy-workflow-only.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/domain/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "docs/decisions/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
+    "commands": [
+      {
+        "name": "install Python dependencies for agent",
+        "command": [
+          "bash",
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  },
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "workflow"
+      },
+      {
+        "name": "functional heldout oracle for hidden-effect-catalog-price-policy",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-price-policy",
+          "functional"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "functional"
+      },
+      {
+        "name": "schema oracle for hidden-effect-catalog-price-policy",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-price-policy",
+          "schema"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "schema"
+      },
+      {
+        "name": "record-consistency oracle for hidden-effect-catalog-price-policy",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-catalog-price-policy",
+          "record_consistency"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "record_consistency"
+      }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-full-harness-memory-pilot",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "workflow-only",
+    "memory_experiment": "decision-failure-memory",
+    "memory_hypothesis": "H1"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/catalog/price-policy",
+      "/catalog/replenishment-signals",
+      "/catalog/price-ladder",
+      "/catalog/value-snapshot",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1",
+      "replenishment-signals-v1",
+      "price-ladder-v1",
+      "value-snapshot-v1"
+    ]
+  }
+}

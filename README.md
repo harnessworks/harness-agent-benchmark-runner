@@ -15,8 +15,9 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: run a fresh 9-record v2 pilot, not another identical stable-4
-  promotion.
+- Next step: do not run another blind 96/100-record H1 promotion; the latest
+  Claude gate hit a Claude session-limit after confirming the price-policy
+  oracle patch.
 
 Safe claims:
 
@@ -80,12 +81,14 @@ The product reading is narrow and useful:
   signal is operational repeatability: max duration was 87.6s versus 544.7s
   for `workflow-only` and 639.3s for `bare`.
 
-Latest v2 scaffold check:
-[`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md).
-The first v2 held-out task completed 3/3 cleanly; `workflow-only` and
-`memory-harness` passed strict scoring, while `bare` failed functional/schema
-scoring. Treat it as scaffold validation and an early signal, not as the main
-representative result.
+Latest execution:
+[`docs/benchmarks/2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](docs/benchmarks/2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md).
+The patched-oracle Claude four-arm gate completed 8/8 records with 0 no-edit
+watchdogs, 0 timeouts, and 0 file-boundary issues, but it is not representative
+H1 evidence because the Claude CLI hit its session limit during the
+replenishment half. Price-policy did separate cleanly under the patched oracle:
+decision-bearing arms passed 2/2 strict and record-consistent checks, while
+controls stayed 0/2 record-consistent.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
@@ -149,6 +152,9 @@ answer catalogs for the task being scored.
   checks, verification, and file-boundary checks.
 - `Functional success`: hidden-oracle behavior for endpoint semantics, status
   codes, calculations, mutations, and edge cases.
+  Companion-doc glossary checks should require the documented route and domain
+  concept, but may accept equivalent prose or code-token spellings such as
+  `price band`, `price-band`, and `price_band`.
 - `Schema contract success`: response envelope, key naming, metadata, and
   API-style checks.
 - `Workflow success`: agent exit, diff check, local workflow/gate commands, and
@@ -244,6 +250,7 @@ design task: all arms scored 0/8 strict and 0/8 schema.
 
 ## Reports
 
+- [`docs/benchmarks/index.md`](docs/benchmarks/index.md)
 - [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md)

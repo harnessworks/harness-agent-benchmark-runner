@@ -24,6 +24,11 @@ class Aggregate:
     functional_successes: int = 0
     schema_contract_successes: int = 0
     workflow_successes: int = 0
+    record_consistency_evaluated: int = 0
+    record_consistent_successes: int = 0
+    mistake_prevention_evaluated: int = 0
+    mistake_prevention_successes: int = 0
+    repeated_documented_mistakes: int = 0
     boundary_successes: int = 0
     preflight_failures: int = 0
     verification_passed: int = 0
@@ -33,6 +38,13 @@ class Aggregate:
     stalls: int = 0
     hidden_accesses: int = 0
     durations: list[float] = field(default_factory=list)
+    watchdog_records: int = 0
+    no_edit_watchdogs: int = 0
+    no_output_no_edit_watchdogs: int = 0
+    no_observed_repo_changes: int = 0
+    seconds_until_repo_change: list[float] = field(default_factory=list)
+    seconds_without_repo_change: list[float] = field(default_factory=list)
+    seconds_since_last_output: list[float] = field(default_factory=list)
 
     def update(self, record: dict[str, Any]) -> None:
         scoring = record.get("scoring", {})
@@ -45,6 +57,16 @@ class Aggregate:
             self.schema_contract_successes += 1
         if scoring.get("workflow_success", scoring.get("success")) is True:
             self.workflow_successes += 1
+        if scoring.get("record_consistent_success") is not None:
+            self.record_consistency_evaluated += 1
+        if scoring.get("record_consistent_success") is True:
+            self.record_consistent_successes += 1
+        if scoring.get("mistake_prevention_success") is not None:
+            self.mistake_prevention_evaluated += 1
+        if scoring.get("mistake_prevention_success") is True:
+            self.mistake_prevention_successes += 1
+        if scoring.get("repeated_documented_mistake") is True:
+            self.repeated_documented_mistakes += 1
         if scoring.get("boundary_success", self.boundary_fallback(scoring)) is True:
             self.boundary_successes += 1
         if scoring.get("preflight_passed") is False:
@@ -62,6 +84,26 @@ class Aggregate:
         duration = record.get("agent", {}).get("duration_seconds")
         if isinstance(duration, (int, float)):
             self.durations.append(float(duration))
+        self.update_watchdog(record)
+
+    def update_watchdog(self, record: dict[str, Any]) -> None:
+        agent = record.get("agent", {})
+        if not isinstance(agent, dict):
+            return
+        watchdog = agent.get("watchdog")
+        if not isinstance(watchdog, dict):
+            return
+
+        self.watchdog_records += 1
+        if agent.get("termination_reason") == "no_edit_watchdog":
+            self.no_edit_watchdogs += 1
+            if is_no_output_no_edit(record):
+                self.no_output_no_edit_watchdogs += 1
+        if watchdog.get("observed_repo_changes") is False:
+            self.no_observed_repo_changes += 1
+        append_number(self.seconds_until_repo_change, watchdog.get("seconds_until_repo_change_observed"))
+        append_number(self.seconds_without_repo_change, watchdog.get("seconds_without_observed_repo_changes"))
+        append_number(self.seconds_since_last_output, watchdog.get("seconds_since_last_output"))
 
     @staticmethod
     def boundary_fallback(scoring: dict[str, Any]) -> bool:
@@ -93,8 +135,8 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
     lines = [
         "## Headline",
         "",
-        "| Target | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Target | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration | Record consistency | Mistake prevention | Repeated documented mistakes |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for target, values in sorted(by_target.items()):
         lines.append(headline_row(target, values))
@@ -104,12 +146,26 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
             "",
             "## Per-Task Results",
             "",
-            "| Target | Task | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Target | Task | Runs | Strict scored successes | Strict success rate | Functional | Schema contract | Workflow | Boundary | Verification passed | Preflight failures | Wrong-file edits | Forbidden-file edits | Hidden access | Stalls | Timeouts | p50 duration | p95 duration | Record consistency | Mistake prevention | Repeated documented mistakes |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for (target, task_id), values in sorted(by_target_task.items()):
         lines.append(task_row(target, task_id, values))
+
+    if any(values.watchdog_records for values in by_target.values()):
+        lines.extend(
+            [
+                "",
+                "## Watchdog Diagnostics",
+                "",
+                "| Target | Watchdog records | No-edit watchdogs | No-output no-edit | No observed repo changes | p50 seconds to repo change | Max seconds without repo change | Max seconds since output |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for target, values in sorted(by_target.items()):
+            if values.watchdog_records:
+                lines.append(watchdog_row(target, values))
     return "\n".join(lines)
 
 
@@ -121,7 +177,10 @@ def headline_row(target: str, values: Aggregate) -> str:
         f"{values.preflight_failures} | {values.wrong_file_edits} | {values.forbidden_file_edits} | "
         f"{values.hidden_accesses} | {values.stalls} | {values.timeouts} | "
         f"{duration(percentile(values.durations, 50))} | "
-        f"{duration(percentile(values.durations, 95))} |"
+        f"{duration(percentile(values.durations, 95))} | "
+        f"{evaluated(values.record_consistent_successes, values.record_consistency_evaluated)} | "
+        f"{evaluated(values.mistake_prevention_successes, values.mistake_prevention_evaluated)} | "
+        f"{values.repeated_documented_mistakes} |"
     )
 
 
@@ -134,7 +193,20 @@ def task_row(target: str, task_id: str, values: Aggregate) -> str:
         f"{values.preflight_failures} | {values.wrong_file_edits} | "
         f"{values.forbidden_file_edits} | {values.hidden_accesses} | "
         f"{values.stalls} | {values.timeouts} | "
-        f"{duration(percentile(values.durations, 50))} | {duration(percentile(values.durations, 95))} |"
+        f"{duration(percentile(values.durations, 50))} | {duration(percentile(values.durations, 95))} | "
+        f"{evaluated(values.record_consistent_successes, values.record_consistency_evaluated)} | "
+        f"{evaluated(values.mistake_prevention_successes, values.mistake_prevention_evaluated)} | "
+        f"{values.repeated_documented_mistakes} |"
+    )
+
+
+def watchdog_row(target: str, values: Aggregate) -> str:
+    return (
+        f"| `{target}` | {values.watchdog_records} | {values.no_edit_watchdogs} | "
+        f"{values.no_output_no_edit_watchdogs} | {values.no_observed_repo_changes} | "
+        f"{duration(percentile(values.seconds_until_repo_change, 50))} | "
+        f"{duration(max(values.seconds_without_repo_change) if values.seconds_without_repo_change else None)} | "
+        f"{duration(max(values.seconds_since_last_output) if values.seconds_since_last_output else None)} |"
     )
 
 
@@ -152,6 +224,38 @@ def agent_log_has_hidden_access(record: dict[str, Any]) -> bool:
         r"/bin/zsh -lc .*benchmarks/(tasks|oracles)",
     )
     return any(re.search(pattern, text) for pattern in patterns)
+
+
+def is_no_output_no_edit(record: dict[str, Any]) -> bool:
+    agent = record.get("agent", {})
+    if not isinstance(agent, dict):
+        return False
+    watchdog = agent.get("watchdog", {})
+    if not isinstance(watchdog, dict):
+        watchdog = {}
+    stdout_tail = str(agent.get("stdout_tail") or "").strip()
+    duration = as_number(agent.get("duration_seconds"))
+    seconds_since_output = as_number(watchdog.get("seconds_since_last_output"))
+    return not stdout_tail and output_silent_for_most_of_run(
+        duration_seconds=duration,
+        seconds_since_last_output=seconds_since_output,
+    )
+
+
+def output_silent_for_most_of_run(
+    *, duration_seconds: float | None, seconds_since_last_output: float | None
+) -> bool:
+    if seconds_since_last_output is None:
+        return False
+    if duration_seconds is None:
+        return True
+    return seconds_since_last_output >= max(5.0, duration_seconds - 5.0)
+
+
+def as_number(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
 
 
 def target_label(record: dict[str, Any]) -> str:
@@ -173,6 +277,12 @@ def rate(numerator: int, denominator: int) -> str:
     return f"{(numerator / denominator) * 100:.1f}%"
 
 
+def evaluated(successes: int, evaluated_count: int) -> str:
+    if evaluated_count == 0:
+        return "-"
+    return f"{successes}/{evaluated_count}"
+
+
 def percentile(values: list[float], percentile_value: int) -> float | None:
     if not values:
         return None
@@ -185,6 +295,11 @@ def duration(value: float | None) -> str:
     if value is None:
         return "-"
     return f"{value:.0f}s"
+
+
+def append_number(values: list[float], value: object) -> None:
+    if isinstance(value, (int, float)):
+        values.append(float(value))
 
 
 if __name__ == "__main__":

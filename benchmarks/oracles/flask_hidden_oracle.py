@@ -16,13 +16,14 @@ MONEY_KEY_TERMS = ("amount", "cost", "discount", "price", "subtotal", "tax", "to
 
 def main(argv: list[str]) -> int:
     if len(argv) not in {2, 3}:
-        fail("usage: flask_hidden_oracle.py <task-id> [strict|functional|schema]")
+        fail("usage: flask_hidden_oracle.py <task-id> [strict|functional|schema|record_consistency]")
 
     mode = argv[2] if len(argv) == 3 else "strict"
     checks_by_mode = {
         "strict": strict_checks(),
         "functional": functional_checks(),
         "schema": schema_checks(),
+        "record_consistency": record_consistency_checks(),
     }
     if mode not in checks_by_mode:
         fail(f"unknown hidden oracle mode: {mode}")
@@ -46,6 +47,8 @@ def strict_checks() -> dict[str, Any]:
         "hidden-effect-cart-validation": check_cart_validation,
         "hidden-effect-catalog-metrics": check_catalog_metrics,
         "hidden-effect-catalog-segments": check_catalog_segments,
+        "hidden-effect-catalog-price-policy": check_catalog_price_policy,
+        "hidden-effect-catalog-replenishment-policy": check_catalog_replenishment_policy,
         "hidden-effect-replenishment-signals": check_replenishment_signals,
         "hidden-effect-catalog-price-ladder": check_catalog_price_ladder,
         "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot,
@@ -62,6 +65,8 @@ def functional_checks() -> dict[str, Any]:
         "hidden-effect-cart-validation": check_cart_validation_functional,
         "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
         "hidden-effect-catalog-segments": check_catalog_segments_functional,
+        "hidden-effect-catalog-price-policy": check_catalog_price_policy_functional,
+        "hidden-effect-catalog-replenishment-policy": check_catalog_replenishment_policy_functional,
         "hidden-effect-replenishment-signals": check_replenishment_signals_functional,
         "hidden-effect-catalog-price-ladder": check_catalog_price_ladder_functional,
         "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot_functional,
@@ -84,6 +89,14 @@ def schema_checks() -> dict[str, Any]:
             "/catalog/segments",
             "catalog segments",
         ),
+        "hidden-effect-catalog-price-policy": lambda: check_get_schema_style(
+            "/catalog/price-policy",
+            "catalog price policy",
+        ),
+        "hidden-effect-catalog-replenishment-policy": lambda: check_get_schema_style(
+            "/catalog/replenishment-policy",
+            "catalog replenishment policy",
+        ),
         "hidden-effect-replenishment-signals": lambda: check_get_schema_style(
             "/catalog/replenishment-signals",
             "catalog replenishment signals",
@@ -95,6 +108,15 @@ def schema_checks() -> dict[str, Any]:
         "hidden-effect-catalog-value-snapshot": lambda: check_get_schema_style(
             "/catalog/value-snapshot",
             "catalog value snapshot",
+        ),
+    }
+
+
+def record_consistency_checks() -> dict[str, Any]:
+    return {
+        "hidden-effect-catalog-price-policy": check_catalog_price_policy_record_consistency,
+        "hidden-effect-catalog-replenishment-policy": (
+            check_catalog_replenishment_policy_record_consistency
         ),
     }
 
@@ -440,6 +462,14 @@ def check_catalog_segments() -> None:
     )
 
 
+def check_catalog_price_policy() -> None:
+    check_catalog_price_policy_record_consistency()
+
+
+def check_catalog_replenishment_policy() -> None:
+    check_catalog_replenishment_policy_record_consistency()
+
+
 def check_replenishment_signals() -> None:
     response = client().get("/catalog/replenishment-signals")
     assert_status(response, 200)
@@ -487,6 +517,269 @@ def check_replenishment_signals() -> None:
         ("/catalog/replenishment-signals", "reorder_now", "watch", "healthy", "target stock"),
         "glossary must document replenishment route and signal terms",
     )
+
+
+def check_catalog_price_policy_functional() -> None:
+    response = client().get("/catalog/price-policy")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    for sku in ("desk-lamp", "notebook", "standing-mat"):
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog price policy must include {sku} row")
+        expect(isinstance(row.get("price_band"), str), f"{sku} row must include price_band")
+
+    summary = object_field(payload, "summary", default=payload)
+    catalog_price_band_counts(summary)
+
+    glossary = glossary_text()
+    expect_catalog_price_policy_glossary_terms(glossary)
+
+
+def check_catalog_price_policy_record_consistency() -> None:
+    decision_path = Path("docs/decisions/0002-adopt-catalog-price-band-policy.md")
+    expect(decision_path.exists(), "catalog price-band decision record must exist before the task")
+    tracked = git_text(["git", "ls-files", "--error-unmatch", str(decision_path)], check=False)
+    expect(tracked.strip() == str(decision_path), "catalog price-band decision record must be tracked")
+    decision_status = git_text(["git", "status", "--porcelain=v1", "--", "docs/decisions"], check=True)
+    expect(not decision_status.strip(), "agent must not create or modify decision records for this task")
+
+    decision = normalize_doc_text(decision_path.read_text(encoding="utf-8"))
+    expect_terms(
+        decision,
+        ("budget", "standard", "premium", "price_band", "10.00", "35.00"),
+        "catalog price-band decision record is missing the adopted policy terms",
+    )
+
+    check_catalog_price_policy_functional()
+    payload = json_payload(client().get("/catalog/price-policy"))
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": "standard",
+        "notebook": "budget",
+        "standing-mat": "premium",
+    }
+    for sku, band in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog price policy must include {sku} row")
+        expect(row.get("price_band") == band, f"{sku} must use decision-consistent price_band {band}")
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_price_band_counts(summary)
+    for band in ("budget", "standard", "premium"):
+        expect(counts[band] == 1, f"catalog price policy summary must count {band}")
+
+    check_catalog_price_policy_hidden_decision_edge()
+
+
+def catalog_price_band_counts(summary: dict[str, Any]) -> dict[str, int]:
+    expect(isinstance(summary, dict), "catalog price policy must include summary object")
+    candidate_keys = ("price_bands", "price_band_counts", "counts", "counts_by_price_band")
+    candidates = [summary]
+    for key in candidate_keys:
+        value = summary.get(key)
+        if isinstance(value, dict):
+            candidates.append(value)
+
+    for candidate in candidates:
+        counts: dict[str, int] = {}
+        for band in ("budget", "standard", "premium"):
+            value = candidate.get(band)
+            if isinstance(value, int) and not isinstance(value, bool):
+                counts[band] = value
+        if len(counts) == 3:
+            expect(
+                sum(counts.values()) >= 3,
+                "catalog price policy summary must count the current catalog rows",
+            )
+            return counts
+
+    fail("catalog price policy summary must count budget, standard, and premium bands")
+
+
+def expect_catalog_price_policy_glossary_terms(glossary: str) -> None:
+    label = "glossary must document catalog price policy route and price bands"
+    expect_terms(glossary, ("/catalog/price-policy",), label)
+    expect_any_term(
+        glossary,
+        ("price band", "price bands", "price-band", "price-bands", "price_band", "price_bands"),
+        label,
+    )
+
+
+def check_catalog_price_policy_hidden_decision_edge() -> None:
+    from app import catalog as catalog_module
+
+    original_products = list(catalog_module.PRODUCTS)
+    try:
+        catalog_module.PRODUCTS.append(
+            {
+                "sku": "policy-edge-37",
+                "name": "Policy edge item",
+                "price": "37.00",
+                "stock": 7,
+            }
+        )
+        payload = json_payload(client().get("/catalog/price-policy"))
+    finally:
+        catalog_module.PRODUCTS[:] = original_products
+
+    rows = rows_by_sku(payload)
+    edge_row = rows.get("policy-edge-37")
+    expect(isinstance(edge_row, dict), "catalog price policy must include hidden 37.00 edge row")
+    expect(
+        edge_row.get("price_band") == "premium",
+        "37.00 price must use decision-consistent premium price_band",
+    )
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_price_band_counts(summary)
+    expect(counts["budget"] == 1, "catalog price policy edge summary must count budget")
+    expect(counts["standard"] == 1, "catalog price policy edge summary must count standard")
+    expect(counts["premium"] == 2, "catalog price policy edge summary must count premium")
+
+
+def check_catalog_replenishment_policy_functional() -> None:
+    response = client().get("/catalog/replenishment-policy")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    for sku, stock in (("desk-lamp", 12), ("notebook", 48), ("standing-mat", 3)):
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog replenishment policy must include {sku} row")
+        expect(row.get("stock") == stock, f"{sku} row must include current stock")
+        expect(
+            isinstance(row.get("replenishment_status"), str),
+            f"{sku} row must include replenishment_status",
+        )
+
+    summary = object_field(payload, "summary", default=payload)
+    catalog_replenishment_status_counts(summary)
+
+    glossary = glossary_text()
+    expect_catalog_replenishment_glossary_terms(glossary)
+
+
+def check_catalog_replenishment_policy_record_consistency() -> None:
+    decision_path = Path("docs/decisions/0003-adopt-catalog-replenishment-policy.md")
+    expect(decision_path.exists(), "catalog replenishment decision record must exist before the task")
+    tracked = git_text(["git", "ls-files", "--error-unmatch", str(decision_path)], check=False)
+    expect(tracked.strip() == str(decision_path), "catalog replenishment decision record must be tracked")
+    decision_status = git_text(["git", "status", "--porcelain=v1", "--", "docs/decisions"], check=True)
+    expect(not decision_status.strip(), "agent must not create or modify decision records for this task")
+
+    decision = normalize_doc_text(decision_path.read_text(encoding="utf-8"))
+    expect_terms(
+        decision,
+        ("reorder_now", "monitor", "healthy", "replenishment_status", "5", "20"),
+        "catalog replenishment decision record is missing the adopted policy terms",
+    )
+
+    check_catalog_replenishment_policy_functional()
+    payload = json_payload(client().get("/catalog/replenishment-policy"))
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": "monitor",
+        "notebook": "healthy",
+        "standing-mat": "reorder_now",
+    }
+    for sku, status in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog replenishment policy must include {sku} row")
+        expect(
+            row.get("replenishment_status") == status,
+            f"{sku} must use decision-consistent replenishment_status {status}",
+        )
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_replenishment_status_counts(summary)
+    for status in ("reorder_now", "monitor", "healthy"):
+        expect(counts[status] == 1, f"catalog replenishment policy summary must count {status}")
+
+    check_catalog_replenishment_policy_hidden_decision_edges()
+
+
+def catalog_replenishment_status_counts(summary: dict[str, Any]) -> dict[str, int]:
+    expect(isinstance(summary, dict), "catalog replenishment policy must include summary object")
+    candidate_keys = (
+        "replenishment_statuses",
+        "replenishment_status_counts",
+        "status_counts",
+        "counts",
+        "counts_by_replenishment_status",
+    )
+    candidates = [summary]
+    for key in candidate_keys:
+        value = summary.get(key)
+        if isinstance(value, dict):
+            candidates.append(value)
+
+    for candidate in candidates:
+        counts: dict[str, int] = {}
+        for status in ("reorder_now", "monitor", "healthy"):
+            value = candidate.get(status)
+            if isinstance(value, int) and not isinstance(value, bool):
+                counts[status] = value
+        if len(counts) == 3:
+            expect(
+                sum(counts.values()) >= 3,
+                "catalog replenishment policy summary must count current catalog rows",
+            )
+            return counts
+
+    fail("catalog replenishment policy summary must count reorder_now, monitor, and healthy statuses")
+
+
+def expect_catalog_replenishment_glossary_terms(glossary: str) -> None:
+    label = "glossary must document catalog replenishment policy route and statuses"
+    expect_terms(glossary, ("/catalog/replenishment-policy",), label)
+    expect_any_term(glossary, ("replenishment status", "replenishment_status"), label)
+
+
+def check_catalog_replenishment_policy_hidden_decision_edges() -> None:
+    from app import catalog as catalog_module
+
+    original_products = list(catalog_module.PRODUCTS)
+    try:
+        catalog_module.PRODUCTS.extend(
+            [
+                {
+                    "sku": "replenishment-edge-5",
+                    "name": "Replenishment edge 5",
+                    "price": "12.00",
+                    "stock": 5,
+                },
+                {
+                    "sku": "replenishment-edge-20",
+                    "name": "Replenishment edge 20",
+                    "price": "12.00",
+                    "stock": 20,
+                },
+            ]
+        )
+        payload = json_payload(client().get("/catalog/replenishment-policy"))
+    finally:
+        catalog_module.PRODUCTS[:] = original_products
+
+    rows = rows_by_sku(payload)
+    edge_5 = rows.get("replenishment-edge-5")
+    edge_20 = rows.get("replenishment-edge-20")
+    expect(isinstance(edge_5, dict), "catalog replenishment policy must include hidden stock 5 edge row")
+    expect(isinstance(edge_20, dict), "catalog replenishment policy must include hidden stock 20 edge row")
+    expect(
+        edge_5.get("replenishment_status") == "monitor",
+        "stock 5 must use decision-consistent monitor replenishment_status",
+    )
+    expect(
+        edge_20.get("replenishment_status") == "healthy",
+        "stock 20 must use decision-consistent healthy replenishment_status",
+    )
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_replenishment_status_counts(summary)
+    expect(counts["reorder_now"] == 1, "catalog replenishment edge summary must count reorder_now")
+    expect(counts["monitor"] == 2, "catalog replenishment edge summary must count monitor")
+    expect(counts["healthy"] == 2, "catalog replenishment edge summary must count healthy")
 
 
 def check_catalog_price_ladder() -> None:
@@ -1103,7 +1396,7 @@ def expect_money_like_values(value: Any, label: str, path: str = "$", key: str =
 
 
 def is_money_key(key: str) -> bool:
-    if key.endswith(("_band", "_bands", "_tier", "_tiers")):
+    if any(term in key for term in ("price_band", "price_tier")):
         return False
     return any(term in key for term in MONEY_KEY_TERMS)
 
@@ -1124,6 +1417,15 @@ def docs_text(relative_dir: str) -> str:
     return "\n".join(path.read_text(encoding="utf-8") for path in files)
 
 
+def git_text(command: list[str], *, check: bool) -> str:
+    import subprocess
+
+    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True)
+    if check and result.returncode != 0:
+        fail(result.stderr.strip() or f"command failed: {' '.join(command)}")
+    return result.stdout
+
+
 def glossary_text() -> str:
     glossary = ROOT / "docs" / "domain" / "glossary.md"
     expect(glossary.exists(), "domain glossary must exist")
@@ -1137,6 +1439,11 @@ def normalize_doc_text(text: str) -> str:
 def expect_terms(text: str, terms: tuple[str, ...], label: str) -> None:
     missing = [term for term in terms if term.lower() not in text]
     expect(not missing, f"{label}; missing: {', '.join(missing)}")
+
+
+def expect_any_term(text: str, terms: tuple[str, ...], label: str) -> None:
+    if not any(term.lower() in text for term in terms):
+        expect(False, f"{label}; missing one of: {', '.join(terms)}")
 
 
 def money(value: Decimal) -> Decimal:

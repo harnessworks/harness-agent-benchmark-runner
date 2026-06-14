@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "id": "hidden-effect-replenishment-signals",
+  "description": "V2 held-out convention-transfer task: new catalog replenishment API with partial-realistic prompt and deterministic hidden oracle.",
+  "repo": {
+    "source": "../flask-memory-harness",
+    "ref": "ba8b3963d071089429fa2c2c8ebc10049e80cca4"
+  },
+  "prompt": "Add a catalog replenishment signals endpoint.\n\nAdd GET /catalog/replenishment-signals. It should return per-product replenishment signals for the current in-memory catalog. Use signal `reorder_now` when stock is below 5, `watch` when stock is 5 up to but not including 15, and `healthy` when stock is 15 or higher. Use target stock 25. For each row include the prompt-named concepts `signal` and `recommended_order_quantity`; items at or above target stock should recommend 0. Sort rows deterministically by SKU. Include a compact summary with counts by signal and total recommended order quantity.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog replenishment signals. Update companion documentation in the repository's documented docs location so future maintainers can find the signal definitions and target stock rule. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-full-harness-memory-pilot/hidden-effect-replenishment-signals-full-harness.json",
+  "timeout_seconds": 600,
+  "max_attempts": 1,
+  "max_cost_usd": 1.0,
+  "expected_files": [
+    "app/**",
+    "tests/**",
+    "docs/**"
+  ],
+  "forbidden_files": [
+    ".env",
+    ".env.*",
+    "benchmarks/**",
+    "requirements.txt",
+    "runs/**",
+    "results/**"
+  ],
+  "agent_excluded_paths": [
+    "benchmarks"
+  ],
+  "agent_setup": {
+    "commands": [
+      {
+        "name": "install Python dependencies for agent",
+        "command": [
+          "bash",
+          "-lc",
+          "python3 -m venv .venv && PIP_DISABLE_PIP_VERSION_CHECK=1 .venv/bin/python -m pip install -q -r requirements.txt"
+        ],
+        "timeout_seconds": 180
+      }
+    ]
+  },
+  "verification": {
+    "commands": [
+      {
+        "name": "harness gate",
+        "command": [
+          "python3",
+          "scripts/check_harness.py"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "workflow"
+      },
+      {
+        "name": "functional heldout oracle for hidden-effect-replenishment-signals",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-replenishment-signals",
+          "functional"
+        ],
+        "timeout_seconds": 180,
+        "dimension": "functional"
+      },
+      {
+        "name": "schema and mistake-prevention oracle for hidden-effect-replenishment-signals",
+        "command": [
+          "bash",
+          "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
+          "hidden-effect-replenishment-signals",
+          "schema"
+        ],
+        "timeout_seconds": 180,
+        "dimensions": [
+          "schema",
+          "mistake_prevention"
+        ]
+      }
+    ]
+  },
+  "benchmark": {
+    "suite": "flask-full-harness-memory-pilot",
+    "split": "heldout",
+    "prompt_variant": "partial-realistic",
+    "target_arm": "full-harness",
+    "memory_experiment": "decision-failure-memory"
+  },
+  "leakage_audit": {
+    "forbidden_paths": [
+      "runs/**",
+      "results/**"
+    ],
+    "forbidden_text": [
+      "flask_hidden_oracle.py",
+      "run_flask_hidden_checks.sh",
+      "/products/<sku>/availability",
+      "/inventory/risk-report",
+      "/suppliers/readiness",
+      "/catalog/bundle-quote",
+      "/cart/validate",
+      "/catalog/metrics",
+      "/catalog/segments",
+      "/catalog/replenishment-signals",
+      "/catalog/price-ladder",
+      "/catalog/value-snapshot",
+      "/warehouse/pick-list",
+      "/inventory/reservations/preview",
+      "/tax/preview",
+      "stock-risk-v1",
+      "catalog-metrics-v1",
+      "segments-v1",
+      "replenishment-signals-v1",
+      "price-ladder-v1",
+      "value-snapshot-v1"
+    ]
+  }
+}

@@ -82,10 +82,106 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
     def test_schema_money_key_detection_allows_band_labels(self) -> None:
         self.assertFalse(flask_hidden_oracle.is_money_key("price_band"))
         self.assertFalse(flask_hidden_oracle.is_money_key("price_bands"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("price_band_counts"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("counts_by_price_band"))
         self.assertFalse(flask_hidden_oracle.is_money_key("price_tier"))
         self.assertFalse(flask_hidden_oracle.is_money_key("price_tiers"))
         self.assertTrue(flask_hidden_oracle.is_money_key("unit_price"))
         self.assertTrue(flask_hidden_oracle.is_money_key("total_amount"))
+
+    def test_catalog_price_policy_summary_accepts_nested_price_band_counts(self) -> None:
+        counts = flask_hidden_oracle.catalog_price_band_counts(
+            {
+                "price_bands": {
+                    "budget": 1,
+                    "standard": 1,
+                    "premium": 1,
+                }
+            }
+        )
+
+        self.assertEqual(counts, {"budget": 1, "standard": 1, "premium": 1})
+
+    def test_catalog_price_policy_summary_requires_all_price_band_counts(self) -> None:
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.catalog_price_band_counts(
+                    {
+                        "price_bands": {
+                            "budget": 1,
+                            "standard": 2,
+                        }
+                    }
+                )
+
+    def test_catalog_price_policy_glossary_accepts_hyphenated_price_band_concept(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog price-policy endpoint: `GET /catalog/price-policy`,
+              returns per-SKU `price_band` labels and summary counts.
+            - Price-Band Policy: stable budget, standard, and premium labels.
+            """
+        )
+
+        flask_hidden_oracle.expect_catalog_price_policy_glossary_terms(glossary)
+
+    def test_catalog_price_policy_glossary_requires_route_and_price_band_concept(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog policy endpoint: returns product pricing details.
+            """
+        )
+
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.expect_catalog_price_policy_glossary_terms(glossary)
+
+    def test_catalog_replenishment_policy_summary_accepts_nested_status_counts(self) -> None:
+        counts = flask_hidden_oracle.catalog_replenishment_status_counts(
+            {
+                "replenishment_statuses": {
+                    "reorder_now": 1,
+                    "monitor": 1,
+                    "healthy": 1,
+                }
+            }
+        )
+
+        self.assertEqual(counts, {"reorder_now": 1, "monitor": 1, "healthy": 1})
+
+    def test_catalog_replenishment_policy_summary_requires_all_status_counts(self) -> None:
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.catalog_replenishment_status_counts(
+                    {
+                        "status_counts": {
+                            "reorder_now": 1,
+                            "healthy": 2,
+                        }
+                    }
+                )
+
+    def test_catalog_replenishment_glossary_accepts_snake_case_status_key(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog replenishment policy endpoint: `GET /catalog/replenishment-policy`,
+              returns `sku`, `stock`, and `replenishment_status`.
+            - `replenishment_status`: Stable stock replenishment classification.
+            """
+        )
+
+        flask_hidden_oracle.expect_catalog_replenishment_glossary_terms(glossary)
+
+    def test_catalog_replenishment_glossary_requires_route_and_status_concept(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Replenishment endpoint: returns stock counts by stable labels.
+            """
+        )
+
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.expect_catalog_replenishment_glossary_terms(glossary)
 
     def test_cart_functional_summary_prefers_summary_object_over_item_rows(self) -> None:
         class Response:

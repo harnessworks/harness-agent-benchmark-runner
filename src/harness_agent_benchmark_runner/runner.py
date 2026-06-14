@@ -21,6 +21,12 @@ except ImportError:  # pragma: no cover - fcntl is unavailable on Windows.
     fcntl = None
 
 
+KNOWN_AGENT_QUOTA_MESSAGES = (
+    "you've hit your session limit",
+    "you have hit your session limit",
+)
+
+
 def run_task(
     task: TaskSpec,
     config: RunnerConfig,
@@ -149,6 +155,7 @@ def run_task(
         wrong_files = classify_wrong_files(changed_files_for_scoring, task.expected_files)
         forbidden_files = matching_files(changed_files_for_scoring, task.forbidden_files)
         verification_passed = all(result.exit_code == 0 for result in verification_results)
+        agent_quota_exhausted_value = agent_quota_exhausted(agent_result)
         dimension_scoring = calculate_dimension_scoring(
             preflight_passed=preflight["passed"],
             agent_result=agent_result,
@@ -212,6 +219,9 @@ def run_task(
                 "functional_success": dimension_scoring["functional_success"],
                 "schema_contract_success": dimension_scoring["schema_contract_success"],
                 "workflow_success": dimension_scoring["workflow_success"],
+                "record_consistent_success": dimension_scoring["record_consistent_success"],
+                "mistake_prevention_success": dimension_scoring["mistake_prevention_success"],
+                "repeated_documented_mistake": dimension_scoring["repeated_documented_mistake"],
                 "boundary_success": dimension_scoring["boundary_success"],
                 "execution_success": dimension_scoring["execution_success"],
                 "preflight_passed": preflight["passed"],
@@ -219,6 +229,7 @@ def run_task(
                 "agent_exit_code": agent_result.exit_code,
                 "agent_timed_out": agent_result.timed_out,
                 "agent_stalled": agent_stalled(agent_result),
+                "agent_quota_exhausted": agent_quota_exhausted_value,
                 "verification_passed": verification_passed,
                 "first_pass_verification": attempt_number == 1 and verification_passed,
                 "wrong_file_edits": len(wrong_files),
@@ -595,7 +606,7 @@ def calculate_dimension_scoring(
     verification_passed: bool,
     wrong_files: list[str],
     forbidden_files: list[str],
-) -> dict[str, bool]:
+) -> dict[str, bool | None]:
     execution_success = agent_result.exit_code == 0 and not agent_result.timed_out
     boundary_success = not wrong_files and not forbidden_files
     diff_success = diff_check.exit_code == 0
@@ -616,6 +627,19 @@ def calculate_dimension_scoring(
         and boundary_success
         and verification_dimension_success(verification_results, "workflow", verification_passed)
     )
+    record_consistent_success = optional_verification_dimension_success(
+        verification_results,
+        "record_consistency",
+        preflight_passed,
+    )
+    mistake_prevention_success = optional_verification_dimension_success(
+        verification_results,
+        "mistake_prevention",
+        preflight_passed,
+    )
+    repeated_documented_mistake = (
+        None if mistake_prevention_success is None else not mistake_prevention_success
+    )
     strict_success = (
         preflight_passed
         and execution_success
@@ -627,6 +651,9 @@ def calculate_dimension_scoring(
         "functional_success": functional_success,
         "schema_contract_success": schema_contract_success,
         "workflow_success": workflow_success,
+        "record_consistent_success": record_consistent_success,
+        "mistake_prevention_success": mistake_prevention_success,
+        "repeated_documented_mistake": repeated_documented_mistake,
         "boundary_success": boundary_success,
         "execution_success": execution_success,
         "strict_success": strict_success,
@@ -646,11 +673,25 @@ def verification_dimension_success(
     return legacy_fallback
 
 
+def optional_verification_dimension_success(
+    verification_results: list[ProcessResult],
+    dimension: str,
+    preflight_passed: bool,
+) -> bool | None:
+    selected = [result for result in verification_results if dimension in result.dimensions]
+    if not selected:
+        return None
+    return preflight_passed and all(result.exit_code == 0 for result in selected)
+
+
 def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
     dimensions = {
         "functional_success": False,
         "schema_contract_success": False,
         "workflow_success": False,
+        "record_consistent_success": None,
+        "mistake_prevention_success": None,
+        "repeated_documented_mistake": None,
         "boundary_success": False,
         "execution_success": False,
         "strict_success": False,
@@ -661,6 +702,9 @@ def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
         "functional_success": False,
         "schema_contract_success": False,
         "workflow_success": False,
+        "record_consistent_success": None,
+        "mistake_prevention_success": None,
+        "repeated_documented_mistake": None,
         "boundary_success": False,
         "execution_success": False,
         "preflight_passed": False,
@@ -669,6 +713,7 @@ def preflight_failure_scoring(preflight: dict[str, Any]) -> dict[str, Any]:
         "agent_exit_code": None,
         "agent_timed_out": False,
         "agent_stalled": False,
+        "agent_quota_exhausted": False,
         "verification_passed": False,
         "first_pass_verification": False,
         "wrong_file_edits": 0,
@@ -690,6 +735,13 @@ def agent_stalled(agent_result: ProcessResult) -> bool:
         "idle_watchdog",
         "no_edit_watchdog",
     }
+
+
+def agent_quota_exhausted(agent_result: ProcessResult) -> bool:
+    if agent_result.exit_code == 0:
+        return False
+    output = f"{agent_result.stdout_tail}\n{agent_result.stderr_tail}".lower()
+    return any(message in output for message in KNOWN_AGENT_QUOTA_MESSAGES)
 
 
 def run_verification_commands(

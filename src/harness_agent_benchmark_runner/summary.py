@@ -54,6 +54,11 @@ def new_counter() -> dict[str, int]:
         "functional_successes": 0,
         "schema_contract_successes": 0,
         "workflow_successes": 0,
+        "record_consistency_evaluated": 0,
+        "record_consistent_successes": 0,
+        "mistake_prevention_evaluated": 0,
+        "mistake_prevention_successes": 0,
+        "repeated_documented_mistakes": 0,
         "boundary_successes": 0,
         "execution_successes": 0,
         "preflight_failures": 0,
@@ -79,6 +84,16 @@ def update_counter(counter: dict[str, int], scoring: dict[str, Any]) -> None:
         counter["schema_contract_successes"] += 1
     if scoring.get("workflow_success") is True:
         counter["workflow_successes"] += 1
+    if scoring.get("record_consistent_success") is not None:
+        counter["record_consistency_evaluated"] += 1
+    if scoring.get("record_consistent_success") is True:
+        counter["record_consistent_successes"] += 1
+    if scoring.get("mistake_prevention_success") is not None:
+        counter["mistake_prevention_evaluated"] += 1
+    if scoring.get("mistake_prevention_success") is True:
+        counter["mistake_prevention_successes"] += 1
+    if scoring.get("repeated_documented_mistake") is True:
+        counter["repeated_documented_mistakes"] += 1
     if scoring.get("boundary_success") is True:
         counter["boundary_successes"] += 1
     if scoring.get("execution_success") is True:
@@ -110,6 +125,17 @@ def format_summary(summary: dict[str, Any]) -> str:
             f"Functional successes: {total['functional_successes']}",
             f"Schema-contract successes: {total['schema_contract_successes']}",
             f"Workflow successes: {total['workflow_successes']}",
+            (
+                "Record-consistency successes: "
+                f"{total['record_consistent_successes']}/"
+                f"{total['record_consistency_evaluated']}"
+            ),
+            (
+                "Mistake-prevention successes: "
+                f"{total['mistake_prevention_successes']}/"
+                f"{total['mistake_prevention_evaluated']}"
+            ),
+            f"Repeated documented mistakes: {total['repeated_documented_mistakes']}",
             f"Boundary successes: {total['boundary_successes']}",
             f"Execution successes: {total['execution_successes']}",
             f"Preflight failures: {total['preflight_failures']}",
@@ -133,6 +159,11 @@ def format_summary(summary: dict[str, Any]) -> str:
             f"functional_successes={values['functional_successes']}, "
             f"schema_contract_successes={values['schema_contract_successes']}, "
             f"workflow_successes={values['workflow_successes']}, "
+            f"record_consistent_successes={values['record_consistent_successes']}/"
+            f"{values['record_consistency_evaluated']}, "
+            f"mistake_prevention_successes={values['mistake_prevention_successes']}/"
+            f"{values['mistake_prevention_evaluated']}, "
+            f"repeated_documented_mistakes={values['repeated_documented_mistakes']}, "
             f"boundary_successes={values['boundary_successes']}, "
             f"execution_successes={values['execution_successes']}, "
             f"preflight_failures={values['preflight_failures']}, "

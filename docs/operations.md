@@ -247,7 +247,54 @@ for the configured interval. The no-edit watchdog stops active-output attempts
 only if no visible repository changes have appeared by the configured interval.
 All three watchdogs record `scoring.agent_stalled=true`; use
 `agent.termination_reason` to distinguish `stall_watchdog`, `idle_watchdog`,
-and `no_edit_watchdog`.
+and `no_edit_watchdog`. When idle or no-edit watchdogs are enabled, the agent
+result also includes `agent.watchdog`, with fields such as
+`seconds_since_last_output`, `observed_repo_changes`, and
+`seconds_without_observed_repo_changes` to separate silent stalls from
+active-output attempts that never touched the repository. The public-safe
+`scripts/summarize_hidden_ab.py` report includes a `Watchdog Diagnostics`
+section when these fields are present.
+
+When a no-edit watchdog fires, triage the stopped records before retrying a
+promotion-sized run:
+
+```bash
+python3 scripts/triage_no_edit_stalls.py --results results/<run-id>
+```
+
+This prints one public-safe row per `no_edit_watchdog` record with the affected
+task, arm, no-edit duration, last-output gap, and the last Codex message
+classified as `startup/no-output`, `unknown/no-output`, `post-planning`, or
+`after-agent-output`. Treat a `post-planning` row as evidence that the agent
+reached an implementation plan but never made the first repository edit;
+diagnose that separately from startup silence, functional failures, and
+file-boundary violations.
+
+For a focused diagnostic or guarded promotion rerun, the Flask A/B wrapper can
+retry only the startup-silence shape:
+
+```bash
+python3 scripts/run_hidden_flask_ab.py \
+  --stop-on-abnormal \
+  --agent-no-edit-timeout 240 \
+  --retry-startup-no-output-once \
+  ...
+```
+
+This option requires `--jobs 1`, `--stop-on-abnormal`, and
+`--agent-no-edit-timeout`. It does not erase the first result record. It reruns
+the same scheduled item once only when the stopped record has
+`termination_reason=no_edit_watchdog`, no stdout tail, no observed repository
+changes, no changed files, and output silence for almost the full agent
+duration. Do not use it for `post-planning` no-edit records; those remain real
+abnormal results.
+
+Known agent quota/session-limit messages are recorded separately from watchdog
+stalls. For example, when an agent exits non-zero with `You've hit your session
+limit` in stdout or stderr, the runner records
+`scoring.agent_quota_exhausted=true`. The Flask A/B wrapper treats that as an
+abnormal signal under `--stop-on-abnormal`, because quota exhaustion
+contaminates the scheduled comparison rather than measuring task behavior.
 
 Use `--agent-timeout-override` when a promotion run intentionally needs a
 different effective task timeout than the task JSON. The runner applies that

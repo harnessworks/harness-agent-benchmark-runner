@@ -60,6 +60,75 @@ class HiddenABSummaryScriptTests(unittest.TestCase):
         self.assertIn("| `flask-yes-harness` | 1 | 0 | 0.0% | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |", markdown)
         self.assertIn("| `flask-no-harness` | 1 | 0 | 0.0% | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |", markdown)
 
+    def test_formats_memory_specific_metrics_when_present(self) -> None:
+        item = record("../flask-yes-harness", "alpha", False, False, 20)
+        scoring = item["scoring"]
+        assert isinstance(scoring, dict)
+        scoring["record_consistent_success"] = True
+        scoring["mistake_prevention_success"] = False
+        scoring["repeated_documented_mistake"] = True
+
+        markdown = hidden_summary.format_markdown([item])
+
+        self.assertIn("Record consistency", markdown)
+        self.assertIn("Mistake prevention", markdown)
+        self.assertIn("Repeated documented mistakes", markdown)
+        self.assertIn("| 1/1 | 0/1 | 1 |", markdown)
+
+    def test_formats_watchdog_diagnostics_when_present(self) -> None:
+        no_edit = record(
+            "../flask-yes-harness",
+            "alpha",
+            False,
+            False,
+            360,
+            watchdog={
+                "observed_repo_changes": False,
+                "seconds_without_observed_repo_changes": 360.035,
+                "seconds_since_last_output": 110.863,
+            },
+            termination_reason="no_edit_watchdog",
+        )
+        observed = record(
+            "../flask-no-harness",
+            "alpha",
+            False,
+            False,
+            65,
+            watchdog={
+                "observed_repo_changes": True,
+                "seconds_until_repo_change_observed": 46.084,
+                "seconds_since_last_output": 0.134,
+            },
+        )
+
+        markdown = hidden_summary.format_markdown([no_edit, observed])
+
+        self.assertIn("## Watchdog Diagnostics", markdown)
+        self.assertIn("No observed repo changes", markdown)
+        self.assertIn("No-output no-edit", markdown)
+        self.assertIn("| `flask-yes-harness` | 1 | 1 | 0 | 1 | - | 360s | 111s |", markdown)
+        self.assertIn("| `flask-no-harness` | 1 | 0 | 0 | 0 | 46s | - | 0s |", markdown)
+
+    def test_counts_no_output_no_edit_watchdogs(self) -> None:
+        item = record(
+            "../flask-yes-harness",
+            "alpha",
+            False,
+            False,
+            240,
+            watchdog={
+                "observed_repo_changes": False,
+                "seconds_without_observed_repo_changes": 240.035,
+                "seconds_since_last_output": 239.863,
+            },
+            termination_reason="no_edit_watchdog",
+        )
+
+        markdown = hidden_summary.format_markdown([item])
+
+        self.assertIn("| `flask-yes-harness` | 1 | 1 | 1 | 1 | - | 240s | 240s |", markdown)
+
 
 def record(
     source: str,
@@ -68,11 +137,21 @@ def record(
     verification_passed: bool,
     duration_seconds: float,
     log_path: Path | None = None,
+    watchdog: dict[str, object] | None = None,
+    termination_reason: str | None = None,
 ) -> dict[str, object]:
+    agent: dict[str, object] = {
+        "duration_seconds": duration_seconds,
+        "log_path": str(log_path) if log_path else None,
+    }
+    if watchdog is not None:
+        agent["watchdog"] = watchdog
+    if termination_reason is not None:
+        agent["termination_reason"] = termination_reason
     return {
         "repo": {"source": source},
         "task": {"id": task_id},
-        "agent": {"duration_seconds": duration_seconds, "log_path": str(log_path) if log_path else None},
+        "agent": agent,
         "scoring": {
             "success": success,
             "verification_passed": verification_passed,
