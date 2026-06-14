@@ -276,6 +276,10 @@ Post-run H1 oracle triage:
   `decision-only` and from 1/3 to 2/3 in `full-harness`, while non-decision
   arms stayed 0/3. The rerun also had 2 stalls/timeouts, so it is triage
   evidence rather than a promotable clean result.
+- A subsequent non-bare H1 clean gate with `--stop-on-abnormal` stopped after
+  8/12 planned records because `workflow-only` hit the no-edit watchdog.
+  `decision-only` and `full-harness` were both 2/2 record-consistent before
+  the stop, so the H1 signal held but the operational gate failed.
 
 Pre-execution checks completed:
 
@@ -333,13 +337,14 @@ accuracy lift.
 
 ## Minimum Next Implementation Steps
 
-1. Investigate the H1 rerun stall pattern before promoting the 50-record plan.
-2. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
+1. Investigate the no-edit watchdog stall before promoting the 50-record plan.
+2. Rerun the same non-bare H1 clean gate before any larger evidence run.
+3. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
    surfaced decision-record guidance.
-3. Classify every abnormal result after the run: hidden access, wrong-file
+4. Classify every abnormal result after the run: hidden access, wrong-file
    edits, forbidden-file edits, preflight failures, stalls, and timeouts.
-4. Summarize public-safe pilot evidence under `docs/benchmarks/`.
-5. Add another harness-structure `record_consistency` task before claiming
+5. Summarize public-safe pilot evidence under `docs/benchmarks/`.
+6. Add another harness-structure `record_consistency` task before claiming
    broad decision-memory value or promoting to the 120-record factorial run.
-6. Keep `docs/benchmarks/latest.md` unchanged unless the pilot becomes the most
+7. Keep `docs/benchmarks/latest.md` unchanged unless the pilot becomes the most
    recent representative report.

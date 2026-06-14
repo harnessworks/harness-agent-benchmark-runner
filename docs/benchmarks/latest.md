@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Focused H1 discoverability rerun, useful as triage evidence only. |
+| Latest execution | Focused H1 clean gate aborted on no-edit watchdog. |
 
 ## Representative Result
 
@@ -74,13 +74,14 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-h1-discoverability-3x.md`](2026-06-14-flask-price-policy-h1-discoverability-3x.md).
+[`2026-06-14-flask-price-policy-h1-clean-gate-aborted.md`](2026-06-14-flask-price-policy-h1-clean-gate-aborted.md).
 
-The price-policy H1 discoverability rerun completed 15/15 records, but it had
-2 stalls/timeouts. Decision-bearing arms improved: `decision-only` passed
-record consistency 3/3 and `full-harness` passed 2/3, while non-decision arms
-stayed 0/3. This is useful H1 triage evidence, not a replacement for the
-96-record representative result.
+The non-bare price-policy H1 clean gate stopped after 8/12 planned records
+because a `workflow-only` record hit the no-edit watchdog. `decision-only` and
+`full-harness` were both 2/2 record-consistent before the stop, while
+non-decision arms stayed 0/2. This is useful triage evidence, not a replacement
+for the 96-record representative result, and it argues against running a
+100-record promotion immediately.
 
 ## Controls And Prior Evidence
 
@@ -89,7 +90,7 @@ stayed 0/3. This is useful H1 triage evidence, not a replacement for the
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
-| Price-policy H1 | discoverability 3x rerun | 15 | 5 | 5 | 2 | 2 | H1 triage only; decision-bearing arms improved, but run had stalls. |
+| Price-policy H1 | non-bare clean gate | 8/12 | 4 | 4 | 1 | 0 | H1 signal held, but gate aborted on no-edit watchdog. |
 | Three-arm v2 | replenishment smoke | 3 | 2 | 2 | 0 | 0 | Scaffold check only. |
 | Balanced Flask A/B | 100-run `jobs=2` full-contract control | 100 | 94 | 95 | 3 | 0 | Useful control, but parallel timeout stability remains unresolved. |
 | Hidden-oracle Flask A/B | 3x convention-dependent tasks | 24 | 11 | 11 | 3 | 11 | Historical strong signal, but older and less balanced than the representative three-arm run. |
@@ -118,6 +119,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-clean-gate-aborted.md`](2026-06-14-flask-price-policy-h1-clean-gate-aborted.md) (focused H1 clean gate, aborted)
 - [`2026-06-14-flask-price-policy-h1-discoverability-3x.md`](2026-06-14-flask-price-policy-h1-discoverability-3x.md) (focused H1 discoverability triage)
 - [`2026-06-14-flask-price-policy-h1-rerun-3x.md`](2026-06-14-flask-price-policy-h1-rerun-3x.md) (focused H1 triage)
 - [`2026-06-13-hidden-flask-three-arm-v2-smoke.md`](2026-06-13-hidden-flask-three-arm-v2-smoke.md) (latest v2 scaffold check)
