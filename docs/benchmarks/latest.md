@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Strengthened-guard H1 promotion stopped after 8/96 on a startup/no-output no-edit watchdog. |
+| Latest execution | Startup-retry H1 pilot stopped after 1/8 on a post-output no-edit watchdog. |
 
 ## Representative Result
 
@@ -73,20 +73,18 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed H1 promotion attempt:
-[`2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md).
+Latest executed H1 diagnostic:
+[`2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md`](2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md).
 
-After the strengthened prompt guard completed a clean 16-record
-decision-bearing gate, the scoped 96-record H1 promotion stopped after 8/96
-records on a `full-harness` `hidden-effect-catalog-replenishment-policy`
-no-edit watchdog.
+After adding `--retry-startup-no-output-once`, a small 8-record
+decision-bearing H1 pilot stopped after 1/8 records on a `decision-only`
+`hidden-effect-catalog-price-policy` no-edit watchdog.
 
-This stop had a different shape from the prior planning-stage no-edit stops:
-the Codex log showed startup metadata, the full prompt, and repeated rollout
-state warnings, but no assistant message and no repository changes for 240
-seconds. Treat it as a startup/no-output no-edit event. The H1 effect signal
-remained positive before the stop, but promotion-scale operational stability is
-still unresolved.
+This was not startup/no-output. The agent found the accepted price-band
+decision, restated the correct thresholds, and announced an immediate scoped
+edit, but made no repository changes for 240 seconds. Startup-only retry
+correctly did not apply. H1 promotion-scale execution remains blocked by
+post-output pre-edit stalls.
 
 ## Controls And Prior Evidence
 
@@ -95,6 +93,7 @@ still unresolved.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | startup-retry pilot aborted | 1/8 | 0 | 0 | 1 | 0 | Startup retry correctly did not apply; stopped on post-output no-edit after decision discovery. |
 | Two-family H1 | strengthened promotion96 aborted | 8/96 | 3 | 3 | 1 | 0 | Stopped on `full-harness` replenishment startup/no-output no-edit. |
 | Two-family H1 | strengthened prompt-guard decision gate16 | 16 | 16 | 16 | 0 | 0 | Decision-bearing arms 16/16 strict and record-consistent; no no-edit recurrence. |
 | Two-family H1 | strengthened prompt-guard diagnostic | 8 | 8 | 8 | 0 | 0 | Stronger edit-before-plan guard cleared the small decision-bearing matrix. |
@@ -133,14 +132,11 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The latest scoped promotion attempt stopped on a startup/no-output no-edit
-event. Do not keep rerunning blind H1 promotions. The next useful H1 step is
-operational:
-
-- keep no-output no-edit classified separately from post-planning no-edit;
-- consider a bounded retry only for no-output/no-change startup failures;
-- keep post-planning no-edit as a real abnormal result;
-- rerun a small diagnostic before another scoped promotion.
+The latest startup-retry diagnostic stopped on post-output no-edit after the
+agent found the relevant decision record and announced the first edit. Do not
+keep rerunning blind H1 promotions. The next useful H1 step is adapter or agent
+diagnosis of edit-command initiation after policy discovery. Keep startup-only
+retry narrow; do not broaden it to hide post-output no-edit.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -155,6 +151,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md`](2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md) (latest H1 startup-retry diagnostic, aborted on post-output no-edit)
 - [`2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md) (latest scoped H1 promotion, aborted on startup/no-output no-edit)
 - [`2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md) (latest H1 strengthened prompt-guard decision-bearing gate)
 - [`2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md`](2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md) (prior H1 prompt-guard mitigation diagnostic)

@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: do not run another blind 96/100-record H1 promotion until the
-  repeated no-edit watchdog path is mitigated or explicitly studied.
+- Next step: do not run another blind 96/100-record H1 promotion; the latest
+  startup-retry pilot exposed a post-output no-edit blocker.
 
 Safe claims:
 
@@ -81,11 +81,11 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](docs/benchmarks/2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md).
-The strengthened-guard scoped H1 promotion stopped after 8/96 records on a
-`full-harness` replenishment no-edit watchdog. The stopped Codex run produced
-no assistant message and no repository changes, so this is a startup/no-output
-no-edit event rather than a decision-memory scoring ambiguity.
+[`docs/benchmarks/2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md`](docs/benchmarks/2026-06-14-flask-h1-startup-retry-pilot-aborted-postoutput.md).
+The startup-retry H1 pilot stopped after 1/8 records on a `decision-only`
+price-policy no-edit watchdog. The agent found the accepted decision and
+announced the first scoped edit, but made no repository changes. Startup-only
+retry correctly did not apply.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
