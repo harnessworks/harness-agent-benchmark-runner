@@ -4,7 +4,7 @@
   "description": "V2 held-out convention-transfer task: new catalog replenishment API with partial-realistic prompt and deterministic hidden oracle.",
   "repo": {
     "source": "../flask-memory-harness",
-    "ref": "51700b72737a32fd9d96625a7547e28562865c57"
+    "ref": "ba8b3963d071089429fa2c2c8ebc10049e80cca4"
   },
   "prompt": "Add a catalog replenishment signals endpoint.\n\nAdd GET /catalog/replenishment-signals. It should return per-product replenishment signals for the current in-memory catalog. Use signal `reorder_now` when stock is below 5, `watch` when stock is 5 up to but not including 15, and `healthy` when stock is 15 or higher. Use target stock 25. For each row include the prompt-named concepts `signal` and `recommended_order_quantity`; items at or above target stock should recommend 0. Sort rows deterministically by SKU. Include a compact summary with counts by signal and total recommended order quantity.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog replenishment signals. Update companion documentation in the repository's documented docs location so future maintainers can find the signal definitions and target stock rule. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-full-harness-memory-pilot/hidden-effect-replenishment-signals-full-harness.json",

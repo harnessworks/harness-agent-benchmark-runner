@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: either scope a larger H1 run to the catalog price-policy decision
-  or add a second decision-memory task family before broad promotion.
+- Next step: run a guarded small H1 pilot over the two catalog decision-memory
+  task families before broad promotion.
 
 Safe claims:
 
@@ -85,9 +85,9 @@ Latest execution:
 The guarded four-arm H1 stability rerun completed 24/24 records with 0 stalls,
 0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only` and
 `full-harness` were both 6/6 strict and record-consistent, while
-`workflow-only` and `failure-only` stayed 0/6 record-consistent. A larger H1 run
-is now operationally more defensible, but the claim is still narrow because the
-current H1 suite measures one catalog price-policy decision family.
+`workflow-only` and `failure-only` stayed 0/6 record-consistent. The H1 suite
+now also scaffolds a catalog replenishment-policy decision task; run a guarded
+small two-family H1 pilot before making a broader decision-memory claim.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

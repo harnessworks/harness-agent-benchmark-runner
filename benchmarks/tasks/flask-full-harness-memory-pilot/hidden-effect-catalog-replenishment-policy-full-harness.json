@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "id": "hidden-effect-catalog-price-policy",
-  "description": "H1 decision-memory task: use a pre-existing catalog price-band decision omitted from the prompt details.",
+  "id": "hidden-effect-catalog-replenishment-policy",
+  "description": "H1 decision-memory task: use a pre-existing catalog replenishment decision omitted from the prompt details.",
   "repo": {
-    "source": "../flask-decision-only",
-    "ref": "e9b0a3e919a7827497c7163912a1023c2346008f"
+    "source": "../flask-memory-harness",
+    "ref": "ba8b3963d071089429fa2c2c8ebc10049e80cca4"
   },
-  "prompt": "Add a catalog price policy endpoint.\n\nAdd GET /catalog/price-policy. It should classify the current in-memory catalog using the repository's adopted catalog price-band policy. Return one row per SKU in a top-level `products` list with `sku`, `price`, and `price_band`, sorted deterministically by SKU. Include a compact summary with counts by price band.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog price policy rows. Update companion documentation in the repository's documented domain docs location so future maintainers can find the route and stable price-band terms. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, decision records, runs, results, credentials, requirements, or environment files.",
-  "prompt_ref": "benchmarks/tasks/flask-full-harness-memory-pilot/hidden-effect-catalog-price-policy-decision-only.json",
+  "prompt": "Add a catalog replenishment policy endpoint.\n\nAdd GET /catalog/replenishment-policy. It should classify the current in-memory catalog using the repository's adopted catalog replenishment policy. Return one row per SKU in a top-level `products` list with `sku`, `stock`, and `replenishment_status`, sorted deterministically by SKU. Include a compact summary with counts by replenishment status.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog replenishment policy rows. Update companion documentation in the repository's documented domain docs location so future maintainers can find the route and stable replenishment-status terms. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, decision records, runs, results, credentials, requirements, or environment files.",
+  "prompt_ref": "benchmarks/tasks/flask-full-harness-memory-pilot/hidden-effect-catalog-replenishment-policy-full-harness.json",
   "timeout_seconds": 600,
   "max_attempts": 1,
   "max_cost_usd": 1.0,
@@ -53,33 +53,33 @@
         "dimension": "workflow"
       },
       {
-        "name": "functional heldout oracle for hidden-effect-catalog-price-policy",
+        "name": "functional heldout oracle for hidden-effect-catalog-replenishment-policy",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-catalog-price-policy",
+          "hidden-effect-catalog-replenishment-policy",
           "functional"
         ],
         "timeout_seconds": 180,
         "dimension": "functional"
       },
       {
-        "name": "schema oracle for hidden-effect-catalog-price-policy",
+        "name": "schema oracle for hidden-effect-catalog-replenishment-policy",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-catalog-price-policy",
+          "hidden-effect-catalog-replenishment-policy",
           "schema"
         ],
         "timeout_seconds": 180,
         "dimension": "schema"
       },
       {
-        "name": "record-consistency oracle for hidden-effect-catalog-price-policy",
+        "name": "record-consistency oracle for hidden-effect-catalog-replenishment-policy",
         "command": [
           "bash",
           "{task_dir}/../../oracles/run_flask_hidden_checks.sh",
-          "hidden-effect-catalog-price-policy",
+          "hidden-effect-catalog-replenishment-policy",
           "record_consistency"
         ],
         "timeout_seconds": 180,
@@ -91,7 +91,7 @@
     "suite": "flask-full-harness-memory-pilot",
     "split": "heldout",
     "prompt_variant": "partial-realistic",
-    "target_arm": "decision-only",
+    "target_arm": "full-harness",
     "memory_experiment": "decision-failure-memory",
     "memory_hypothesis": "H1"
   },
@@ -111,6 +111,7 @@
       "/catalog/metrics",
       "/catalog/segments",
       "/catalog/price-policy",
+      "/catalog/replenishment-policy",
       "/catalog/replenishment-signals",
       "/catalog/price-ladder",
       "/catalog/value-snapshot",

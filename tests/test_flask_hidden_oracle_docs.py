@@ -114,6 +114,31 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
                     }
                 )
 
+    def test_catalog_replenishment_policy_summary_accepts_nested_status_counts(self) -> None:
+        counts = flask_hidden_oracle.catalog_replenishment_status_counts(
+            {
+                "replenishment_statuses": {
+                    "reorder_now": 1,
+                    "monitor": 1,
+                    "healthy": 1,
+                }
+            }
+        )
+
+        self.assertEqual(counts, {"reorder_now": 1, "monitor": 1, "healthy": 1})
+
+    def test_catalog_replenishment_policy_summary_requires_all_status_counts(self) -> None:
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.catalog_replenishment_status_counts(
+                    {
+                        "status_counts": {
+                            "reorder_now": 1,
+                            "healthy": 2,
+                        }
+                    }
+                )
+
     def test_cart_functional_summary_prefers_summary_object_over_item_rows(self) -> None:
         class Response:
             def __init__(self, status_code: int, payload: dict[str, object]) -> None:

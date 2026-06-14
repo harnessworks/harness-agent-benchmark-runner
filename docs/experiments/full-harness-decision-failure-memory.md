@@ -140,11 +140,11 @@ primary outcome is behavior.
 
 Prepared measurement pilot:
 
-- 5 task families.
+- 6 task families.
 - 5 arms: `bare`, `workflow-only`, `decision-only`, `failure-only`,
   `full-harness`.
 - 2 repeats.
-- 50 planned records.
+- 60 planned records.
 - `--jobs 1`.
 - `--agent-timeout-override 900`.
 - `--agent-idle-timeout 300`.
@@ -234,22 +234,23 @@ The first executable five-arm Flask pilot scaffold is prepared:
 | --- | --- | --- |
 | `bare` | `../flask-no-harness` | `b5351eae78ed9f17d46a43eee05354e9e13f6b94` |
 | `workflow-only` | `../flask-workflow-only` | `1a79d8cf9e0799789b3da8029dbbb5a572b3133e` |
-| `decision-only` | `../flask-decision-only` | `95a843171d2183865c8698207b3b7d4075ba567b` |
+| `decision-only` | `../flask-decision-only` | `e9b0a3e919a7827497c7163912a1023c2346008f` |
 | `failure-only` | `../flask-failure-only` | `18330ea23880b1ca7a647ea58b0d694e2c658fc8` |
-| `full-harness` | `../flask-memory-harness` | `51700b72737a32fd9d96625a7547e28562865c57` |
+| `full-harness` | `../flask-memory-harness` | `ba8b3963d071089429fa2c2c8ebc10049e80cca4` |
 
 Prepared runner artifacts:
 
 - suite: `benchmarks/suites/flask-full-harness-memory-pilot.json`;
 - task specs: `benchmarks/tasks/flask-full-harness-memory-pilot/*.json`;
-- task matrix: five held-out Flask endpoint tasks across five arms;
-- planned measurement run: two repeats, 50 records, `--jobs 1`, without
+- task matrix: six held-out Flask endpoint tasks across five arms;
+- planned measurement run: two repeats, 60 records, `--jobs 1`, without
   `--stop-on-abnormal`;
 - first-class result fields: `record_consistent_success`,
   `mistake_prevention_success`, and `repeated_documented_mistake`;
-- direct H1 task: `hidden-effect-catalog-price-policy`, whose prompt omits the
-  price-band labels and thresholds while decision-bearing arms carry the
-  tracked catalog price-band decision record;
+- direct H1 tasks: `hidden-effect-catalog-price-policy` and
+  `hidden-effect-catalog-replenishment-policy`, whose prompts omit the exact
+  labels and thresholds while decision-bearing arms carry the tracked catalog
+  decision records;
 - hidden schema oracles tagged with `mistake_prevention` because the visible
   failure records target prompt-named response-key drift and `meta.service`
   envelope drift.
@@ -317,37 +318,37 @@ Post-run H1 oracle triage:
 Pre-execution checks completed:
 
 - each non-bare target variant passes `python3 scripts/check_harness.py`;
-- the pilot suite dry-runs to 50 planned runs;
-- the task matrix has 25 specs, with five specs per arm and five arm variants
+- the pilot suite dry-runs to 60 planned runs;
+- the task matrix has 30 specs, with six specs per arm and five arm variants
   per task family;
 - `python3 -m unittest discover -s tests` passes in the runner.
 
 Scope of this pilot line: it directly measures failure-memory transfer through
 `mistake_prevention` and direct decision-memory behavior through
-`record_consistency`. The H1 signal is intentionally narrow: whether agents use
-the pre-existing catalog price-band decision without modifying decision
-records.
+`record_consistency`. The H1 signal now has two scaffolded catalog decision
+families: price bands and replenishment statuses. Only price-policy has clean
+live stability evidence so far; replenishment-policy still needs a pilot.
 
 ### Remaining Gaps Before Promotion
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
 | H1 stability is now clean for this task. | The guarded four-arm 24-record rerun completed 24/24 with zero stalls/timeouts and decision-bearing arms at 12/12 record-consistent. | Treat larger H1 work as operationally defensible for this task family, not as broad decision-memory proof. |
-| H1 coverage is narrow. | The current pilot directly tests one catalog policy decision, not every structural decision-memory family. | Add at least one harness-structure `record_consistency` task before making a broad decision-memory claim. |
+| H1 coverage is broader but not yet exercised. | A second catalog replenishment decision task is scaffolded, but live evidence still exists only for the price-policy decision. | Run a guarded small H1 pilot over both decision families before a broad promotion. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
-| Live Codex runs cost time and budget. | A larger H1 run is now less likely to be wasted on immediate no-edit stalls, but it still measures one decision family. | Either scope the larger run narrowly to price-policy H1 or add a second H1 task family first. |
+| Live Codex runs cost time and budget. | A larger H1 run is now less likely to be wasted on immediate no-edit stalls, but the new replenishment task has not been exercised. | Spend the next live budget on a guarded two-family H1 pilot. |
 
-Feasibility verdict: the scoring surface and this task's guarded stability are
-ready. A larger run is now operationally defensible if the claim is scoped to
-the catalog price-policy decision. A broad decision-memory promotion still
-needs at least one additional H1 task family.
+Feasibility verdict: the scoring surface and price-policy guarded stability are
+ready, and a second H1 task family is now scaffolded. A larger run is
+operationally defensible only after the replenishment-policy task clears a
+small guarded pilot.
 
 ## Direction Review
 
 Recommended direction:
 
-1. Decide whether the next larger H1 run is a narrow price-policy promotion or
-   whether to add a second decision-memory task family first.
+1. Run a guarded small H1 pilot over `hidden-effect-catalog-price-policy` and
+   `hidden-effect-catalog-replenishment-policy`.
 2. Prefer failure-memory tasks next. They have clearer behavioral oracles:
    "did the known mistake recur?"
 3. Add decision-memory tasks second. Their oracles need careful concept checks

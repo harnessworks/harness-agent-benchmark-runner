@@ -308,26 +308,30 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
         groups = hidden_ab.load_task_groups(suite.task_dir, required_arms=arms)
         hidden_ab.validate_task_groups(groups)
 
-        self.assertIn("hidden-effect-catalog-price-policy", suite.task_ids)
-        price_policy_group = next(
-            group for group in groups if group.task_id == "hidden-effect-catalog-price-policy"
-        )
-        self.assertEqual(list(price_policy_group.arms), list(arms or ()))
-        for arm, task_path in price_policy_group.arms.items():
-            data = hidden_ab.read_json(task_path)
-            self.assertEqual(data["benchmark"]["memory_hypothesis"], "H1")
-            self.assertEqual(data["benchmark"]["target_arm"], arm)
-            self.assertEqual(data["expected_files"], ["app/**", "tests/**", "docs/domain/**"])
-            self.assertIn("docs/decisions/**", data["forbidden_files"])
-            commands = data["verification"]["commands"]
-            self.assertTrue(
-                any(command.get("dimension") == "record_consistency" for command in commands)
-            )
-            record_command = next(
-                command for command in commands if command.get("dimension") == "record_consistency"
-            )
-            self.assertIn("record_consistency", record_command["command"])
-            self.assertIn("/catalog/price-policy", data["leakage_audit"]["forbidden_text"])
+        h1_routes = {
+            "hidden-effect-catalog-price-policy": "/catalog/price-policy",
+            "hidden-effect-catalog-replenishment-policy": "/catalog/replenishment-policy",
+        }
+        for task_id, route in h1_routes.items():
+            self.assertIn(task_id, suite.task_ids)
+            group = next(group for group in groups if group.task_id == task_id)
+            self.assertEqual(list(group.arms), list(arms or ()))
+            for arm, task_path in group.arms.items():
+                data = hidden_ab.read_json(task_path)
+                self.assertEqual(data["benchmark"]["memory_hypothesis"], "H1")
+                self.assertEqual(data["benchmark"]["target_arm"], arm)
+                self.assertEqual(data["expected_files"], ["app/**", "tests/**", "docs/domain/**"])
+                self.assertIn("docs/decisions/**", data["forbidden_files"])
+                commands = data["verification"]["commands"]
+                self.assertTrue(
+                    any(command.get("dimension") == "record_consistency" for command in commands)
+                )
+                record_command = next(
+                    command for command in commands if command.get("dimension") == "record_consistency"
+                )
+                self.assertIn("record_consistency", record_command["command"])
+                self.assertIn(task_id, record_command["command"])
+                self.assertIn(route, data["leakage_audit"]["forbidden_text"])
 
     def test_loads_pairs_and_alternates_schedule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

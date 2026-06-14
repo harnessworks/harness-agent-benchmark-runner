@@ -86,7 +86,9 @@ watchdog records were produced.
 
 This clears the immediate H1 operational blocker from the previous guarded
 24-record abort. It does not by itself justify a broad decision-memory claim:
-the current H1 evidence still covers one catalog price-policy decision family.
+the current live H1 evidence still covers one catalog price-policy decision
+family. The suite now scaffolds a second catalog replenishment-policy H1 task,
+but that task still needs live pilot evidence.
 
 ## Controls And Prior Evidence
 
@@ -118,10 +120,14 @@ hidden-oracle rows are the relevant harness-effect evidence.
 ## Next Step
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
-semantics change. For H1, a larger run is now operationally more defensible
-than it was after the abort, but its value depends on scope. Either keep the
-larger run explicitly scoped to the catalog price-policy decision, or add a
-second decision-memory task family before making a broader promotion claim.
+semantics change. For H1, the next useful step is a guarded small pilot over
+both decision-memory task families:
+
+- `hidden-effect-catalog-price-policy`
+- `hidden-effect-catalog-replenishment-policy`
+
+If both families separate decision-bearing arms from controls without abnormal
+events, a larger H1 run becomes more valuable.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:

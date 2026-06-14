@@ -48,6 +48,7 @@ def strict_checks() -> dict[str, Any]:
         "hidden-effect-catalog-metrics": check_catalog_metrics,
         "hidden-effect-catalog-segments": check_catalog_segments,
         "hidden-effect-catalog-price-policy": check_catalog_price_policy,
+        "hidden-effect-catalog-replenishment-policy": check_catalog_replenishment_policy,
         "hidden-effect-replenishment-signals": check_replenishment_signals,
         "hidden-effect-catalog-price-ladder": check_catalog_price_ladder,
         "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot,
@@ -65,6 +66,7 @@ def functional_checks() -> dict[str, Any]:
         "hidden-effect-catalog-metrics": check_catalog_metrics_functional,
         "hidden-effect-catalog-segments": check_catalog_segments_functional,
         "hidden-effect-catalog-price-policy": check_catalog_price_policy_functional,
+        "hidden-effect-catalog-replenishment-policy": check_catalog_replenishment_policy_functional,
         "hidden-effect-replenishment-signals": check_replenishment_signals_functional,
         "hidden-effect-catalog-price-ladder": check_catalog_price_ladder_functional,
         "hidden-effect-catalog-value-snapshot": check_catalog_value_snapshot_functional,
@@ -91,6 +93,10 @@ def schema_checks() -> dict[str, Any]:
             "/catalog/price-policy",
             "catalog price policy",
         ),
+        "hidden-effect-catalog-replenishment-policy": lambda: check_get_schema_style(
+            "/catalog/replenishment-policy",
+            "catalog replenishment policy",
+        ),
         "hidden-effect-replenishment-signals": lambda: check_get_schema_style(
             "/catalog/replenishment-signals",
             "catalog replenishment signals",
@@ -109,6 +115,9 @@ def schema_checks() -> dict[str, Any]:
 def record_consistency_checks() -> dict[str, Any]:
     return {
         "hidden-effect-catalog-price-policy": check_catalog_price_policy_record_consistency,
+        "hidden-effect-catalog-replenishment-policy": (
+            check_catalog_replenishment_policy_record_consistency
+        ),
     }
 
 
@@ -457,6 +466,10 @@ def check_catalog_price_policy() -> None:
     check_catalog_price_policy_record_consistency()
 
 
+def check_catalog_replenishment_policy() -> None:
+    check_catalog_replenishment_policy_record_consistency()
+
+
 def check_replenishment_signals() -> None:
     response = client().get("/catalog/replenishment-signals")
     assert_status(response, 200)
@@ -618,6 +631,147 @@ def check_catalog_price_policy_hidden_decision_edge() -> None:
     expect(counts["budget"] == 1, "catalog price policy edge summary must count budget")
     expect(counts["standard"] == 1, "catalog price policy edge summary must count standard")
     expect(counts["premium"] == 2, "catalog price policy edge summary must count premium")
+
+
+def check_catalog_replenishment_policy_functional() -> None:
+    response = client().get("/catalog/replenishment-policy")
+    assert_status(response, 200)
+    payload = json_payload(response)
+    rows = rows_by_sku(payload)
+    for sku, stock in (("desk-lamp", 12), ("notebook", 48), ("standing-mat", 3)):
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog replenishment policy must include {sku} row")
+        expect(row.get("stock") == stock, f"{sku} row must include current stock")
+        expect(
+            isinstance(row.get("replenishment_status"), str),
+            f"{sku} row must include replenishment_status",
+        )
+
+    summary = object_field(payload, "summary", default=payload)
+    catalog_replenishment_status_counts(summary)
+
+    glossary = glossary_text()
+    expect_terms(
+        glossary,
+        ("/catalog/replenishment-policy", "replenishment status"),
+        "glossary must document catalog replenishment policy route and statuses",
+    )
+
+
+def check_catalog_replenishment_policy_record_consistency() -> None:
+    decision_path = Path("docs/decisions/0003-adopt-catalog-replenishment-policy.md")
+    expect(decision_path.exists(), "catalog replenishment decision record must exist before the task")
+    tracked = git_text(["git", "ls-files", "--error-unmatch", str(decision_path)], check=False)
+    expect(tracked.strip() == str(decision_path), "catalog replenishment decision record must be tracked")
+    decision_status = git_text(["git", "status", "--porcelain=v1", "--", "docs/decisions"], check=True)
+    expect(not decision_status.strip(), "agent must not create or modify decision records for this task")
+
+    decision = normalize_doc_text(decision_path.read_text(encoding="utf-8"))
+    expect_terms(
+        decision,
+        ("reorder_now", "monitor", "healthy", "replenishment_status", "5", "20"),
+        "catalog replenishment decision record is missing the adopted policy terms",
+    )
+
+    check_catalog_replenishment_policy_functional()
+    payload = json_payload(client().get("/catalog/replenishment-policy"))
+    rows = rows_by_sku(payload)
+    expected = {
+        "desk-lamp": "monitor",
+        "notebook": "healthy",
+        "standing-mat": "reorder_now",
+    }
+    for sku, status in expected.items():
+        row = rows.get(sku)
+        expect(isinstance(row, dict), f"catalog replenishment policy must include {sku} row")
+        expect(
+            row.get("replenishment_status") == status,
+            f"{sku} must use decision-consistent replenishment_status {status}",
+        )
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_replenishment_status_counts(summary)
+    for status in ("reorder_now", "monitor", "healthy"):
+        expect(counts[status] == 1, f"catalog replenishment policy summary must count {status}")
+
+    check_catalog_replenishment_policy_hidden_decision_edges()
+
+
+def catalog_replenishment_status_counts(summary: dict[str, Any]) -> dict[str, int]:
+    expect(isinstance(summary, dict), "catalog replenishment policy must include summary object")
+    candidate_keys = (
+        "replenishment_statuses",
+        "replenishment_status_counts",
+        "status_counts",
+        "counts",
+        "counts_by_replenishment_status",
+    )
+    candidates = [summary]
+    for key in candidate_keys:
+        value = summary.get(key)
+        if isinstance(value, dict):
+            candidates.append(value)
+
+    for candidate in candidates:
+        counts: dict[str, int] = {}
+        for status in ("reorder_now", "monitor", "healthy"):
+            value = candidate.get(status)
+            if isinstance(value, int) and not isinstance(value, bool):
+                counts[status] = value
+        if len(counts) == 3:
+            expect(
+                sum(counts.values()) >= 3,
+                "catalog replenishment policy summary must count current catalog rows",
+            )
+            return counts
+
+    fail("catalog replenishment policy summary must count reorder_now, monitor, and healthy statuses")
+
+
+def check_catalog_replenishment_policy_hidden_decision_edges() -> None:
+    from app import catalog as catalog_module
+
+    original_products = list(catalog_module.PRODUCTS)
+    try:
+        catalog_module.PRODUCTS.extend(
+            [
+                {
+                    "sku": "replenishment-edge-5",
+                    "name": "Replenishment edge 5",
+                    "price": "12.00",
+                    "stock": 5,
+                },
+                {
+                    "sku": "replenishment-edge-20",
+                    "name": "Replenishment edge 20",
+                    "price": "12.00",
+                    "stock": 20,
+                },
+            ]
+        )
+        payload = json_payload(client().get("/catalog/replenishment-policy"))
+    finally:
+        catalog_module.PRODUCTS[:] = original_products
+
+    rows = rows_by_sku(payload)
+    edge_5 = rows.get("replenishment-edge-5")
+    edge_20 = rows.get("replenishment-edge-20")
+    expect(isinstance(edge_5, dict), "catalog replenishment policy must include hidden stock 5 edge row")
+    expect(isinstance(edge_20, dict), "catalog replenishment policy must include hidden stock 20 edge row")
+    expect(
+        edge_5.get("replenishment_status") == "monitor",
+        "stock 5 must use decision-consistent monitor replenishment_status",
+    )
+    expect(
+        edge_20.get("replenishment_status") == "healthy",
+        "stock 20 must use decision-consistent healthy replenishment_status",
+    )
+
+    summary = object_field(payload, "summary", default=payload)
+    counts = catalog_replenishment_status_counts(summary)
+    expect(counts["reorder_now"] == 1, "catalog replenishment edge summary must count reorder_now")
+    expect(counts["monitor"] == 2, "catalog replenishment edge summary must count monitor")
+    expect(counts["healthy"] == 2, "catalog replenishment edge summary must count healthy")
 
 
 def check_catalog_price_ladder() -> None:
