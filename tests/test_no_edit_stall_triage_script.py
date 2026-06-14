@@ -59,8 +59,42 @@ class NoEditStallTriageScriptTests(unittest.TestCase):
         self.assertIn("`full-harness`", markdown)
         self.assertIn("360.0s", markdown)
         self.assertIn("83.3s", markdown)
+        self.assertIn("post-planning |", markdown)
         self.assertIn("post-planning", markdown)
         self.assertIn("I'm going to add the reusable helper, route, and tests.", markdown)
+
+    def test_classifies_startup_no_output_when_silent_for_full_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "agent.log"
+            log_path.write_text(
+                "\n".join(
+                    [
+                        "OpenAI Codex",
+                        "user",
+                        "Do the task.",
+                        "Stopped by no-edit watchdog after 240 seconds without repository changes.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            item = record(
+                "alpha",
+                log_path=log_path,
+                termination_reason="no_edit_watchdog",
+                duration_seconds=240.04,
+                watchdog={
+                    "seconds_without_observed_repo_changes": 240.04,
+                    "seconds_since_last_output": 239.6,
+                },
+            )
+
+            stalls = stall_triage.collect_no_edit_stalls([item], message_chars=80)
+            markdown = stall_triage.format_markdown([item])
+
+        self.assertEqual(stalls[0].no_edit_class, "startup/no-output")
+        self.assertEqual(stalls[0].last_codex_phase, "unknown")
+        self.assertEqual(stalls[0].last_codex_message, "-")
+        self.assertIn("startup/no-output", markdown)
 
     def test_missing_log_keeps_unknown_phase(self) -> None:
         item = record(
@@ -71,6 +105,7 @@ class NoEditStallTriageScriptTests(unittest.TestCase):
 
         stalls = stall_triage.collect_no_edit_stalls([item], message_chars=80)
 
+        self.assertEqual(stalls[0].no_edit_class, "unknown/no-output")
         self.assertEqual(stalls[0].last_codex_phase, "unknown")
         self.assertEqual(stalls[0].last_codex_message, "-")
 
@@ -81,9 +116,10 @@ def record(
     log_path: Path | None = None,
     termination_reason: str | None,
     watchdog: dict[str, object] | None = None,
+    duration_seconds: float = 360.04,
 ) -> dict[str, object]:
     agent: dict[str, object] = {
-        "duration_seconds": 360.04,
+        "duration_seconds": duration_seconds,
         "log_path": str(log_path) if log_path else None,
     }
     if termination_reason is not None:

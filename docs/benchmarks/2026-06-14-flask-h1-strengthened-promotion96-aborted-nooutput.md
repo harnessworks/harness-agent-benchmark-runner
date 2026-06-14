@@ -111,14 +111,9 @@ Stopped run:
 
 No-edit watchdog records: 1
 
-Run ID: 20260614T090139Z-hidden-effect-catalog-replenishment-policy-6e5b0aef
-Target: full-harness
-Task: hidden-effect-catalog-replenishment-policy
-Duration: 240.1s
-Seconds without repo change: 240.1s
-Seconds since last output: 239.7s
-Last Codex phase: unknown
-Last Codex message: -
+| Run ID | Target | Task | No-edit class | Duration | Seconds without repo change | Seconds since last output | Last Codex phase | Last Codex message |
+| --- | --- | --- | --- | ---: | ---: | ---: | --- | --- |
+| `20260614T090139Z-hidden-effect-catalog-replenishment-policy-6e5b0aef` | `full-harness` | `hidden-effect-catalog-replenishment-policy` | startup/no-output | 240.1s | 240.1s | 239.7s | unknown | - |
 ```
 
 The agent log contained:
@@ -160,7 +155,7 @@ This stop has a different shape from the prior planning-stage no-edit stops.
 The next useful work is adapter or runner handling for startup/no-output
 no-edit events, for example:
 
-- classify no-output no-edit separately from post-planning no-edit;
+- keep no-output no-edit classified separately from post-planning no-edit;
 - consider a bounded retry only for no-output/no-change startup failures;
 - keep post-planning no-edit as a real abnormal result;
 - rerun a small diagnostic before another scoped promotion.

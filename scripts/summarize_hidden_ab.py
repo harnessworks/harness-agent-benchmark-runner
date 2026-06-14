@@ -40,6 +40,7 @@ class Aggregate:
     durations: list[float] = field(default_factory=list)
     watchdog_records: int = 0
     no_edit_watchdogs: int = 0
+    no_output_no_edit_watchdogs: int = 0
     no_observed_repo_changes: int = 0
     seconds_until_repo_change: list[float] = field(default_factory=list)
     seconds_without_repo_change: list[float] = field(default_factory=list)
@@ -96,6 +97,8 @@ class Aggregate:
         self.watchdog_records += 1
         if agent.get("termination_reason") == "no_edit_watchdog":
             self.no_edit_watchdogs += 1
+            if is_no_output_no_edit(record):
+                self.no_output_no_edit_watchdogs += 1
         if watchdog.get("observed_repo_changes") is False:
             self.no_observed_repo_changes += 1
         append_number(self.seconds_until_repo_change, watchdog.get("seconds_until_repo_change_observed"))
@@ -156,8 +159,8 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
                 "",
                 "## Watchdog Diagnostics",
                 "",
-                "| Target | Watchdog records | No-edit watchdogs | No observed repo changes | p50 seconds to repo change | Max seconds without repo change | Max seconds since output |",
-                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+                "| Target | Watchdog records | No-edit watchdogs | No-output no-edit | No observed repo changes | p50 seconds to repo change | Max seconds without repo change | Max seconds since output |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
             ]
         )
         for target, values in sorted(by_target.items()):
@@ -200,7 +203,7 @@ def task_row(target: str, task_id: str, values: Aggregate) -> str:
 def watchdog_row(target: str, values: Aggregate) -> str:
     return (
         f"| `{target}` | {values.watchdog_records} | {values.no_edit_watchdogs} | "
-        f"{values.no_observed_repo_changes} | "
+        f"{values.no_output_no_edit_watchdogs} | {values.no_observed_repo_changes} | "
         f"{duration(percentile(values.seconds_until_repo_change, 50))} | "
         f"{duration(max(values.seconds_without_repo_change) if values.seconds_without_repo_change else None)} | "
         f"{duration(max(values.seconds_since_last_output) if values.seconds_since_last_output else None)} |"
@@ -221,6 +224,38 @@ def agent_log_has_hidden_access(record: dict[str, Any]) -> bool:
         r"/bin/zsh -lc .*benchmarks/(tasks|oracles)",
     )
     return any(re.search(pattern, text) for pattern in patterns)
+
+
+def is_no_output_no_edit(record: dict[str, Any]) -> bool:
+    agent = record.get("agent", {})
+    if not isinstance(agent, dict):
+        return False
+    watchdog = agent.get("watchdog", {})
+    if not isinstance(watchdog, dict):
+        watchdog = {}
+    stdout_tail = str(agent.get("stdout_tail") or "").strip()
+    duration = as_number(agent.get("duration_seconds"))
+    seconds_since_output = as_number(watchdog.get("seconds_since_last_output"))
+    return not stdout_tail and output_silent_for_most_of_run(
+        duration_seconds=duration,
+        seconds_since_last_output=seconds_since_output,
+    )
+
+
+def output_silent_for_most_of_run(
+    *, duration_seconds: float | None, seconds_since_last_output: float | None
+) -> bool:
+    if seconds_since_last_output is None:
+        return False
+    if duration_seconds is None:
+        return True
+    return seconds_since_last_output >= max(5.0, duration_seconds - 5.0)
+
+
+def as_number(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
 
 
 def target_label(record: dict[str, Any]) -> str:

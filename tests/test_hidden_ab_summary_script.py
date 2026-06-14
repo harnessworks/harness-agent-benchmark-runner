@@ -106,8 +106,28 @@ class HiddenABSummaryScriptTests(unittest.TestCase):
 
         self.assertIn("## Watchdog Diagnostics", markdown)
         self.assertIn("No observed repo changes", markdown)
-        self.assertIn("| `flask-yes-harness` | 1 | 1 | 1 | - | 360s | 111s |", markdown)
-        self.assertIn("| `flask-no-harness` | 1 | 0 | 0 | 46s | - | 0s |", markdown)
+        self.assertIn("No-output no-edit", markdown)
+        self.assertIn("| `flask-yes-harness` | 1 | 1 | 0 | 1 | - | 360s | 111s |", markdown)
+        self.assertIn("| `flask-no-harness` | 1 | 0 | 0 | 0 | 46s | - | 0s |", markdown)
+
+    def test_counts_no_output_no_edit_watchdogs(self) -> None:
+        item = record(
+            "../flask-yes-harness",
+            "alpha",
+            False,
+            False,
+            240,
+            watchdog={
+                "observed_repo_changes": False,
+                "seconds_without_observed_repo_changes": 240.035,
+                "seconds_since_last_output": 239.863,
+            },
+            termination_reason="no_edit_watchdog",
+        )
+
+        markdown = hidden_summary.format_markdown([item])
+
+        self.assertIn("| `flask-yes-harness` | 1 | 1 | 1 | 1 | - | 240s | 240s |", markdown)
 
 
 def record(

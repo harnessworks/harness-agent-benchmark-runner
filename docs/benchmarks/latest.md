@@ -137,7 +137,7 @@ The latest scoped promotion attempt stopped on a startup/no-output no-edit
 event. Do not keep rerunning blind H1 promotions. The next useful H1 step is
 operational:
 
-- classify no-output no-edit separately from post-planning no-edit;
+- keep no-output no-edit classified separately from post-planning no-edit;
 - consider a bounded retry only for no-output/no-change startup failures;
 - keep post-planning no-edit as a real abnormal result;
 - rerun a small diagnostic before another scoped promotion.

@@ -31,6 +31,7 @@ class NoEditStall:
     run_id: str
     target: str
     task_id: str
+    no_edit_class: str
     duration_seconds: float | None
     seconds_without_repo_change: float | None
     seconds_since_last_output: float | None
@@ -70,8 +71,8 @@ def format_markdown(records: list[dict[str, Any]], *, message_chars: int = 180) 
     lines.extend(
         [
             "",
-            "| Run ID | Target | Task | Duration | Seconds without repo change | Seconds since last output | Last Codex phase | Last Codex message |",
-            "| --- | --- | --- | ---: | ---: | ---: | --- | --- |",
+            "| Run ID | Target | Task | No-edit class | Duration | Seconds without repo change | Seconds since last output | Last Codex phase | Last Codex message |",
+            "| --- | --- | --- | --- | ---: | ---: | ---: | --- | --- |",
         ]
     )
     for stall in stalls:
@@ -80,6 +81,7 @@ def format_markdown(records: list[dict[str, Any]], *, message_chars: int = 180) 
             f"`{escape_cell(stall.run_id)}` | "
             f"`{escape_cell(stall.target)}` | "
             f"`{escape_cell(stall.task_id)}` | "
+            f"{escape_cell(stall.no_edit_class)} | "
             f"{duration(stall.duration_seconds)} | "
             f"{duration(stall.seconds_without_repo_change)} | "
             f"{duration(stall.seconds_since_last_output)} | "
@@ -103,16 +105,23 @@ def collect_no_edit_stalls(
         if not isinstance(watchdog, dict):
             watchdog = {}
         last_message = read_last_codex_message(agent.get("log_path"), max_chars=message_chars)
+        duration_seconds = as_number(agent.get("duration_seconds"))
+        seconds_since_last_output = as_number(watchdog.get("seconds_since_last_output"))
         stalls.append(
             NoEditStall(
                 run_id=str(record.get("run_id", "unknown")),
                 target=target_label(record),
                 task_id=str(record.get("task", {}).get("id", "unknown")),
-                duration_seconds=as_number(agent.get("duration_seconds")),
+                no_edit_class=classify_no_edit_stall(
+                    last_message,
+                    duration_seconds=duration_seconds,
+                    seconds_since_last_output=seconds_since_last_output,
+                ),
+                duration_seconds=duration_seconds,
                 seconds_without_repo_change=as_number(
                     watchdog.get("seconds_without_observed_repo_changes")
                 ),
-                seconds_since_last_output=as_number(watchdog.get("seconds_since_last_output")),
+                seconds_since_last_output=seconds_since_last_output,
                 last_codex_phase=classify_last_codex_message(last_message),
                 last_codex_message=last_message or "-",
                 log_path=str(agent.get("log_path") or ""),
@@ -159,6 +168,34 @@ def classify_last_codex_message(message: str) -> str:
     if PLANNING_RE.search(message):
         return "post-planning"
     return "after-agent-output"
+
+
+def classify_no_edit_stall(
+    message: str,
+    *,
+    duration_seconds: float | None,
+    seconds_since_last_output: float | None,
+) -> str:
+    if not message and output_silent_for_most_of_run(
+        duration_seconds=duration_seconds,
+        seconds_since_last_output=seconds_since_last_output,
+    ):
+        return "startup/no-output"
+    if not message:
+        return "unknown/no-output"
+    if PLANNING_RE.search(message):
+        return "post-planning"
+    return "after-agent-output"
+
+
+def output_silent_for_most_of_run(
+    *, duration_seconds: float | None, seconds_since_last_output: float | None
+) -> bool:
+    if seconds_since_last_output is None:
+        return False
+    if duration_seconds is None:
+        return True
+    return seconds_since_last_output >= max(5.0, duration_seconds - 5.0)
 
 
 def target_label(record: dict[str, Any]) -> str:

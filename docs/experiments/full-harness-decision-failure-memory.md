@@ -406,7 +406,7 @@ twice on no-edit watchdogs.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 promotion-scale stability is not clean. | Three scoped 96-record promotion attempts have stopped on no-edit watchdogs across different shapes, including the latest startup/no-output no-edit after a clean 16-record strengthened-guard gate. | Classify no-output startup failures separately and consider bounded retry semantics before another scoped promotion. |
+| H1 promotion-scale stability is not clean. | Three scoped 96-record promotion attempts have stopped on no-edit watchdogs across different shapes, including the latest startup/no-output no-edit after a clean 16-record strengthened-guard gate. | Use the separate no-output startup classification and consider bounded retry semantics before another scoped promotion. |
 | H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
 | Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |
@@ -449,7 +449,7 @@ proven accuracy lift.
 2. Treat another blind 96/100-record H1 promotion as low-value until no-edit
    behavior is mitigated or explicitly measured.
 3. Keep `scripts/triage_no_edit_stalls.py` ready for any stopped no-edit
-   records in larger runs.
+   records in larger runs, including the `startup/no-output` distinction.
 4. Classify every abnormal result after the run: hidden access, wrong-file
    edits, forbidden-file edits, preflight failures, stalls, and timeouts.
 5. Summarize public-safe pilot evidence under `docs/benchmarks/`.
