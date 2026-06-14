@@ -280,6 +280,14 @@ Post-run H1 oracle triage:
   8/12 planned records because `workflow-only` hit the no-edit watchdog.
   `decision-only` and `full-harness` were both 2/2 record-consistent before
   the stop, so the H1 signal held but the operational gate failed.
+- The next non-bare H1 clean gate rerun completed 12/12 records with zero
+  stalls/timeouts. `decision-only` and `full-harness` were both 3/3 strict and
+  record-consistent, while `workflow-only` and `failure-only` stayed 0/3.
+- A 24-record H1 stability expansion then stopped after 2/24 planned records
+  because the first `decision-only` record hit the no-edit watchdog. The new
+  `agent.watchdog` diagnostics recorded `observed_repo_changes=false` for
+  360.035 seconds, so this is an operational promotion blocker rather than an
+  H1 scoring ambiguity.
 
 Pre-execution checks completed:
 
@@ -289,7 +297,7 @@ Pre-execution checks completed:
   per task family;
 - `python3 -m unittest discover -s tests` passes in the runner.
 
-Scope of this ready pilot: it directly measures failure-memory transfer through
+Scope of this pilot line: it directly measures failure-memory transfer through
 `mistake_prevention` and direct decision-memory behavior through
 `record_consistency`. The H1 signal is intentionally narrow: whether agents use
 the pre-existing catalog price-band decision without modifying decision
@@ -299,22 +307,23 @@ records.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
+| H1 stability is not promotion-ready. | A 12-record clean gate passed, but the next 24-record expansion reproduced a `decision-only` no-edit stall after only 2 records. | Diagnose the no-edit stall pattern before another promotion-sized run. |
 | H1 coverage is narrow. | The current pilot directly tests one catalog policy decision, not every structural decision-memory family. | Add at least one harness-structure `record_consistency` task before making a broad decision-memory claim. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
-| Live Codex runs cost time and budget. | Promotion run may be expensive. | Start with the prepared 50-record pilot and promote only if operationally clean. |
+| Live Codex runs cost time and budget. | Promotion run may be expensive, and the latest 24-record expansion stopped after 2 records. | Spend the next live budget on focused stall diagnosis, not a promotion matrix. |
 
-Feasibility verdict: the first five-arm pilot is ready to execute with both
-`mistake_prevention` and `record_consistency` metrics. A clean factorial
-promotion still needs broader H1 task coverage before making a broad
-decision-memory claim.
+Feasibility verdict: the scoring surface is ready, but live promotion is not.
+The H1 correctness signal reproduced in a clean 12-record gate, then the
+24-record stability expansion reproduced the no-edit stall. A clean factorial
+promotion still needs both broader H1 task coverage and operational stability.
 
 ## Direction Review
 
 Recommended direction:
 
-1. Execute the prepared five-arm pilot before spending effort on a promotion
-   matrix.
-2. Prefer failure-memory tasks first. They have clearer behavioral oracles:
+1. Diagnose the `decision-only` no-edit stall before spending effort on a
+   promotion matrix.
+2. Prefer failure-memory tasks next. They have clearer behavioral oracles:
    "did the known mistake recur?"
 3. Add decision-memory tasks second. Their oracles need careful concept checks
    so they measure structural choice rather than preferred prose.
@@ -337,8 +346,9 @@ accuracy lift.
 
 ## Minimum Next Implementation Steps
 
-1. Investigate the no-edit watchdog stall before promoting the 50-record plan.
-2. Rerun the same non-bare H1 clean gate before any larger evidence run.
+1. Investigate the no-edit watchdog stall before any promotion-sized run.
+2. Reproduce or clear the `decision-only` no-edit stall with a focused
+   diagnostic run.
 3. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
    surfaced decision-record guidance.
 4. Classify every abnormal result after the run: hidden access, wrong-file

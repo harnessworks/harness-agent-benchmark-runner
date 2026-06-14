@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: triage the H1 price-policy pilot failure, then rerun a small
-  multi-repeat five-arm memory pilot before considering promotion.
+- Next step: diagnose the H1 `decision-only` no-edit stall before any
+  100-record promotion attempt.
 
 Safe claims:
 
@@ -81,13 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-clean-gate-rerun.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-clean-gate-rerun.md).
-The non-bare H1 clean gate rerun completed 12/12 planned records with 0 stalls,
-0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only`
-and `full-harness` were both 3/3 strict and record-consistent, while
-`workflow-only` and `failure-only` stayed 0/3 record-consistent. This is strong
-focused H1 evidence, but still not enough to jump directly to a 100-record
-promotion.
+[`docs/benchmarks/2026-06-14-flask-price-policy-h1-stability24-aborted.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-stability24-aborted.md).
+The non-bare H1 stability expansion used the prior clean 12-record gate as
+readiness evidence, then stopped after 2/24 planned records because the first
+`decision-only` record hit the no-edit watchdog. The new `agent.watchdog`
+diagnostics showed no observed repository changes for 360.035s. Do not run a
+100-record H1 promotion until this stall pattern is understood.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
