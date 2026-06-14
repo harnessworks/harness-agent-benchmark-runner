@@ -81,12 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](docs/benchmarks/2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md).
-After two scoped H1 promotions stopped on no-edit watchdogs, a small
-decision-bearing time-to-first-edit diagnostic completed 8/8 strict with
-0 no-edit watchdogs. First repository changes appeared within 22.0-38.1s.
-This narrows the blocker to intermittent promotion-scale behavior; it does not
-make another blind 96/100-record H1 run valuable yet.
+[`docs/benchmarks/2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](docs/benchmarks/2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md).
+After adding a generic no-edit mitigation to the Codex prompt guard, the small
+decision-bearing diagnostic completed 7/8 strict. One `decision-only`
+replenishment record still hit the no-edit watchdog after finding the accepted
+policy and describing the intended implementation. The generic guardrail is
+not enough; another blind 96/100-record H1 run remains low-value.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

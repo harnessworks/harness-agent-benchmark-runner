@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Small H1 decision-bearing time-to-first-edit diagnostic completed 8/8 strict with 0 no-edit watchdogs. |
+| Latest execution | Prompt-guard mitigation diagnostic completed 7/8 strict; one `decision-only` replenishment no-edit recurred. |
 
 ## Representative Result
 
@@ -74,19 +74,20 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed H1 diagnostic:
-[`2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md).
+[`2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md).
 
-After two scoped H1 promotion attempts stopped on no-edit watchdogs, a small
+After adding a generic no-edit mitigation to the Codex prompt guard, a small
 decision-bearing diagnostic covered both direct H1 task families across
-`decision-only` and `full-harness`, with two repeats each. It completed 8/8
-strict and record-consistent with 0 stalls, 0 timeouts, 0 wrong-file edits, and
-0 forbidden-file edits. First observed repository changes landed within
-22.0-38.1 seconds.
+`decision-only` and `full-harness`, with two repeats each. It completed 7/8
+strict and record-consistent. One `decision-only`
+`hidden-effect-catalog-replenishment-policy` record hit the no-edit watchdog.
 
-This is useful operational evidence, not promotion evidence. It shows the
-no-edit path is intermittent and not deterministic for the selected pairs in a
-small batch. The two aborted promotion attempts still block another blind
-96/100-record H1 run.
+The stopped agent had already found the accepted replenishment policy and
+announced the intended implementation direction, but no repository changes
+were observed for 240 seconds. This shows the generic prompt-guard mitigation
+is not enough. The earlier clean 8-record time-to-first-edit diagnostic still
+shows the failure is intermittent, but another blind 96/100-record H1 run
+remains low-value.
 
 ## Controls And Prior Evidence
 
@@ -95,6 +96,7 @@ small batch. The two aborted promotion attempts still block another blind
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | prompt-guard mitigation diagnostic | 8 | 7 | 7 | 1 | 0 | Generic edit-start guard did not prevent `decision-only` replenishment no-edit. |
 | Two-family H1 | decision-arms time-to-first-edit diagnostic | 8 | 8 | 8 | 0 | 0 | Decision-bearing arms started edits within 22.0-38.1s; no no-edit reproduction in small batch. |
 | Two-family H1 | promotion96 rerun aborted | 13/96 | 6 | 6 | 1 | 0 | Second promotion-scale no-edit stop, this time on `decision-only` replenishment. |
 | Price-policy H1 | full-harness no-edit diagnostic | 5 | 5 | 5 | 0 | 0 | Did not reproduce the promotion no-edit failure. |
@@ -129,14 +131,15 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The latest small diagnostic executed the time-to-first-edit option and did not
-reproduce the no-edit stop. The next useful H1 step is still operational, not
+The latest small diagnostic tested a generic prompt-guard mitigation and still
+reproduced the no-edit stop. The next useful H1 step is still operational, not
 larger-sample scoring:
 
-- add or test a mitigation that makes agents start a minimal scoped
-  implementation edit shortly after relevant record discovery;
-- or run another explicitly no-edit-focused diagnostic with a different
-  controlled variable;
+- reduce the `decision-only` replenishment planning surface without adding
+  task-specific answers;
+- or add a stronger answer-free adapter progress constraint before narrating an
+  implementation plan;
+- rerun a small diagnostic before any larger promotion attempt;
 - keep `CODEX_PROMPT_GUARD=1`, sequential execution, and watchdog reporting.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
@@ -152,7 +155,8 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
-- [`2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md) (latest H1 decision-bearing no-edit diagnostic)
+- [`2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md) (latest H1 prompt-guard mitigation diagnostic)
+- [`2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md`](2026-06-14-flask-h1-decision-arms-time-to-first-edit-diagnostic.md) (prior H1 decision-bearing no-edit diagnostic)
 - [`2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-rerun-aborted-noedit.md) (latest scoped H1 promotion rerun, aborted on no-edit)
 - [`2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md) (focused no-edit diagnostic)
 - [`2026-06-14-flask-h1-promotion96-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-aborted-noedit.md) (scoped H1 promotion, aborted on no-edit)
