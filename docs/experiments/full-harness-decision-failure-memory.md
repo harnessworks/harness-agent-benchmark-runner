@@ -343,6 +343,12 @@ Post-run H1 oracle triage:
   made no repository changes for 240 seconds. Treat this as an operational
   promotion blocker. The partial scoring still separated decision-bearing arms
   from controls, but the promotion is not achieved.
+- A focused follow-up diagnostic over the same `full-harness` price-policy
+  task completed 5/5 strict and record-consistent with zero no-edit watchdogs.
+  The promotion blocker is therefore intermittent, not deterministic. A rerun
+  of the scoped 96-record promotion is reasonable with the same safeguards, but
+  a repeated stop on the same pattern should be treated as operational
+  instability.
 
 Pre-execution checks completed:
 

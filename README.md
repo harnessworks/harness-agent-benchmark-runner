@@ -81,12 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-promotion96-aborted-noedit.md`](docs/benchmarks/2026-06-14-flask-h1-promotion96-aborted-noedit.md).
-The scoped 96-record H1 promotion stopped after 11 records because a
-`full-harness` price-policy record hit the no-edit watchdog. Early scoring
-still separated decision-bearing arms from controls, but the promotion is not
-achieved. Next step: targeted `full-harness` price-policy no-edit mitigation
-before another promotion attempt.
+[`docs/benchmarks/2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md`](docs/benchmarks/2026-06-14-flask-price-policy-full-harness-noedit-diagnostic.md).
+After the scoped 96-record H1 promotion stopped on a `full-harness`
+price-policy no-edit watchdog, a focused 5-record diagnostic for that exact
+task/arm completed 5/5 strict with 0 no-edit watchdogs. The promotion is still
+not achieved, but the no-edit blocker is intermittent rather than
+deterministic.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
