@@ -113,6 +113,18 @@ catalog price-band decision record. It then announced it would add a reusable
 catalog helper, route, envelope, and tests, but made no visible repository
 changes before the no-edit watchdog fired.
 
+No-edit triage command:
+
+```bash
+python3 scripts/triage_no_edit_stalls.py \
+  --results results/hidden-flask-ab-pilot-20260614T035836Z
+```
+
+Triage output classified the stopped record as `post-planning`: the last Codex
+message was an implementation plan, the no-edit duration was 360.0s, and the
+last-output gap was 83.3s. This supports treating the stop as a pre-edit
+execution stall rather than a task-understanding failure.
+
 ## Reading
 
 The prompt guard is useful but not sufficient promotion evidence.

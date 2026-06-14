@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: diagnose the post-planning no-edit stall before any 100-record
-  promotion attempt.
+- Next step: rerun the guarded four-arm H1 stability gate before any
+  100-record promotion attempt.
 
 Safe claims:
 
@@ -81,13 +81,13 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md).
-The guarded H1 stability expansion required the prior guarded clean gate as
-readiness evidence, then stopped after 4/24 planned records because
-`full-harness` hit the no-edit watchdog. The stopped agent had read the
-decision record and stated the correct implementation direction, but made no
-repository changes for 360.040s. Do not run a 100-record H1 promotion until
-this post-planning no-edit stall is understood.
+[`docs/benchmarks/2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md).
+The guarded decision-bearing H1 no-edit triage completed 8/8 records with
+8/8 strict and record-consistent success, 0 stalls, and first repository
+changes within 27.0-39.1s. This shows the post-planning no-edit stall is
+intermittent rather than deterministic, but it does not clear the four-arm H1
+stability gate. Do not run a 100-record H1 promotion until a guarded four-arm
+24-record rerun completes cleanly.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

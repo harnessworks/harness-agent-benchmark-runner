@@ -302,6 +302,12 @@ Post-run H1 oracle triage:
   found the accepted price-band decision and announced the correct
   implementation direction, but made no visible repository changes for 360.040
   seconds.
+- A focused guarded no-edit triage over only `decision-only` and
+  `full-harness` then completed 8/8 records with 8/8 strict and
+  record-consistent success, zero stalls/timeouts, and first observed
+  repository changes within 27.0-39.1 seconds. This means the no-edit stall is
+  intermittent, not deterministic, but the four-arm H1 stability gate still
+  needs to be rerun before any promotion-sized matrix.
 
 Pre-execution checks completed:
 
@@ -321,22 +327,24 @@ records.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 stability is not promotion-ready. | A guarded 12-record gate passed, but the guarded 24-record expansion reproduced a no-edit stall in `full-harness` after only 4 records. | Diagnose the post-planning, pre-edit stall before another promotion-sized run. |
+| H1 stability is not promotion-ready. | A guarded 12-record gate passed and a decision-bearing 8-record triage completed cleanly, but the guarded four-arm 24-record expansion reproduced a `post-planning` no-edit stall in `full-harness` after only 4 records. | Rerun the guarded four-arm 24-record gate before any promotion-sized run. |
 | H1 coverage is narrow. | The current pilot directly tests one catalog policy decision, not every structural decision-memory family. | Add at least one harness-structure `record_consistency` task before making a broad decision-memory claim. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
-| Live Codex runs cost time and budget. | Promotion run may be expensive, and the latest 24-record expansion stopped after 2 records. | Spend the next live budget on focused stall diagnosis, not a promotion matrix. |
+| Live Codex runs cost time and budget. | Promotion run may be expensive, and the latest four-arm 24-record expansion stopped after 4 records. | Spend the next live budget on a guarded four-arm 24-record rerun, not a promotion matrix. |
 
 Feasibility verdict: the scoring surface is ready, but live promotion is not.
-The H1 correctness signal reproduced in a clean 12-record gate, then the
-24-record stability expansion reproduced the no-edit stall. A clean factorial
-promotion still needs both broader H1 task coverage and operational stability.
+The H1 correctness signal reproduced in a clean 12-record gate and an 8-record
+decision-bearing triage, but the latest four-arm 24-record stability expansion
+still reproduced the no-edit stall. A clean factorial promotion still needs
+both broader H1 task coverage and operational stability.
 
 ## Direction Review
 
 Recommended direction:
 
-1. Diagnose the post-planning, pre-edit no-edit stall before spending effort
-   on a promotion matrix.
+1. Rerun the guarded four-arm 24-record H1 gate before spending effort on a
+   promotion matrix; use `scripts/triage_no_edit_stalls.py` to classify any
+   stopped no-edit records.
 2. Prefer failure-memory tasks next. They have clearer behavioral oracles:
    "did the known mistake recur?"
 3. Add decision-memory tasks second. Their oracles need careful concept checks
@@ -361,8 +369,8 @@ accuracy lift.
 ## Minimum Next Implementation Steps
 
 1. Keep guarded and unguarded H1 evidence separate in reports.
-2. Add or test a focused mitigation for the post-planning, pre-edit no-edit
-   stall.
+2. Rerun the guarded four-arm 24-record H1 gate with no-edit triage ready for
+   any abnormal stop.
 3. Rerun a clean small H1/H2 pilot under the revised price-policy oracle and
    surfaced decision-record guidance.
 4. Classify every abnormal result after the run: hidden access, wrong-file

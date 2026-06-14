@@ -255,6 +255,20 @@ active-output attempts that never touched the repository. The public-safe
 `scripts/summarize_hidden_ab.py` report includes a `Watchdog Diagnostics`
 section when these fields are present.
 
+When a no-edit watchdog fires, triage the stopped records before retrying a
+promotion-sized run:
+
+```bash
+python3 scripts/triage_no_edit_stalls.py --results results/<run-id>
+```
+
+This prints one public-safe row per `no_edit_watchdog` record with the affected
+task, arm, no-edit duration, last-output gap, and the last Codex message
+classified as `post-planning`, `after-agent-output`, or `unknown`. Treat a
+`post-planning` row as evidence that the agent reached an implementation plan
+but never made the first repository edit; diagnose that separately from idle
+silence, functional failures, and file-boundary violations.
+
 Use `--agent-timeout-override` when a promotion run intentionally needs a
 different effective task timeout than the task JSON. The runner applies that
 override before `--max-agent-timeout`, so `--max-agent-timeout` remains a cap.

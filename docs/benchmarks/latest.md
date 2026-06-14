@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Guarded H1 24-record stability expansion aborted on `full-harness` no-edit watchdog. |
+| Latest execution | Guarded H1 decision-bearing no-edit triage completed 8/8 clean records. |
 
 ## Representative Result
 
@@ -74,15 +74,21 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md).
+[`2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md).
 
-The guarded price-policy H1 stability expansion used
+The guarded price-policy H1 decision-bearing no-edit triage used
 `CODEX_PROMPT_GUARD=1`, required the prior guarded clean gate as readiness
-evidence, and planned 24 records. It stopped after 4/24 planned records when
-`full-harness` hit the no-edit watchdog. The stopped agent had read the
-accepted decision record and announced the correct implementation direction,
-but made no visible repository changes for 360.040s. This blocks a 100-record
-H1 promotion.
+evidence, and ran only `decision-only` and `full-harness` for 8 records. It
+completed 8/8 strict and record-consistent records with 0 stalls, 0 timeouts,
+and first repository changes within 27.0-39.1s. This shows the prior
+post-planning no-edit stall is intermittent rather than deterministic, but it
+does not clear the four-arm H1 stability gate.
+
+The previous guarded 24-record four-arm H1 expansion remains the promotion
+blocker: it stopped after 4/24 planned records when `full-harness` hit the
+no-edit watchdog after reading the accepted decision record and announcing the
+correct implementation direction. Do not run a 100-record H1 promotion until a
+guarded four-arm 24-record rerun completes cleanly.
 
 ## Controls And Prior Evidence
 
@@ -91,6 +97,7 @@ H1 promotion.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Price-policy H1 | guarded decision-arms no-edit triage | 8 | 8 | 8 | 0 | 0 | Decision-bearing arms completed cleanly; no-edit stall did not immediately reproduce. |
 | Price-policy H1 | guarded stability24 expansion | 4/24 | 1 | 1 | 1 | 0 | Aborted on `full-harness` no-edit watchdog after decision-record discovery. |
 | Price-policy H1 | guarded clean gate | 12 | 6 | 6 | 0 | 0 | Guarded four-arm H1 gate completed; decision memory arms separated cleanly from controls. |
 | Price-policy H1 | guarded decision-only diagnostic | 2 | 2 | 2 | 0 | 0 | Prompt guard coincided with quick repo edits; mitigation signal only. |
@@ -113,8 +120,8 @@ hidden-oracle rows are the relevant harness-effect evidence.
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
 semantics change. Do not run a 100-record H1 promotion now. The next useful H1
-step is to diagnose the post-planning, pre-edit no-edit stall pattern that now
-appears in both decision-bearing arms.
+step is a guarded four-arm 24-record rerun; if any no-edit watchdog fires, run
+`scripts/triage_no_edit_stalls.py` on the stopped result before retrying.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -129,6 +136,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md`](2026-06-14-flask-price-policy-h1-decision-arms-noedit-triage.md) (guarded H1 decision-bearing no-edit triage)
 - [`2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md`](2026-06-14-flask-price-policy-h1-guarded-stability24-aborted.md) (guarded H1 stability expansion, aborted)
 - [`2026-06-14-flask-price-policy-h1-guarded-clean-gate.md`](2026-06-14-flask-price-policy-h1-guarded-clean-gate.md) (guarded H1 clean gate)
 - [`2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md`](2026-06-14-flask-price-policy-h1-decision-guard-diagnostic.md) (guarded H1 decision-only diagnostic)
