@@ -81,11 +81,11 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](docs/benchmarks/2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md).
-After strengthening the answer-free Codex prompt guard, a bounded
-decision-bearing H1 gate completed 16/16 strict with 0 no-edit watchdogs.
-This makes a scoped guarded H1 promotion attempt defensible again, but it is
-not itself a 96/100-run result.
+[`docs/benchmarks/2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](docs/benchmarks/2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md).
+The strengthened-guard scoped H1 promotion stopped after 8/96 records on a
+`full-harness` replenishment no-edit watchdog. The stopped Codex run produced
+no assistant message and no repository changes, so this is a startup/no-output
+no-edit event rather than a decision-memory scoring ambiguity.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

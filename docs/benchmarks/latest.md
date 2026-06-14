@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Strengthened prompt-guard decision-bearing gate completed 16/16 strict with 0 no-edit watchdogs. |
+| Latest execution | Strengthened-guard H1 promotion stopped after 8/96 on a startup/no-output no-edit watchdog. |
 
 ## Representative Result
 
@@ -73,20 +73,20 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed H1 diagnostic:
-[`2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md).
+Latest executed H1 promotion attempt:
+[`2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md).
 
-After strengthening the answer-free Codex prompt guard, a bounded
-decision-bearing gate covered both direct H1 task families across
-`decision-only` and `full-harness`, with four repeats each. It completed 16/16
-strict and record-consistent with 0 no-edit watchdogs, 0 timeouts, 0 wrong-file
-edits, and 0 forbidden-file edits. First observed repository changes landed
-within 21.0-54.1 seconds.
+After the strengthened prompt guard completed a clean 16-record
+decision-bearing gate, the scoped 96-record H1 promotion stopped after 8/96
+records on a `full-harness` `hidden-effect-catalog-replenishment-policy`
+no-edit watchdog.
 
-This is the strongest no-edit mitigation signal so far because the prior
-generic prompt-guard diagnostic reproduced a `decision-only` replenishment
-no-edit watchdog. It is still not a promotion result. The next promotion
-attempt should be scoped, guarded, sequential, and stopped on abnormal events.
+This stop had a different shape from the prior planning-stage no-edit stops:
+the Codex log showed startup metadata, the full prompt, and repeated rollout
+state warnings, but no assistant message and no repository changes for 240
+seconds. Treat it as a startup/no-output no-edit event. The H1 effect signal
+remained positive before the stop, but promotion-scale operational stability is
+still unresolved.
 
 ## Controls And Prior Evidence
 
@@ -95,6 +95,7 @@ attempt should be scoped, guarded, sequential, and stopped on abnormal events.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | strengthened promotion96 aborted | 8/96 | 3 | 3 | 1 | 0 | Stopped on `full-harness` replenishment startup/no-output no-edit. |
 | Two-family H1 | strengthened prompt-guard decision gate16 | 16 | 16 | 16 | 0 | 0 | Decision-bearing arms 16/16 strict and record-consistent; no no-edit recurrence. |
 | Two-family H1 | strengthened prompt-guard diagnostic | 8 | 8 | 8 | 0 | 0 | Stronger edit-before-plan guard cleared the small decision-bearing matrix. |
 | Two-family H1 | prompt-guard mitigation diagnostic | 8 | 7 | 7 | 1 | 0 | Generic edit-start guard did not prevent `decision-only` replenishment no-edit. |
@@ -132,16 +133,14 @@ semantics change. For H1, do not run another blind 96/100-record promotion
 now. Two promotion-scale attempts have stopped on no-edit watchdogs across
 different task/arm pairs.
 
-The latest bounded gate tested the strengthened prompt-guard mitigation over
-16 decision-bearing records and completed cleanly. The next useful H1 step can
-return to promotion-scale evidence, but it should be scoped and guarded rather
-than a broad 100-run:
+The latest scoped promotion attempt stopped on a startup/no-output no-edit
+event. Do not keep rerunning blind H1 promotions. The next useful H1 step is
+operational:
 
-- run the two direct H1 task families across `workflow-only`, `decision-only`,
-  `failure-only`, and `full-harness`;
-- keep 12 repeats for the balanced 96-record matrix;
-- use clean-readiness results and `--stop-on-abnormal`;
-- keep `CODEX_PROMPT_GUARD=1`, sequential execution, and watchdog reporting.
+- classify no-output no-edit separately from post-planning no-edit;
+- consider a bounded retry only for no-output/no-change startup failures;
+- keep post-planning no-edit as a real abnormal result;
+- rerun a small diagnostic before another scoped promotion.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -156,6 +155,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md`](2026-06-14-flask-h1-strengthened-promotion96-aborted-nooutput.md) (latest scoped H1 promotion, aborted on startup/no-output no-edit)
 - [`2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md) (latest H1 strengthened prompt-guard decision-bearing gate)
 - [`2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md`](2026-06-14-flask-h1-strengthened-prompt-guard-diagnostic.md) (prior H1 prompt-guard mitigation diagnostic)
 - [`2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md`](2026-06-14-flask-h1-prompt-guard-mitigation-diagnostic.md) (prior H1 prompt-guard mitigation diagnostic)

@@ -379,6 +379,13 @@ Post-run H1 oracle triage:
   watchdogs. The previously recurring `decision-only` replenishment path was
   4/4 strict and record-consistent. This makes a scoped guarded H1 promotion
   attempt defensible again, but it is not itself promotion-scale evidence.
+- The subsequent scoped 96-record H1 promotion stopped after 8/96 planned
+  records on a `full-harness` replenishment no-edit watchdog. This was a
+  startup/no-output no-edit: the Codex log showed startup metadata, the full
+  prompt, and repeated rollout state warnings, but no assistant message and no
+  repository changes for 240 seconds. Treat this separately from
+  post-planning no-edit; promotion-scale operational stability is still
+  unresolved.
 
 Pre-execution checks completed:
 
@@ -399,7 +406,7 @@ twice on no-edit watchdogs.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 promotion-scale stability is not clean. | Two scoped 96-record promotion attempts stopped on no-edit watchdogs across different task/arm pairs; the strengthened prompt-guard decision-bearing gate then completed 16/16 clean. | A scoped guarded 96-record H1 promotion is defensible again, but it should stop on abnormal events and not be called a broad 100-run. |
+| H1 promotion-scale stability is not clean. | Three scoped 96-record promotion attempts have stopped on no-edit watchdogs across different shapes, including the latest startup/no-output no-edit after a clean 16-record strengthened-guard gate. | Classify no-output startup failures separately and consider bounded retry semantics before another scoped promotion. |
 | H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
 | Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |
