@@ -16,8 +16,7 @@ they succeed or fail.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
 - Next step: do not run another blind 96/100-record H1 promotion; the latest
-  Claude gate hit a Claude session-limit after confirming the price-policy
-  oracle patch.
+  Claude H1 interim gate is clean, but Codex no-edit remains unresolved.
 
 Safe claims:
 
@@ -82,13 +81,11 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](docs/benchmarks/2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md).
-The patched-oracle Claude four-arm gate completed 8/8 records with 0 no-edit
-watchdogs, 0 timeouts, and 0 file-boundary issues, but it is not representative
-H1 evidence because the Claude CLI hit its session limit during the
-replenishment half. Price-policy did separate cleanly under the patched oracle:
-decision-bearing arms passed 2/2 strict and record-consistent checks, while
-controls stayed 0/2 record-consistent.
+[`docs/benchmarks/2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](docs/benchmarks/2026-06-15-flask-h1-claude-four-arm-interim-gate.md).
+The Claude four-arm H1 interim gate completed 8/8 records with 0 no-edit
+watchdogs, 0 timeouts, 0 quota/session-limit exits, and 0 file-boundary issues.
+Decision-bearing arms passed 4/4 strict and record-consistent checks across
+price-policy and replenishment, while controls stayed 0/4 record-consistent.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

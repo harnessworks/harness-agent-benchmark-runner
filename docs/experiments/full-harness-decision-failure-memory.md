@@ -422,6 +422,12 @@ Post-run H1 oracle triage:
   `failure-only` stayed record-inconsistent. The same run is not representative
   two-family H1 evidence because three replenishment records hit the Claude CLI
   session limit.
+- A subsequent Claude four-arm interim gate completed 8/8 records with zero
+  no-edit watchdogs, zero timeouts, zero quota/session-limit exits, and zero
+  file-boundary issues. It is the current H1 interim representative evidence:
+  `decision-only` and `full-harness` passed 4/4 strict and record-consistent
+  checks across price-policy and replenishment, while `workflow-only` and
+  `failure-only` stayed 0/4 record-consistent.
 
 Pre-execution checks completed:
 
@@ -442,9 +448,9 @@ twice on no-edit watchdogs.
 
 | Gap | Impact | Practical fix |
 | --- | --- | --- |
-| H1 promotion-scale stability is not clean for Codex. | Three scoped Codex 96-record promotion attempts stopped on no-edit watchdogs, and the Codex startup-retry pilot then stopped after 1/8 on post-output no-edit. Claude gates completed 2/2, 4/4, and 8/8 with no no-edit stalls, but the latest patched-oracle rerun hit the Claude CLI session limit. | Pause Codex H1 promotion reruns; continue H1 only after a clean Claude quota window or after runner classification for known quota/session-limit exits. |
-| H1 coverage is broader and positive in gates, but not promotable. | The revised-oracle two-family gate completed 16/16 clean, and promotion partials separated decision-bearing arms from controls before no-edit stops. | Treat the H1 effect signal as promising but operationally blocked at promotion scale. |
-| Claude H1 evidence now has quota contamination risk. | The patched-oracle rerun confirmed price-policy separation, but three replenishment records failed because the Claude CLI session limit was reached. | Rerun the replenishment half after quota reset or classify known session-limit messages as abnormal before another live gate. |
+| H1 promotion-scale stability is not clean for Codex. | Three scoped Codex 96-record promotion attempts stopped on no-edit watchdogs, and the Codex startup-retry pilot then stopped after 1/8 on post-output no-edit. Claude now has clean 2/2, 4/4, and 8/8 gates with no no-edit stalls. | Keep Codex H1 promotion blocked; use Codex budget only for targeted no-edit diagnostics or mitigation checks. |
+| H1 coverage is broader and positive in gates, but not promotable. | The current Claude interim gate separated decision-bearing arms from controls across both direct H1 task families, but it is still one 8-record gate. | Treat the H1 effect signal as current interim evidence; repeat a 16-record or 24-record Claude gate before a larger claim. |
+| Claude H1 evidence needs repetition before promotion. | The latest gate is clean and no longer quota-contaminated, but it is not promotion-scale. | Run a repeated Claude four-arm gate before promoting H1 beyond interim representative status. |
 | Public summary script is still Flask-shaped. | Reports can group custom arms and memory metrics, but table naming remains Flask benchmark oriented. | Use it for the pilot, then add a neutral memory-experiment summary wrapper before promotion if the result becomes representative. |
 | Live Codex runs cost time and budget. | Larger blind runs are now likely to spend budget reproducing no-edit instability before producing promotable H1 evidence. | Spend the next live budget on mitigation or a small time-to-first-edit diagnostic. |
 
@@ -485,8 +491,8 @@ proven accuracy lift.
 1. Keep guarded and unguarded H1 evidence separate in reports.
 2. Treat another blind Codex 96/100-record H1 promotion as low-value until
    post-output no-edit behavior is mitigated or directly measured.
-3. Repeat the Claude four-arm gate or triage price-policy wording before making
-   any H1 claim.
+3. Repeat the clean Claude four-arm gate at 16 or 24 records before making a
+   larger H1 claim.
 4. Keep `scripts/triage_no_edit_stalls.py` ready for any stopped no-edit
    records in larger runs, including the `startup/no-output` distinction.
 5. Classify every abnormal result after the run: hidden access, wrong-file
@@ -494,5 +500,5 @@ proven accuracy lift.
 6. Summarize public-safe pilot evidence under `docs/benchmarks/`.
 7. Add another harness-structure `record_consistency` task before claiming
    broad decision-memory value or promoting to the 120-record factorial run.
-8. Keep `docs/benchmarks/latest.md` unchanged unless the pilot becomes the most
-   recent representative report.
+8. Keep `docs/benchmarks/latest.md` pointed at the H1 interim gate only for the
+   H1 line; the broad representative benchmark remains stable-4 promotion96.

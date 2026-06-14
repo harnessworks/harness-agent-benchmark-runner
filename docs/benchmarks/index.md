@@ -13,6 +13,10 @@ outside the repository after their reproducible fields are summarized here.
 
 ## Current H1 Decision-Memory Line
 
+- [`2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](2026-06-15-flask-h1-claude-four-arm-interim-gate.md):
+  current H1 interim representative gate; decision-bearing arms passed 4/4
+  strict and record-consistent checks, while controls stayed 0/4
+  record-consistent.
 - [`2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md):
   patched price-policy oracle gate; price-policy separated cleanly, but the
   replenishment half was contaminated by a Claude session limit.

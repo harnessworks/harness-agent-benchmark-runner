@@ -1,6 +1,6 @@
 # Latest Benchmark Status
 
-Updated: 2026-06-14
+Updated: 2026-06-15
 
 ## At A Glance
 
@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Patched-oracle Claude gate completed 8/8 with 0 no-edit watchdogs, but three replenishment records hit the Claude CLI session limit. |
+| Latest execution | Claude H1 interim gate completed 8/8 with 0 operational abnormal signals and decision-bearing arms 4/4 strict. |
 
 ## Representative Result
 
@@ -74,21 +74,19 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed H1 diagnostic:
-[`2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md).
+[`2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](2026-06-15-flask-h1-claude-four-arm-interim-gate.md).
 
-After the price-policy glossary oracle was patched to accept equivalent
-`price band`, `price-band`, and `price_band` concept spellings, a fresh Claude
-four-arm gate reran both direct H1 task families across `workflow-only`,
-`decision-only`, `failure-only`, and `full-harness`.
+After the price-policy glossary oracle was patched and the prior Claude
+session-limit contamination was classified, a fresh Claude four-arm gate reran
+both direct H1 task families across `workflow-only`, `decision-only`,
+`failure-only`, and `full-harness`.
 
 The gate completed 8/8 records with 0 no-edit watchdogs, 0 timeouts,
-0 wrong-file edits, and 0 forbidden-file edits, but it is not representative
-H1 evidence because three replenishment records hit the Claude CLI session
-limit. Price-policy did separate cleanly under the patched oracle:
-decision-bearing arms were 2/2 strict and record-consistent, while controls
-stayed 0/2 record-consistent. The replenishment half needs a clean rerun after
-Claude quota reset or a runner change that treats known quota/session-limit
-messages as abnormal.
+0 quota/session-limit exits, 0 wrong-file edits, and 0 forbidden-file edits.
+Decision-bearing arms were 4/4 strict and record-consistent across price-policy
+and replenishment, while controls stayed 0/4 record-consistent. Treat this as
+the current H1 interim representative evidence, not as the broad public
+representative benchmark result.
 
 ## Controls And Prior Evidence
 
@@ -97,6 +95,7 @@ messages as abnormal.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | Claude interim gate | 8 | 4 | 4 | 0 | 0 | Current H1 interim representative; decision-bearing arms 4/4, controls 0/4 record-consistent. |
 | Two-family H1 | Claude patched-oracle gate | 8 | 2 | 2 | 0 | 0 | Price-policy separated cleanly; replenishment half contaminated by Claude CLI session limit. |
 | Two-family H1 | Claude four-arm gate | 8 | 2 | 2 | 0 | 0 | No operational abnormal events; replenishment separated cleanly, price-policy wording remained noisy. |
 | Two-family H1 | Claude adapter-control | 4 | 3 | 3 | 0 | 0 | Decision-bearing arms completed with no no-edit stalls; one `full-harness` glossary wording miss. |
@@ -142,11 +141,9 @@ different task/arm pairs.
 
 The latest clean Claude four-arm gate suggests the repeated no-edit blocker is
 specific to the Codex execution path rather than the runner, target refs, or
-watchdog mechanics. The patched-oracle rerun also confirms the price-policy
-wording fix, but the replenishment half hit the Claude CLI session limit. Do
-not keep rerunning blind Codex H1 promotions. The next useful H1 step is either
-a clean replenishment-half rerun after Claude quota reset or runner
-classification for known agent quota/session-limit exits.
+watchdog mechanics. Do not keep rerunning blind Codex H1 promotions. The next
+useful H1 step is a repeated 16-record or 24-record Claude gate before making
+a larger H1 claim.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -162,7 +159,8 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 
 - [`index.md`](index.md) (curated report index)
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
-- [`2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md) (latest patched-oracle H1 Claude gate, contaminated by Claude session limit)
+- [`2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](2026-06-15-flask-h1-claude-four-arm-interim-gate.md) (current H1 interim representative gate)
+- [`2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md) (patched-oracle H1 Claude gate, contaminated by Claude session limit)
 - [`2026-06-14-flask-h1-claude-four-arm-gate.md`](2026-06-14-flask-h1-claude-four-arm-gate.md) (prior H1 four-arm Claude gate)
 - [`2026-06-14-flask-h1-claude-adapter-control-two-family.md`](2026-06-14-flask-h1-claude-adapter-control-two-family.md) (latest H1 adapter-control, Claude two-family gate)
 - [`2026-06-14-flask-h1-claude-adapter-control-price-policy.md`](2026-06-14-flask-h1-claude-adapter-control-price-policy.md) (latest H1 adapter-control, Claude completed with 0 no-edit stalls)
