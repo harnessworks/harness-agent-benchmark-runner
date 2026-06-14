@@ -314,6 +314,14 @@ Post-run H1 oracle triage:
   forbidden-file edits. `decision-only` and `full-harness` were both 6/6
   strict and record-consistent, while `workflow-only` and `failure-only` stayed
   0/6 record-consistent.
+- After adding the second direct H1 task family,
+  `hidden-effect-catalog-replenishment-policy`, a guarded two-family pilot
+  completed 8/8 records with zero stalls/timeouts and zero file-boundary
+  issues. The price-policy family reproduced the expected H1 separation, but
+  replenishment passed only in `full-harness`; `decision-only` failed because
+  its glossary used `replenishment_status` rather than the normalized prose
+  phrase `replenishment status`. Treat this as task/oracle/discoverability
+  triage evidence, not as a green light for a 100-run H1 promotion.
 
 Pre-execution checks completed:
 

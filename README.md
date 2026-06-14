@@ -15,8 +15,8 @@ they succeed or fail.
   records; `bare` recovered 0/32.
 - Current limit: `memory-harness` did not beat `workflow-only` on correctness,
   and `cart-validation` failed across all arms.
-- Next step: run a guarded small H1 pilot over the two catalog decision-memory
-  task families before broad promotion.
+- Next step: triage the new replenishment H1 task before any 100-run
+  decision-memory promotion.
 
 Safe claims:
 
@@ -81,13 +81,13 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md`](docs/benchmarks/2026-06-14-flask-price-policy-h1-guarded-stability24-rerun.md).
-The guarded four-arm H1 stability rerun completed 24/24 records with 0 stalls,
-0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only` and
-`full-harness` were both 6/6 strict and record-consistent, while
-`workflow-only` and `failure-only` stayed 0/6 record-consistent. The H1 suite
-now also scaffolds a catalog replenishment-policy decision task; run a guarded
-small two-family H1 pilot before making a broader decision-memory claim.
+[`docs/benchmarks/2026-06-14-flask-h1-two-family-guarded-pilot.md`](docs/benchmarks/2026-06-14-flask-h1-two-family-guarded-pilot.md).
+The guarded two-family H1 pilot completed 8/8 records with 0 stalls,
+0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. The price-policy
+family reproduced the expected H1 separation, but the new replenishment-policy
+family passed only in `full-harness`; `decision-only` failed functional and
+record-consistency checks on documentation wording. Do not spend on a 100-run
+H1 promotion until the replenishment task is triaged.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
