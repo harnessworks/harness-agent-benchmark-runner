@@ -251,7 +251,9 @@ and `no_edit_watchdog`. When idle or no-edit watchdogs are enabled, the agent
 result also includes `agent.watchdog`, with fields such as
 `seconds_since_last_output`, `observed_repo_changes`, and
 `seconds_without_observed_repo_changes` to separate silent stalls from
-active-output attempts that never touched the repository.
+active-output attempts that never touched the repository. The public-safe
+`scripts/summarize_hidden_ab.py` report includes a `Watchdog Diagnostics`
+section when these fields are present.
 
 Use `--agent-timeout-override` when a promotion run intentionally needs a
 different effective task timeout than the task JSON. The runner applies that

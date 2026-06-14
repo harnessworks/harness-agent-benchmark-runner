@@ -38,6 +38,12 @@ class Aggregate:
     stalls: int = 0
     hidden_accesses: int = 0
     durations: list[float] = field(default_factory=list)
+    watchdog_records: int = 0
+    no_edit_watchdogs: int = 0
+    no_observed_repo_changes: int = 0
+    seconds_until_repo_change: list[float] = field(default_factory=list)
+    seconds_without_repo_change: list[float] = field(default_factory=list)
+    seconds_since_last_output: list[float] = field(default_factory=list)
 
     def update(self, record: dict[str, Any]) -> None:
         scoring = record.get("scoring", {})
@@ -77,6 +83,24 @@ class Aggregate:
         duration = record.get("agent", {}).get("duration_seconds")
         if isinstance(duration, (int, float)):
             self.durations.append(float(duration))
+        self.update_watchdog(record)
+
+    def update_watchdog(self, record: dict[str, Any]) -> None:
+        agent = record.get("agent", {})
+        if not isinstance(agent, dict):
+            return
+        watchdog = agent.get("watchdog")
+        if not isinstance(watchdog, dict):
+            return
+
+        self.watchdog_records += 1
+        if agent.get("termination_reason") == "no_edit_watchdog":
+            self.no_edit_watchdogs += 1
+        if watchdog.get("observed_repo_changes") is False:
+            self.no_observed_repo_changes += 1
+        append_number(self.seconds_until_repo_change, watchdog.get("seconds_until_repo_change_observed"))
+        append_number(self.seconds_without_repo_change, watchdog.get("seconds_without_observed_repo_changes"))
+        append_number(self.seconds_since_last_output, watchdog.get("seconds_since_last_output"))
 
     @staticmethod
     def boundary_fallback(scoring: dict[str, Any]) -> bool:
@@ -125,6 +149,20 @@ def format_markdown(records: list[dict[str, Any]]) -> str:
     )
     for (target, task_id), values in sorted(by_target_task.items()):
         lines.append(task_row(target, task_id, values))
+
+    if any(values.watchdog_records for values in by_target.values()):
+        lines.extend(
+            [
+                "",
+                "## Watchdog Diagnostics",
+                "",
+                "| Target | Watchdog records | No-edit watchdogs | No observed repo changes | p50 seconds to repo change | Max seconds without repo change | Max seconds since output |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for target, values in sorted(by_target.items()):
+            if values.watchdog_records:
+                lines.append(watchdog_row(target, values))
     return "\n".join(lines)
 
 
@@ -156,6 +194,16 @@ def task_row(target: str, task_id: str, values: Aggregate) -> str:
         f"{evaluated(values.record_consistent_successes, values.record_consistency_evaluated)} | "
         f"{evaluated(values.mistake_prevention_successes, values.mistake_prevention_evaluated)} | "
         f"{values.repeated_documented_mistakes} |"
+    )
+
+
+def watchdog_row(target: str, values: Aggregate) -> str:
+    return (
+        f"| `{target}` | {values.watchdog_records} | {values.no_edit_watchdogs} | "
+        f"{values.no_observed_repo_changes} | "
+        f"{duration(percentile(values.seconds_until_repo_change, 50))} | "
+        f"{duration(max(values.seconds_without_repo_change) if values.seconds_without_repo_change else None)} | "
+        f"{duration(max(values.seconds_since_last_output) if values.seconds_since_last_output else None)} |"
     )
 
 
@@ -212,6 +260,11 @@ def duration(value: float | None) -> str:
     if value is None:
         return "-"
     return f"{value:.0f}s"
+
+
+def append_number(values: list[float], value: object) -> None:
+    if isinstance(value, (int, float)):
+        values.append(float(value))
 
 
 if __name__ == "__main__":
