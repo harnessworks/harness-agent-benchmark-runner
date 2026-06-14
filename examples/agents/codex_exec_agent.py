@@ -34,6 +34,7 @@ Keep exploration short and implementation-focused:
 - Read only app code, tests, README/docs, and project guidance needed for this task.
 - Do not inspect benchmark task specs, benchmark oracle code, previous runs/results, credentials, or git history unless the task prompt explicitly asks.
 - If companion docs are requested and no docs directory exists, create a focused docs/ note; do not update the root README unless explicitly asked.
+- After you identify the relevant implementation direction, start a small scoped repository edit before extended additional analysis.
 - Make focused edits, run focused tests when practical, and stop once the task should pass verification."""
 
 
