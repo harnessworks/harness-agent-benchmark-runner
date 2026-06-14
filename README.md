@@ -81,12 +81,12 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-14-flask-h1-revised-oracle-two-family-gate.md`](docs/benchmarks/2026-06-14-flask-h1-revised-oracle-two-family-gate.md).
-The revised-oracle two-family H1 gate completed 16/16 records with 0 stalls,
-0 timeouts, 0 wrong-file edits, and 0 forbidden-file edits. `decision-only`
-and `full-harness` were 8/8 strict and record-consistent; `workflow-only` and
-`failure-only` were 0/8 record-consistent. A scoped 96-record H1 promotion is
-now valuable, with duration-tail risk still tracked.
+[`docs/benchmarks/2026-06-14-flask-h1-promotion96-aborted-noedit.md`](docs/benchmarks/2026-06-14-flask-h1-promotion96-aborted-noedit.md).
+The scoped 96-record H1 promotion stopped after 11 records because a
+`full-harness` price-policy record hit the no-edit watchdog. Early scoring
+still separated decision-bearing arms from controls, but the promotion is not
+achieved. Next step: targeted `full-harness` price-policy no-edit mitigation
+before another promotion attempt.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the

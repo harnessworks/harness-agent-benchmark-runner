@@ -337,6 +337,12 @@ Post-run H1 oracle triage:
   record-consistent. A scoped 96-record H1 promotion is now valuable, but
   should keep sequential execution and watchdog reporting because one
   `full-harness` replenishment pass took 405.9 seconds.
+- The scoped guarded H1 promotion then stopped after 11/96 planned records on
+  a `full-harness` price-policy no-edit watchdog. The stopped agent read the
+  coding conventions, found the accepted price-band decision record, and then
+  made no repository changes for 240 seconds. Treat this as an operational
+  promotion blocker. The partial scoring still separated decision-bearing arms
+  from controls, but the promotion is not achieved.
 
 Pre-execution checks completed:
 

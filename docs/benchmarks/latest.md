@@ -11,7 +11,7 @@ Updated: 2026-06-14
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Revised-oracle two-family H1 gate completed 16/16 clean records; decision-bearing arms were 8/8 strict. |
+| Latest execution | Scoped H1 promotion96 stopped after 11/96 on a `full-harness` price-policy no-edit watchdog. |
 
 ## Representative Result
 
@@ -74,24 +74,22 @@ duration-tail repeatability.
 ## Latest Run
 
 Latest executed focused H1 check:
-[`2026-06-14-flask-h1-revised-oracle-two-family-gate.md`](2026-06-14-flask-h1-revised-oracle-two-family-gate.md).
+[`2026-06-14-flask-h1-promotion96-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-aborted-noedit.md).
 
-The revised-oracle two-family H1 gate used `CODEX_PROMPT_GUARD=1` and ran
-`hidden-effect-catalog-price-policy` plus
-`hidden-effect-catalog-replenishment-policy` across `workflow-only`,
-`decision-only`, `failure-only`, and `full-harness` for 2 repeats. It
-completed 16/16 planned records with 0 stalls, 0 timeouts, 0 wrong-file edits,
-and 0 forbidden-file edits. No no-edit watchdog records were produced.
+The scoped 96-record H1 promotion used `CODEX_PROMPT_GUARD=1`, `--promotion-run`,
+and the clean 16-record revised-oracle gate as readiness evidence. It stopped
+after 11/96 planned records because a `full-harness`
+`hidden-effect-catalog-price-policy` record hit the no-edit watchdog.
 
-The H1 separation was clean: `decision-only` and `full-harness` were 8/8
-strict and record-consistent, while `workflow-only` and `failure-only` were
-0/8 record-consistent. The revised replenishment oracle did not create control
-false positives.
+Before the stop, the partial H1 signal still separated decision-bearing arms
+from controls: `decision-only` was 3/3 strict and record-consistent, completed
+`full-harness` records were 2/2 strict and record-consistent, and controls were
+0/5 record-consistent. The stopped record found the accepted price-band
+decision record but made no repository changes for 240 seconds.
 
-This makes a scoped H1 promotion valuable. The remaining caveat is operational:
-one `full-harness` replenishment pass took 405.9s despite first repository
-changes after 30.0s, so promotion reporting should preserve duration-tail and
-watchdog diagnostics.
+This means the H1 promotion is not achieved. The current blocker is
+operational no-edit behavior in `full-harness` price-policy, not oracle
+wording or control false positives.
 
 ## Controls And Prior Evidence
 
@@ -100,6 +98,7 @@ watchdog diagnostics.
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
+| Two-family H1 | promotion96 aborted | 11/96 | 5 | 5 | 1 | 0 | Stopped on `full-harness` price-policy no-edit after decision lookup. |
 | Two-family H1 | revised-oracle four-arm gate | 16 | 8 | 8 | 0 | 0 | Decision-bearing arms 8/8 record-consistent; controls 0/8. |
 | Replenishment H1 | guarded decision-bearing triage | 10 | 8 live / 10 revised | 8 live / 10 revised | 0 | 0 | Oracle wording brittleness fixed; controls still need revised-oracle rerun. |
 | Two-family H1 | guarded pilot | 8 | 3 | 3 | 0 | 0 | Operationally clean, but replenishment passed only in `full-harness`; not promotion-ready. |
@@ -126,17 +125,16 @@ hidden-oracle rows are the relevant harness-effect evidence.
 ## Next Step
 
 Do not rerun the same stable-4 96-record promotion unless the harness or runner
-semantics change. For H1, the next useful step is a scoped guarded promotion:
+semantics change. For H1, do not immediately rerun the 96-record promotion.
+The next useful step is targeted no-edit mitigation:
 
-- `hidden-effect-catalog-price-policy`
-- `hidden-effect-catalog-replenishment-policy`
-- arms: `workflow-only`, `decision-only`, `failure-only`, `full-harness`
-- repeats: 12
-- planned records: 96
+- task: `hidden-effect-catalog-price-policy`
+- arm: `full-harness`
+- repeat enough times to reproduce or bound the no-edit rate
+- inspect whether stalls happen after decision-record lookup
+- test any prompt/adapter mitigation on a small gate before promotion
 
-Use 96 records rather than an arbitrary 100 because it preserves the balanced
-2 tasks x 4 arms x 12 repeats matrix. Keep sequential execution,
-`CODEX_PROMPT_GUARD=1`, `--stop-on-abnormal`, and duration-tail diagnostics.
+Only rerun promotion after that blocker is understood.
 
 The next useful v2 experiment remains a fresh 9-record pilot using the current
 three-task suite:
@@ -151,6 +149,7 @@ workflow, boundary, strict, timeout, and duration-tail metrics separately.
 ## Detailed Reports
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-14-flask-h1-promotion96-aborted-noedit.md`](2026-06-14-flask-h1-promotion96-aborted-noedit.md) (scoped H1 promotion, aborted on no-edit)
 - [`2026-06-14-flask-h1-revised-oracle-two-family-gate.md`](2026-06-14-flask-h1-revised-oracle-two-family-gate.md) (latest revised-oracle two-family H1 gate)
 - [`2026-06-14-flask-replenishment-h1-guarded-triage.md`](2026-06-14-flask-replenishment-h1-guarded-triage.md) (latest guarded replenishment H1 triage)
 - [`2026-06-14-flask-h1-two-family-guarded-pilot.md`](2026-06-14-flask-h1-two-family-guarded-pilot.md) (prior guarded two-family H1 pilot)
