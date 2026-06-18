@@ -1,6 +1,6 @@
 # Latest Benchmark Status
 
-Updated: 2026-06-15
+Updated: 2026-06-18
 
 ## At A Glance
 
@@ -11,7 +11,7 @@ Updated: 2026-06-15
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | Claude H1 interim gate completed 8/8 with 0 operational abnormal signals and decision-bearing arms 4/4 strict. |
+| Latest execution | V2 three-arm pilot completed 9/9 with 0 operational abnormal signals; both harness arms passed 3/3 strict while `bare` stayed 0/3. |
 
 ## Representative Result
 
@@ -73,25 +73,23 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed H1 diagnostic:
-[`2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](2026-06-15-flask-h1-claude-four-arm-interim-gate.md).
+Latest executed v2 pilot:
+[`2026-06-18-hidden-flask-three-arm-v2-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-pilot.md).
 
-After the price-policy glossary oracle was patched and the prior Claude
-session-limit contamination was classified, a fresh Claude four-arm gate reran
-both direct H1 task families across `workflow-only`, `decision-only`,
-`failure-only`, and `full-harness`.
+The v2 held-out pilot completed 9/9 records with 0 stalls, 0 timeouts,
+0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits.
+`bare` stayed 0/3 strict, while both `workflow-only` and `memory-harness`
+passed 3/3 strict across replenishment signals, price ladder, and value
+snapshot tasks.
 
-The gate completed 8/8 records with 0 no-edit watchdogs, 0 timeouts,
-0 quota/session-limit exits, 0 wrong-file edits, and 0 forbidden-file edits.
-Decision-bearing arms were 4/4 strict and record-consistent across price-policy
-and replenishment, while controls stayed 0/4 record-consistent. Treat this as
-the current H1 interim representative evidence, not as the broad public
-representative benchmark result.
+Treat this as the latest clean execution evidence and as a useful v2 pilot, not
+as a replacement for the 96-record stable-4 representative benchmark.
 
 ## Controls And Prior Evidence
 
 | Scope | Mode | Runs | Strict successes | Verification passed | Timeouts | Boundary issues | Reading |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Three-arm v2 | held-out pilot | 9 | 6 | 6 | 0 | 0 | Latest execution; both harness arms 3/3 strict, `bare` 0/3. |
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |

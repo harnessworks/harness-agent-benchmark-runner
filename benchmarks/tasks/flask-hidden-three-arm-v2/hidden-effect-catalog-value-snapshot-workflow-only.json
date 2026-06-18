@@ -4,7 +4,7 @@
   "description": "V2 held-out convention-transfer task: new catalog value snapshot API with partial-realistic prompt and deterministic hidden oracle.",
   "repo": {
     "source": "../flask-yes-harness",
-    "ref": "3933a09a74cfefbd8455eb3aecd1ff225d7a7457"
+    "ref": "3b3b5c5a295b0b025ea3519debaddfbed09c2ecd"
   },
   "prompt": "Add a catalog value snapshot endpoint.\n\nAdd GET /catalog/value-snapshot. It should calculate each product's inventory value from price times stock. For each row include the prompt-named concept `inventory_value`. Sort rows deterministically by SKU. Include a compact summary with `total_inventory_value` and `highest_value_sku`. Use the project's normal decimal-compatible money formatting for calculated money values.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog value snapshot. Update companion documentation in the repository's documented docs location so future maintainers can find the inventory value and highest-value definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-hidden-three-arm-v2/hidden-effect-catalog-value-snapshot-workflow-only.json",

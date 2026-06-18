@@ -4,7 +4,7 @@
   "description": "V2 held-out convention-transfer task: new catalog price ladder API with partial-realistic prompt and deterministic hidden oracle.",
   "repo": {
     "source": "../flask-yes-harness",
-    "ref": "3933a09a74cfefbd8455eb3aecd1ff225d7a7457"
+    "ref": "3b3b5c5a295b0b025ea3519debaddfbed09c2ecd"
   },
   "prompt": "Add a catalog price ladder endpoint.\n\nAdd GET /catalog/price-ladder. It should classify each catalog product into a price tier. Use tier `economy` for prices below 10, `core` for prices from 10 up to but not including 30, and `premium` for prices 30 or higher. For each row include the prompt-named concepts `price_tier` and `price`. Sort rows deterministically by price ascending, then SKU. Include a compact summary with counts by tier.\n\nFollow the repository's existing public API response style for payload shape, metadata, naming, ordering, and status codes. Add focused pytest coverage for the current catalog price ladder. Update companion documentation in the repository's documented docs location so future maintainers can find the tier definitions. Do not update the root README unless the task explicitly asks for README changes.\n\nKeep the change focused and do not modify benchmark task specs, oracle code, runs, results, credentials, requirements, or environment files.",
   "prompt_ref": "benchmarks/tasks/flask-hidden-three-arm-v2/hidden-effect-catalog-price-ladder-workflow-only.json",

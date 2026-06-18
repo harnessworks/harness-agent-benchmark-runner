@@ -86,6 +86,9 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
         self.assertFalse(flask_hidden_oracle.is_money_key("counts_by_price_band"))
         self.assertFalse(flask_hidden_oracle.is_money_key("price_tier"))
         self.assertFalse(flask_hidden_oracle.is_money_key("price_tiers"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("sku"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("highest_value_sku"))
+        self.assertFalse(flask_hidden_oracle.is_money_key("top_value_sku"))
         self.assertTrue(flask_hidden_oracle.is_money_key("unit_price"))
         self.assertTrue(flask_hidden_oracle.is_money_key("total_amount"))
 
@@ -182,6 +185,27 @@ class FlaskHiddenOracleDocsTests(unittest.TestCase):
         with redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):
                 flask_hidden_oracle.expect_catalog_replenishment_glossary_terms(glossary)
+
+    def test_catalog_value_snapshot_glossary_accepts_snake_case_concepts(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog value snapshot endpoint: `GET /catalog/value-snapshot`,
+              returns `inventory_value` and `highest_value_sku` summary details.
+            """
+        )
+
+        flask_hidden_oracle.expect_catalog_value_snapshot_glossary_terms(glossary)
+
+    def test_catalog_value_snapshot_glossary_requires_route_and_value_concepts(self) -> None:
+        glossary = flask_hidden_oracle.normalize_doc_text(
+            """
+            - Catalog snapshot endpoint: returns product rows.
+            """
+        )
+
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                flask_hidden_oracle.expect_catalog_value_snapshot_glossary_terms(glossary)
 
     def test_cart_functional_summary_prefers_summary_object_over_item_rows(self) -> None:
         class Response:
