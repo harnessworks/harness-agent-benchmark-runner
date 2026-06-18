@@ -16,11 +16,15 @@ they succeed or fail.
 - Current limit: `memory-harness` has not shown an accuracy lift over
   `workflow-only`; `cart-validation` failed across all arms in the
   representative run.
-- Latest execution: the v2 held-out three-arm pilot completed 9/9 records with
-  no operational abnormalities; both harness arms passed 3/3 strict and
-  `bare` passed 0/3.
-- Next step: expand or repeat v2 before any larger v2 promotion; do not replace
-  the stable-4 96-record representative result with a 9-record pilot.
+- Latest local execution: Claude v2 pilot completed 9/9 records with no
+  operational abnormalities; harness arms passed 2/3 strict and 3/3 schema
+  while `bare` stayed 0/3 strict and 0/3 schema. The comparable Codex v2 pilot
+  and local Hermes adapter repeat both completed 9/9 clean with both harness
+  arms 3/3 strict. A follow-up 18-record Hermes gate attempt aborted on the
+  first record due to an idle/no-observed-clone-edit watchdog signal.
+- Next step: harden the Hermes adapter before another larger Hermes gate, or
+  restore a comparable Codex repeat; do not replace the stable-4 96-record
+  representative result with 9-record pilots or an aborted gate.
 
 Safe claims:
 
@@ -84,19 +88,37 @@ The product reading is narrow and useful:
   signal is operational repeatability: max duration was 87.6s versus 544.7s
   for `workflow-only` and 639.3s for `bare`.
 
-Latest execution:
-[`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md).
-The v2 held-out three-arm pilot completed 9/9 records with 0 stalls,
-0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file
-edits. `bare` stayed 0/3 strict, while `workflow-only` and `memory-harness`
-each passed 3/3 strict.
+Latest completed Claude execution:
+[`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md).
+The Claude adapter v2 pilot completed 9/9 records with 0 stalls, 0 timeouts,
+0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits.
+`bare` stayed 0/3 strict and 0/3 schema. Both harness arms passed 3/3 schema
+and 2/3 strict, failing only replenishment functional stock.
 
-Reading: this supports the narrow claim that workflow/harness guidance helps
-agents preserve repo-local API and documentation conventions on held-out Flask
-tasks. It does not show that `memory-harness` is more accurate than
-`workflow-only`, because both harness arms tied on correctness in this pilot.
-It also does not replace the 96-record stable-4 promotion as the representative
-result.
+Latest attempted expansion:
+[`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md).
+An attempted 18-record Hermes adapter gate stopped on the first record after an
+idle/no-observed-clone-edit watchdog signal. Do not promote the Hermes adapter
+line beyond the clean 9-record repeat until adapter isolation and
+output/watchdog behavior are hardened.
+
+Latest completed local execution:
+[`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md).
+The Hermes adapter v2 repeat completed 9/9 records with 0 stalls, 0 timeouts,
+0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits.
+`bare` stayed 0/3 strict, while `workflow-only` and `memory-harness` each passed
+3/3 strict. Treat this as adapter-diversity evidence, not a direct Codex repeat.
+
+Comparable Codex v2 pilot:
+[`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md).
+The Codex pilot also completed 9/9 clean with the same strict pattern: `bare`
+0/3 and both harness arms 3/3.
+
+Reading: these v2 runs support the narrow claim that workflow/harness guidance
+helps agents preserve repo-local API and documentation conventions on held-out
+Flask tasks. They do not show that `memory-harness` is more accurate than
+`workflow-only`, because both harness arms tied on correctness. They also do not
+replace the 96-record stable-4 promotion as the representative result.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
