@@ -30,6 +30,14 @@ outside the repository after their reproducible fields are summarized here.
 - [`2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md`](2026-06-14-flask-h1-strengthened-prompt-guard-decision-gate16.md):
   clean decision-bearing gate under strengthened prompt guard.
 
+## Current V2 Held-Out Line
+
+- [`2026-06-18-hidden-flask-three-arm-v2-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-pilot.md):
+  clean 9-record v2 pilot; both harness arms passed 3/3 strict while `bare`
+  stayed 0/3.
+- [`2026-06-13-hidden-flask-three-arm-v2-smoke.md`](2026-06-13-hidden-flask-three-arm-v2-smoke.md):
+  earlier single-task v2 smoke.
+
 ## Stable-4 Harness Effect Line
 
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md):

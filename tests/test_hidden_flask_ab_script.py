@@ -39,6 +39,8 @@ BARE_REF = "b5351eae78ed9f17d46a43eee05354e9e13f6b94"
 CLEAN_YES_HARNESS_REF = "0f478ddede915b2f0cf41662373c53d8c70f3f86"
 THREE_ARM_WORKFLOW_REF = "3933a09a74cfefbd8455eb3aecd1ff225d7a7457"
 MEMORY_HARNESS_REF = "87c12fb5e276e40272ceee86d497823e93def4e9"
+V2_WORKFLOW_REF = "3b3b5c5a295b0b025ea3519debaddfbed09c2ecd"
+V2_MEMORY_HARNESS_REF = "00e3d5170bde7e5451f525f5ac011f16b6df2edb"
 SPEC = importlib.util.spec_from_file_location("run_hidden_flask_ab", SCRIPT_PATH)
 assert SPEC is not None
 hidden_ab = importlib.util.module_from_spec(SPEC)
@@ -540,8 +542,8 @@ class HiddenFlaskABScriptTests(unittest.TestCase):
 
         expected_refs = {
             "bare": ("../flask-no-harness", BARE_REF),
-            "workflow-only": ("../flask-yes-harness", THREE_ARM_WORKFLOW_REF),
-            "memory-harness": ("../flask-memory-harness", MEMORY_HARNESS_REF),
+            "workflow-only": ("../flask-yes-harness", V2_WORKFLOW_REF),
+            "memory-harness": ("../flask-memory-harness", V2_MEMORY_HARNESS_REF),
         }
         expected_forbidden_text = (
             "/catalog/replenishment-signals",

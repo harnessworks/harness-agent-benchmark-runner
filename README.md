@@ -13,17 +13,21 @@ they succeed or fail.
   0 stalls, 0 timeouts, 0 hidden-access findings, and 0 file-boundary issues.
 - Observed lift: harness arms recovered schema-contract behavior in 24/32
   records; `bare` recovered 0/32.
-- Current limit: `memory-harness` did not beat `workflow-only` on correctness,
-  and `cart-validation` failed across all arms.
-- Next step: do not run another blind 96/100-record H1 promotion; the latest
-  Claude H1 interim gate is clean, but Codex no-edit remains unresolved.
+- Current limit: `memory-harness` has not shown an accuracy lift over
+  `workflow-only`; `cart-validation` failed across all arms in the
+  representative run.
+- Latest execution: the v2 held-out three-arm pilot completed 9/9 records with
+  no operational abnormalities; both harness arms passed 3/3 strict and
+  `bare` passed 0/3.
+- Next step: expand or repeat v2 before any larger v2 promotion; do not replace
+  the stable-4 96-record representative result with a 9-record pilot.
 
 Safe claims:
 
 - The runner separates functional, schema, workflow, boundary, timeout, and
   hidden-access failures.
 - The harness helps agents preserve repo-local API/documentation conventions in
-  this suite.
+  the measured Flask suites.
 - The latest representative run was operationally clean enough to publish.
 
 Claims not supported yet:
@@ -81,11 +85,18 @@ The product reading is narrow and useful:
   for `workflow-only` and 639.3s for `bare`.
 
 Latest execution:
-[`docs/benchmarks/2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](docs/benchmarks/2026-06-15-flask-h1-claude-four-arm-interim-gate.md).
-The Claude four-arm H1 interim gate completed 8/8 records with 0 no-edit
-watchdogs, 0 timeouts, 0 quota/session-limit exits, and 0 file-boundary issues.
-Decision-bearing arms passed 4/4 strict and record-consistent checks across
-price-policy and replenishment, while controls stayed 0/4 record-consistent.
+[`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md).
+The v2 held-out three-arm pilot completed 9/9 records with 0 stalls,
+0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file
+edits. `bare` stayed 0/3 strict, while `workflow-only` and `memory-harness`
+each passed 3/3 strict.
+
+Reading: this supports the narrow claim that workflow/harness guidance helps
+agents preserve repo-local API and documentation conventions on held-out Flask
+tasks. It does not show that `memory-harness` is more accurate than
+`workflow-only`, because both harness arms tied on correctness in this pilot.
+It also does not replace the 96-record stable-4 promotion as the representative
+result.
 
 The older balanced 100-run `jobs=2` report remains a full-contract control, not
 the main product claim. Its timeout stability remains unresolved because the
@@ -175,6 +186,7 @@ answer catalogs for the task being scored.
 
 | Scope | Mode | Runs | Strict successes | Verification passed | Timeouts | Boundary issues | Reading |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Three-arm v2 | held-out pilot | 9 | 6 | 6 | 0 | 0 | Latest clean execution; supports harness-vs-bare lift, not memory-vs-workflow lift. |
 | Three-arm stable-4 | `bare` promotion96 | 32 | 0 | 0 | 0 | 0 | Strong negative baseline under answer-free prompts. |
 | Three-arm stable-4 | `workflow-only` promotion96 | 32 | 8 | 8 | 0 | 0 | Repo workflow and conventions recover schema behavior. |
 | Three-arm stable-4 | `memory-harness` promotion96 | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
@@ -226,11 +238,14 @@ python3 -m harness_agent_benchmark_runner run \
 Do not spend the next run on another identical stable-4 promotion. The
 representative 96-record result is clean enough for its current scope.
 
-The next product path is the v2 held-out suite at
-`benchmarks/suites/flask-hidden-three-arm-v2.json`, currently covering
+The v2 held-out pilot at
+`benchmarks/suites/flask-hidden-three-arm-v2.json` is now complete for
 `hidden-effect-replenishment-signals`, `hidden-effect-catalog-price-ladder`,
-and `hidden-effect-catalog-value-snapshot`. Run a fresh 9-record v2 pilot
-before any larger promotion.
+and `hidden-effect-catalog-value-snapshot`. It is clean enough to publish as
+latest execution evidence, but it is still only a 9-record pilot.
+
+Before any larger v2 promotion, either add more v2 held-out task families or
+repeat this matrix to separate a clean pilot from repeatable task-family signal.
 
 Keep these rules for v2:
 
@@ -249,6 +264,7 @@ design task: all arms scored 0/8 strict and 0/8 schema.
 
 - [`docs/benchmarks/index.md`](docs/benchmarks/index.md)
 - [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md)
+- [`docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md`](docs/benchmarks/2026-06-18-hidden-flask-three-arm-v2-pilot.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md`](docs/benchmarks/2026-06-13-hidden-flask-three-arm-v2-smoke.md)
 - [`docs/benchmarks/2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md`](docs/benchmarks/2026-06-13-hidden-flask-workflow-smoke-stable4-fullcontract-control.md)

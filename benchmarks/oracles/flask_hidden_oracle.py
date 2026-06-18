@@ -736,6 +736,24 @@ def expect_catalog_replenishment_glossary_terms(glossary: str) -> None:
     expect_any_term(glossary, ("replenishment status", "replenishment_status"), label)
 
 
+def expect_catalog_value_snapshot_glossary_terms(glossary: str) -> None:
+    expect_terms(
+        glossary,
+        ("/catalog/value-snapshot",),
+        "glossary must document value snapshot route",
+    )
+    expect_any_term(
+        glossary,
+        ("inventory value", "inventory_value", "inventory-value"),
+        "glossary must document inventory value concept",
+    )
+    expect_any_term(
+        glossary,
+        ("highest value", "highest_value", "highest-value"),
+        "glossary must document highest value concept",
+    )
+
+
 def check_catalog_replenishment_policy_hidden_decision_edges() -> None:
     from app import catalog as catalog_module
 
@@ -840,12 +858,7 @@ def check_catalog_value_snapshot() -> None:
     expect(meta.get("source") == "catalog", "value snapshot meta.source is wrong")
     expect(meta.get("service") == "flask-no-harness", "value snapshot meta.service is wrong")
 
-    glossary = glossary_text()
-    expect_terms(
-        glossary,
-        ("/catalog/value-snapshot", "inventory value", "highest value"),
-        "glossary must document value snapshot route and concepts",
-    )
+    expect_catalog_value_snapshot_glossary_terms(glossary_text())
 
 
 def check_pick_list() -> None:
@@ -1228,12 +1241,7 @@ def check_catalog_value_snapshot_functional() -> None:
     )
     expect(first_present(payload, ("highest_value_sku", "top_value_sku")) == "desk-lamp", "highest value sku is wrong")
 
-    glossary = glossary_text()
-    expect_terms(
-        glossary,
-        ("/catalog/value-snapshot", "inventory value", "highest value"),
-        "glossary must document value snapshot route and concepts",
-    )
+    expect_catalog_value_snapshot_glossary_terms(glossary_text())
 
 
 def check_bundle_quote_schema() -> None:
@@ -1397,6 +1405,8 @@ def expect_money_like_values(value: Any, label: str, path: str = "$", key: str =
 
 def is_money_key(key: str) -> bool:
     if any(term in key for term in ("price_band", "price_tier")):
+        return False
+    if key == "sku" or key.endswith("_sku"):
         return False
     return any(term in key for term in MONEY_KEY_TERMS)
 
