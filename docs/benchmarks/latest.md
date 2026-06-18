@@ -11,7 +11,7 @@ Updated: 2026-06-18
 | Cleanliness | 96/96 records completed with 0 stalls, 0 timeouts, 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits. |
 | Harness signal | Schema contract improved from 0/32 in `bare` to 24/32 in both harness arms. |
 | Memory signal | Accuracy tied `workflow-only`; duration tail was better. |
-| Latest execution | V2 three-arm pilot completed 9/9 with 0 operational abnormal signals; both harness arms passed 3/3 strict while `bare` stayed 0/3. |
+| Latest execution | Claude v2 pilot completed 9/9 with 0 operational abnormal signals; harness arms passed 2/3 strict and 3/3 schema while `bare` stayed 0/3 strict and 0/3 schema. Local Hermes adapter v2 repeat completed 9/9 clean with both harness arms 3/3 strict, but a follow-up 18-record Hermes gate attempt aborted on the first record due to an idle/no-observed-clone-edit watchdog signal. Comparable Codex v2 pilot completed 9/9 clean with both harness arms 3/3 strict. |
 
 ## Representative Result
 
@@ -73,23 +73,49 @@ duration-tail repeatability.
 
 ## Latest Run
 
-Latest executed v2 pilot:
-[`2026-06-18-hidden-flask-three-arm-v2-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-pilot.md).
+Latest completed Claude v2 pilot:
+[`2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md).
 
-The v2 held-out pilot completed 9/9 records with 0 stalls, 0 timeouts,
+The Claude adapter pilot completed 9/9 records with 0 stalls, 0 timeouts,
+0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits.
+`bare` stayed 0/3 strict and 0/3 schema. Both harness arms passed 3/3 schema
+and 2/3 strict, failing only the replenishment functional oracle with the same
+`desk-lamp stock is wrong` message.
+
+Latest attempted Hermes expansion:
+[`2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md`](2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md).
+An attempted 18-record Hermes adapter gate stopped on the first record after the
+idle watchdog fired with no observed repository changes in the isolated clone.
+Do not promote the Hermes adapter line beyond the clean 9-record repeat until
+adapter isolation and output/watchdog behavior are hardened.
+
+Latest completed local Hermes v2 adapter-diversity repeat:
+[`2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md`](2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md).
+
+The Hermes adapter repeat completed 9/9 records with 0 stalls, 0 timeouts,
 0 hidden-access findings, 0 wrong-file edits, and 0 forbidden-file edits.
 `bare` stayed 0/3 strict, while both `workflow-only` and `memory-harness`
 passed 3/3 strict across replenishment signals, price ladder, and value
-snapshot tasks.
+snapshot tasks. This is useful adapter-diversity evidence, not a direct Codex
+repeat, because the local Codex CLI was unavailable and the run used a temporary
+Hermes CLI adapter.
 
-Treat this as the latest clean execution evidence and as a useful v2 pilot, not
-as a replacement for the 96-record stable-4 representative benchmark.
+Comparable Codex v2 pilot:
+[`2026-06-18-hidden-flask-three-arm-v2-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-pilot.md).
+The Codex v2 held-out pilot also completed 9/9 records with 0 operational
+abnormal signals and the same strict pattern: `bare` 0/3, both harness arms 3/3.
+
+Treat both v2 runs as latest clean execution evidence and useful v2 pilots, not
+as replacements for the 96-record stable-4 representative benchmark.
 
 ## Controls And Prior Evidence
 
 | Scope | Mode | Runs | Strict successes | Verification passed | Timeouts | Boundary issues | Reading |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Three-arm v2 | held-out pilot | 9 | 6 | 6 | 0 | 0 | Latest execution; both harness arms 3/3 strict, `bare` 0/3. |
+| Three-arm v2 | Claude pilot | 9 | 4 | 4 | 0 | 0 | Clean operational run; harness arms 2/3 strict each and 3/3 schema each, `bare` 0/3. Harness arms missed replenishment functional stock. |
+| Three-arm v2 | Hermes adapter gate18 aborted | 1/18 | 0 | 0 | 1 | 0 | Stopped on first `bare` replenishment record after idle/no-observed-clone-edit watchdog; do not promote Hermes line beyond 9-record repeat yet. |
+| Three-arm v2 | Hermes adapter repeat | 9 | 6 | 6 | 0 | 0 | Latest completed local adapter-diversity evidence; both harness arms 3/3 strict, `bare` 0/3. Not a direct Codex repeat. |
+| Three-arm v2 | held-out pilot | 9 | 6 | 6 | 0 | 0 | Comparable Codex v2 pilot; both harness arms 3/3 strict, `bare` 0/3. |
 | Three-arm stable-4 | promotion96 `bare` | 32 | 0 | 0 | 0 | 0 | Representative negative baseline. |
 | Three-arm stable-4 | promotion96 `workflow-only` | 32 | 8 | 8 | 0 | 0 | Workflow and docs conventions recover schema behavior. |
 | Three-arm stable-4 | promotion96 `memory-harness` | 32 | 8 | 8 | 0 | 0 | Same correctness as workflow-only, lower duration tail. |
@@ -143,20 +169,29 @@ watchdog mechanics. Do not keep rerunning blind Codex H1 promotions. The next
 useful H1 step is a repeated 16-record or 24-record Claude gate before making
 a larger H1 claim.
 
-The next useful v2 experiment remains a fresh 9-record pilot using the current
-three-task suite:
+The next useful v2 work is adapter hardening before another larger Hermes gate,
+or a comparable Codex repeat after the Codex CLI is restored locally. For the
+Hermes adapter line, do not rerun blind 16/18/24-record gates until the adapter
+has a clone-isolation smoke check and emits a startup/progress line that avoids
+ambiguous no-output watchdog stops. Once hardened, use the same three-task suite:
 
 - `hidden-effect-replenishment-signals`
 - `hidden-effect-catalog-price-ladder`
 - `hidden-effect-catalog-value-snapshot`
 
 Keep the same three arms and continue to report functional, schema-contract,
-workflow, boundary, strict, timeout, and duration-tail metrics separately.
+workflow, boundary, strict, timeout, and duration-tail metrics separately. Do
+not merge Hermes adapter results into the Codex line without labeling the agent
+adapter difference.
 
 ## Detailed Reports
 
 - [`index.md`](index.md) (curated report index)
 - [`2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md`](2026-06-13-hidden-flask-three-arm-stable4-allslim-promotion96.md) (representative result)
+- [`2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md) (latest completed Claude v2 pilot)
+- [`2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md`](2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md) (attempted Hermes v2 expansion, aborted on idle/no-observed-clone-edit)
+- [`2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md`](2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md) (latest completed local v2 adapter-diversity repeat)
+- [`2026-06-18-hidden-flask-three-arm-v2-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-pilot.md) (comparable Codex v2 pilot)
 - [`2026-06-15-flask-h1-claude-four-arm-interim-gate.md`](2026-06-15-flask-h1-claude-four-arm-interim-gate.md) (current H1 interim representative gate)
 - [`2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md`](2026-06-14-flask-h1-claude-four-arm-gate-patched-oracle-session-limit.md) (patched-oracle H1 Claude gate, contaminated by Claude session limit)
 - [`2026-06-14-flask-h1-claude-four-arm-gate.md`](2026-06-14-flask-h1-claude-four-arm-gate.md) (prior H1 four-arm Claude gate)

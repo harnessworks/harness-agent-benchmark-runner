@@ -32,9 +32,21 @@ outside the repository after their reproducible fields are summarized here.
 
 ## Current V2 Held-Out Line
 
+- [`2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-claude-pilot.md):
+  clean operational 9-record Claude pilot; harness arms passed 2/3 strict and
+  3/3 schema while `bare` stayed 0/3 strict and 0/3 schema. Both harness arms
+  missed replenishment functional stock.
+- [`2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md`](2026-06-18-hidden-flask-three-arm-v2-hermes-gate18-aborted.md):
+  attempted 18-record Hermes adapter gate; stopped on the first record after an
+  idle/no-observed-clone-edit watchdog signal. Do not promote the Hermes line
+  beyond the 9-record repeat until the adapter is hardened.
+- [`2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md`](2026-06-18-hidden-flask-three-arm-v2-hermes-repeat.md):
+  clean 9-record Hermes adapter repeat; both harness arms passed 3/3 strict
+  while `bare` stayed 0/3. Treat as adapter-diversity evidence, not as a direct
+  Codex repeat.
 - [`2026-06-18-hidden-flask-three-arm-v2-pilot.md`](2026-06-18-hidden-flask-three-arm-v2-pilot.md):
-  clean 9-record v2 pilot; both harness arms passed 3/3 strict while `bare`
-  stayed 0/3.
+  clean 9-record Codex v2 pilot; both harness arms passed 3/3 strict while
+  `bare` stayed 0/3.
 - [`2026-06-13-hidden-flask-three-arm-v2-smoke.md`](2026-06-13-hidden-flask-three-arm-v2-smoke.md):
   earlier single-task v2 smoke.
 
